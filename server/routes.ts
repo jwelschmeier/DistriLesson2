@@ -692,42 +692,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Better fallback: Find teacher with similar subjects or skip
               let fallbackTeacher = null;
               
-              // Try to find a teacher with related subjects
-              if (baseSubject === 'KR') {
-                fallbackTeacher = teachers.find(t => 
-                  t.subjects.some(s => 
-                    s.toUpperCase().includes('KR') || 
-                    s.toUpperCase().includes('KATHOLISCH') ||
-                    s.includes('Kr')
-                  )
-                );
-                if (!fallbackTeacher) {
-                  console.log(`    WARNING: No teacher found for KR - skipping assignment for class ${classData.name}`);
-                  continue; // Skip this subject completely if no qualified teacher
+              // UNIFIED SMART FALLBACK: All subjects use workload + qualification checks
+              const subjectMappings: Record<string, string[]> = {
+                'D': ['D', 'DE', 'Deutsch'],
+                'M': ['M', 'MA', 'Mathe', 'Mathematik'],
+                'E': ['E', 'EN', 'Englisch', 'English'],
+                'L': ['L', 'F', 'FR', 'LA', 'FS', 'Französisch', 'Latein', 'Fremdsprache'],
+                'PK': ['PK', 'SW', 'Politik', 'Sozialwissenschaften'],
+                'TC': ['TC', 'TX', 'Technik'],
+                'NW': ['NW', 'BI', 'BIO', 'CH', 'PH', 'Naturwissenschaften'],
+                'GE': ['GE', 'Geschichte'],
+                'EK': ['EK', 'Erdkunde', 'Geografie'],
+                'SP': ['SP', 'Sport'],
+                'KU': ['KU', 'Kunst'],
+                'MU': ['MU', 'Musik'],
+                'KR': ['KR', 'katholische Religion'],
+                'ER': ['ER', 'evangelische Religion']
+              };
+              
+              // Try all teachers, but check workload and basic qualification
+              for (const teacher of teachers) {
+                // WORKLOAD CHECK FIRST  
+                const currentWorkload = teacherWorkloads.get(teacher.id) || 0;
+                const totalHoursNeeded = currentWorkload + (semesterHours * 2);
+                
+                if (totalHoursNeeded <= parseFloat(teacher.maxHours)) {
+                  // BASIC QUALIFICATION CHECK (relaxed for emergency fallback)
+                  const subjectAliases = subjectMappings[baseSubject] || [baseSubject];
+                  const canTeach = teacher.subjects.some(subj => {
+                    return subjectAliases.some(alias => 
+                      subj.toUpperCase().includes(alias.toUpperCase()) ||
+                      alias.toUpperCase().includes(subj.toUpperCase())
+                    );
+                  });
+                  
+                  if (canTeach) {
+                    fallbackTeacher = teacher;
+                    break; // Take first qualified teacher with workload capacity
+                  }
                 }
-              } else if (baseSubject === 'ER') {
-                fallbackTeacher = teachers.find(t => 
-                  t.subjects.some(s => 
-                    s.toUpperCase().includes('ER') || 
-                    s.toUpperCase().includes('EVANGELISCH') ||
-                    s.includes('Er')
-                  )
-                );
-                if (!fallbackTeacher) {
-                  console.log(`    WARNING: No teacher found for ER - skipping assignment for class ${classData.name}`);
-                  continue;
-                }
-              } else {
-                // For other subjects, try to find any available teacher
-                fallbackTeacher = teachers.find(t => t.subjects.length > 0);
               }
               
               if (fallbackTeacher) {
-                console.log(`    Fallback: Assigned to ${fallbackTeacher.shortName} (${fallbackTeacher.firstName} ${fallbackTeacher.lastName})`);
+                console.log(`    SMART FALLBACK: Assigned to ${fallbackTeacher.shortName} (${fallbackTeacher.firstName} ${fallbackTeacher.lastName})`);
                 console.log(`    Teacher subjects: ${fallbackTeacher.subjects.join(', ')}`);
+                console.log(`    Workload check: ${(teacherWorkloads.get(fallbackTeacher.id) || 0) + (semesterHours * 2)}h <= ${fallbackTeacher.maxHours}h`);
+                
+                // UPDATE WORKLOAD TRACKER for fallback assignments too!
+                const hoursForBothSemesters = semesterHours * 2;
+                const currentWorkload = teacherWorkloads.get(fallbackTeacher.id) || 0;
+                teacherWorkloads.set(fallbackTeacher.id, currentWorkload + hoursForBothSemesters);
                 
                 for (let semester = 1; semester <= 2; semester++) {
-                  let subject = subjects.find(s => s.shortName === baseSubject);
+                  const semesterSubjectName = semesterSubjects[baseSubject].semesters[semester - 1];
+                  let subject = findSubjectByName(subjects, semesterSubjectName, baseSubject);
+                  
                   if (subject) {
                     const assignmentPromise = storage.createAssignment({
                       teacherId: fallbackTeacher.id,
