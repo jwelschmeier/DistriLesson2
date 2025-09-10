@@ -128,6 +128,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteTeacher(id: string): Promise<void> {
+    // First delete all assignments for this teacher
+    await db.delete(assignments).where(eq(assignments.teacherId, id));
+    
+    // Also remove teacher as class teacher from classes
+    await db.update(classes)
+      .set({ classTeacher1Id: null })
+      .where(eq(classes.classTeacher1Id, id));
+    
+    await db.update(classes)
+      .set({ classTeacher2Id: null })
+      .where(eq(classes.classTeacher2Id, id));
+    
+    // Then delete the teacher
     await db.delete(teachers).where(eq(teachers.id, id));
   }
 
