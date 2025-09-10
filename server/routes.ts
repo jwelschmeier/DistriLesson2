@@ -502,13 +502,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const teacherSubjects = teacherSubjectStr.split(/[,;]/).map(s => s.trim());
         return teacherSubjects.some((sub: string) => {
           return possibleSubjects.some((possible: string) => {
-            // For religion subjects, use exact match only
-            if (baseSubject === 'KR' || baseSubject === 'ER') {
-              return sub.toUpperCase() === possible.toUpperCase();
-            }
-            // For other subjects, use contains match
-            return sub.toUpperCase().includes(possible.toUpperCase()) ||
-                   possible.toUpperCase().includes(sub.toUpperCase());
+            // Use EXACT match only for all subjects to prevent false positives
+            return sub.toUpperCase() === possible.toUpperCase();
           });
         });
       });
@@ -525,11 +520,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const classes = await storage.getClasses();
       const subjects = await storage.getSubjects();
       
-      // Clear existing assignments to avoid duplicates
+      // Clear existing assignments to avoid duplicates (parallel)
       const existingAssignments = await storage.getAssignments();
-      for (const assignment of existingAssignments) {
-        await storage.deleteAssignment(assignment.id);
-      }
+      await Promise.all(existingAssignments.map(a => storage.deleteAssignment(a.id)));
       
       let createdAssignments = 0;
       const assignmentPromises: Promise<any>[] = [];
@@ -555,9 +548,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'ER': { semesters: ['ER1', 'ER2'], hours: 2 }  // Protestant Religion
       };
       
-      // For each class, create semester-based assignments
+      // For each class, create semester-based assignments  
       for (const classData of classes) {
-        console.log(`\n=== Processing class ${classData.name} (Grade ${classData.grade}) ===`);
+        // Reduced logging for performance
         
         // Determine which subjects this grade level needs
         let gradeSubjects: string[] = [];
@@ -586,7 +579,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const qualifiedTeacher = findQualifiedTeacher(baseSubject, teacherPool);
             
             if (qualifiedTeacher) {
-              console.log(`  ${baseSubject}: Assigned to ${qualifiedTeacher.shortName} (${qualifiedTeacher.firstName} ${qualifiedTeacher.lastName})`);
+              // Teacher assigned successfully
               
               // Create assignments for both semesters with the same teacher
               for (let semester = 1; semester <= 2; semester++) {
