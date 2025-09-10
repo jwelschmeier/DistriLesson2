@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, boolean, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, boolean, timestamp, json, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -9,10 +9,22 @@ export const teachers = pgTable("teachers", {
   lastName: text("last_name").notNull(),
   shortName: varchar("short_name", { length: 20 }).notNull().unique(),
   email: text("email"),
+  dateOfBirth: date("date_of_birth"),
   subjects: json("subjects").$type<string[]>().notNull().default([]),
   maxHours: integer("max_hours").notNull().default(25),
   currentHours: integer("current_hours").notNull().default(0),
   qualifications: json("qualifications").$type<string[]>().notNull().default([]),
+  reductionHours: json("reduction_hours").$type<{
+    sV?: number; // Schülervertretung
+    sL?: number; // Schulleitung
+    SB?: number; // Schwerbehinderung
+    LK?: number; // Lehrerkonferenz
+    VG?: number; // weitere Kategorie
+    FB?: number; // Fachberater
+    aE?: number; // Altersermäßigung (automatisch berechnet)
+    BA?: number; // Besondere Aufgaben
+    SO?: number; // Sonstiges
+  }>().notNull().default({}),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
