@@ -7,7 +7,7 @@ export const teachers = pgTable("teachers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
-  shortName: varchar("short_name", { length: 4 }).notNull().unique(),
+  shortName: varchar("short_name", { length: 20 }).notNull().unique(),
   email: text("email"),
   subjects: json("subjects").$type<string[]>().notNull().default([]),
   maxHours: integer("max_hours").notNull().default(25),
