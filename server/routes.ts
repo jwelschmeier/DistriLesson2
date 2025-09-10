@@ -215,8 +215,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             shortName: row[2] || "",
             email: row[3] || "",
             subjects: row[4] ? row[4].split(";") : [],
-            maxHours: parseInt(row[5]) || 25,
-            qualifications: row[6] ? row[6].split(";") : [],
+            maxHours: (parseFloat(row[5]) || 25).toString(),
+            currentHours: (parseFloat(row[6]) || 0).toString(),
+            dateOfBirth: row[7] || null, // Format: YYYY-MM-DD
+            qualifications: row[8] ? row[8].split(";") : [],
+            notes: row[9] || "",
           }));
           result = await storage.bulkCreateTeachers(teacherData);
           break;

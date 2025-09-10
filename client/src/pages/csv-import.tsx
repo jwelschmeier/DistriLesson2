@@ -240,8 +240,23 @@ export default function CSVImport() {
                 <div className="space-y-4">
                   <div>
                     <h4 className="font-semibold text-foreground mb-2">Lehrkräfte</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Spalten: Vorname, Nachname, Kürzel, E-Mail, Fächer (;-getrennt), Max. Stunden, Qualifikationen (;-getrennt)
+                    <p className="text-sm text-muted-foreground mb-2">
+                      <strong>Spalten (in dieser Reihenfolge):</strong>
+                    </p>
+                    <ul className="text-sm text-muted-foreground space-y-1 ml-4">
+                      <li>1. Vorname</li>
+                      <li>2. Nachname</li>
+                      <li>3. Kürzel</li>
+                      <li>4. E-Mail</li>
+                      <li>5. Fächer (;-getrennt)</li>
+                      <li>6. Max. Stunden/Woche (Dezimalzahl, z.B. 25.5)</li>
+                      <li>7. Aktuelle Stunden/Woche (Dezimalzahl, z.B. 20.5)</li>
+                      <li>8. Geburtsdatum (YYYY-MM-DD)</li>
+                      <li>9. Qualifikationen (;-getrennt)</li>
+                      <li>10. Notizen (optional)</li>
+                    </ul>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      <strong>Beispiel:</strong> Max Mustermann,MM,max.mustermann@schule.de,Deutsch;Mathe,25.5,22.0,1975-03-15,Lehramt;Fachleitung,Klassenlehrer 5A
                     </p>
                   </div>
 

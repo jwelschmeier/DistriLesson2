@@ -67,9 +67,33 @@ export const assignments = pgTable("assignments", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const planstellenScenarios = pgTable("planstellen_scenarios", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  schoolYear: text("school_year").notNull(),
+  parameters: json("parameters").$type<{
+    classesByGrade?: Record<string, number>;
+    subjectHourOverrides?: Record<string, Record<string, number>>;
+    categoryFactors?: Record<string, number>;
+    includeFlags?: Record<string, boolean>;
+  }>().notNull().default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const planstellen = pgTable("planstellen", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  subjectId: varchar("subject_id").references(() => subjects.id).notNull(),
+  scenarioId: varchar("scenario_id").references(() => planstellenScenarios.id),
+  subjectId: varchar("subject_id").references(() => subjects.id), // nullable for totals
+  grade: integer("grade"), // nullable for summaries
+  category: text("category").notNull(), // grundbedarf, foerder, ergaenzung, ag, summe, etc.
+  component: text("component").notNull(), // descriptive label
+  lineType: text("line_type").notNull(), // requirement, capacity, summary
+  formula: json("formula").$type<{
+    op?: string;
+    terms?: any[];
+    description?: string;
+  }>().notNull().default({}),
+  color: text("color"), // for UI color coding
   requiredHours: decimal("required_hours", { precision: 4, scale: 1 }).notNull(),
   availableHours: decimal("available_hours", { precision: 4, scale: 1 }).notNull(),
   deficit: decimal("deficit", { precision: 4, scale: 1 }).notNull().default('0'),
@@ -93,6 +117,10 @@ export const classesRelations = relations(classes, ({ many, one }) => ({
   assignments: many(assignments),
 }));
 
+export const planstellenScenariosRelations = relations(planstellenScenarios, ({ many }) => ({
+  planstellen: many(planstellen),
+}));
+
 export const subjectsRelations = relations(subjects, ({ many }) => ({
   assignments: many(assignments),
   planstellen: many(planstellen),
@@ -114,6 +142,10 @@ export const assignmentsRelations = relations(assignments, ({ one }) => ({
 }));
 
 export const planstellenRelations = relations(planstellen, ({ one }) => ({
+  scenario: one(planstellenScenarios, {
+    fields: [planstellen.scenarioId],
+    references: [planstellenScenarios.id],
+  }),
   subject: one(subjects, {
     fields: [planstellen.subjectId],
     references: [subjects.id],
@@ -146,6 +178,11 @@ export const insertAssignmentSchema = createInsertSchema(assignments).omit({
   createdAt: true,
 });
 
+export const insertPlanstellenScenarioSchema = createInsertSchema(planstellenScenarios).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertPlanstelleSchema = createInsertSchema(planstellen).omit({
   id: true,
   calculatedAt: true,
@@ -162,5 +199,7 @@ export type Subject = typeof subjects.$inferSelect;
 export type InsertSubject = z.infer<typeof insertSubjectSchema>;
 export type Assignment = typeof assignments.$inferSelect;
 export type InsertAssignment = z.infer<typeof insertAssignmentSchema>;
+export type PlanstellenScenario = typeof planstellenScenarios.$inferSelect;
+export type InsertPlanstellenScenario = z.infer<typeof insertPlanstellenScenarioSchema>;
 export type Planstelle = typeof planstellen.$inferSelect;
 export type InsertPlanstelle = z.infer<typeof insertPlanstelleSchema>;

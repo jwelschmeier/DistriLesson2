@@ -5,6 +5,7 @@ import {
   subjects, 
   assignments, 
   planstellen,
+  planstellenScenarios,
   type Teacher, 
   type InsertTeacher,
   type Student,
@@ -16,7 +17,9 @@ import {
   type Assignment,
   type InsertAssignment,
   type Planstelle,
-  type InsertPlanstelle
+  type InsertPlanstelle,
+  type PlanstellenScenario,
+  type InsertPlanstellenScenario
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql, desc } from "drizzle-orm";
@@ -266,12 +269,12 @@ export class DatabaseStorage implements IStorage {
     return planstelle || undefined;
   }
 
-  async createPlanstelle(planstelle: InsertPlanstelle): Promise<Planstelle> {
+  async createPlanstelle(planstelle: typeof planstellen.$inferInsert): Promise<Planstelle> {
     const [newPlanstelle] = await db.insert(planstellen).values(planstelle).returning();
     return newPlanstelle;
   }
 
-  async updatePlanstelle(id: string, planstelle: Partial<InsertPlanstelle>): Promise<Planstelle> {
+  async updatePlanstelle(id: string, planstelle: Partial<typeof planstellen.$inferInsert>): Promise<Planstelle> {
     const [updatedPlanstelle] = await db
       .update(planstellen)
       .set(planstelle)
