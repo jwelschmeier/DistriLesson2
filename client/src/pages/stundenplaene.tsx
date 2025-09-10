@@ -215,6 +215,44 @@ export default function Stundenplaene() {
     return { totalHours, teacherCount };
   }, [classAssignments]);
 
+  const selectedTeacher = selectedTeacherId ? teacherMap.get(selectedTeacherId) : null;
+  const selectedClass = selectedClassId ? classMap.get(selectedClassId) : null;
+
+  // Calculate subject hour requirements vs. assignments
+  const subjectRequirements = useMemo(() => {
+    if (!selectedClass || !selectedClass.subjectHours || !subjects) return [];
+    
+    const requirements = [];
+    const subjectHours = selectedClass.subjectHours as Record<string, { "1": number; "2": number }>;
+    
+    for (const [subjectShortName, semesters] of Object.entries(subjectHours)) {
+      const subject = subjects.find(s => s.shortName === subjectShortName);
+      if (!subject) continue;
+      
+      // Calculate assigned hours for this subject
+      const assignedHours = {
+        "1": classAssignments
+          .filter(a => a.subjectId === subject.id && a.semester === "1")
+          .reduce((sum, a) => sum + a.hoursPerWeek, 0),
+        "2": classAssignments
+          .filter(a => a.subjectId === subject.id && a.semester === "2")
+          .reduce((sum, a) => sum + a.hoursPerWeek, 0)
+      };
+      
+      requirements.push({
+        subject,
+        required: semesters,
+        assigned: assignedHours,
+        deficit: {
+          "1": Math.max(0, semesters["1"] - assignedHours["1"]),
+          "2": Math.max(0, semesters["2"] - assignedHours["2"])
+        }
+      });
+    }
+    
+    return requirements.sort((a, b) => a.subject.shortName.localeCompare(b.subject.shortName));
+  }, [selectedClass, classAssignments, subjects]);
+
   // Calculate teacher workload (assigned hours per teacher)
   const teacherWorkload = useMemo(() => {
     if (!extendedAssignments) return new Map();
@@ -266,9 +304,6 @@ export default function Stundenplaene() {
     
     return Math.max(0, maxHours - assignedHours);
   }, [teacherMap, teacherWorkload]);
-
-  const selectedTeacher = selectedTeacherId ? teacherMap.get(selectedTeacherId) : null;
-  const selectedClass = selectedClassId ? classMap.get(selectedClassId) : null;
 
   // Helper functions for editable table
   const updateEditedAssignment = (assignmentId: string, field: keyof Assignment, value: any) => {
@@ -614,6 +649,46 @@ export default function Stundenplaene() {
                       </div>
                     </CardContent>
                   </Card>
+
+                  {/* Subject Hour Requirements */}
+                  {subjectRequirements.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center">
+                          <BookOpen className="mr-2 text-primary" />
+                          Stundenvorgaben nach Fächern
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {subjectRequirements.map((req) => (
+                            <div key={req.subject.id} className="border rounded-lg p-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <Badge variant="outline">{req.subject.shortName}</Badge>
+                                <span className="text-xs text-muted-foreground">{req.subject.name}</span>
+                              </div>
+                              <div className="space-y-1 text-sm">
+                                <div className="flex justify-between">
+                                  <span>1. HJ:</span>
+                                  <span className={req.deficit["1"] > 0 ? "text-red-600 font-medium" : "text-green-600"}>
+                                    {req.assigned["1"]}/{req.required["1"]}h
+                                    {req.deficit["1"] > 0 && <span className="ml-1 text-red-600">(-{req.deficit["1"]})</span>}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>2. HJ:</span>
+                                  <span className={req.deficit["2"] > 0 ? "text-red-600 font-medium" : "text-green-600"}>
+                                    {req.assigned["2"]}/{req.required["2"]}h
+                                    {req.deficit["2"] > 0 && <span className="ml-1 text-red-600">(-{req.deficit["2"]})</span>}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
 
                   {/* Class Assignments Table */}
                   <Card>
