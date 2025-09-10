@@ -237,17 +237,32 @@ export default function Stundenplaene() {
     
     return teachers.filter(teacher => {
       // Check if teacher has this subject in their subjects array
-      return teacher.subjects && teacher.subjects.includes(subject.shortName);
+      // Handle both comma-separated strings and direct matches
+      if (!teacher.subjects || teacher.subjects.length === 0) return false;
+      
+      return teacher.subjects.some(subjectEntry => {
+        if (typeof subjectEntry === 'string') {
+          // Split comma-separated values and check each one
+          const subjectCodes = subjectEntry.split(',').map(s => s.trim());
+          return subjectCodes.includes(subject.shortName);
+        }
+        return subjectEntry === subject.shortName;
+      });
     });
   }, [teachers, subjects, subjectMap]);
 
-  // Calculate available hours for a teacher
-  const getAvailableHours = useCallback((teacherId: string) => {
+  // Calculate available hours for a teacher (excluding current assignment when editing)
+  const getAvailableHours = useCallback((teacherId: string, excludeHours?: number) => {
     const teacher = teacherMap.get(teacherId);
     if (!teacher) return 0;
     
     const maxHours = parseFloat(teacher.maxHours);
-    const assignedHours = teacherWorkload.get(teacherId) || 0;
+    let assignedHours = teacherWorkload.get(teacherId) || 0;
+    
+    // When editing an existing assignment, don't count its current hours against availability
+    if (excludeHours !== undefined) {
+      assignedHours = Math.max(0, assignedHours - excludeHours);
+    }
     
     return Math.max(0, maxHours - assignedHours);
   }, [teacherMap, teacherWorkload]);
@@ -778,12 +793,19 @@ export default function Stundenplaene() {
                                     </SelectTrigger>
                                     <SelectContent>
                                       {(() => {
-                                        const qualifiedTeachers = newAssignment?.subjectId ? 
-                                          getQualifiedTeachers(newAssignment.subjectId) : 
+                                        const currentSubjectId = getEffectiveValue(assignment, 'subjectId') as string;
+                                        const qualifiedTeachers = currentSubjectId ? 
+                                          getQualifiedTeachers(currentSubjectId) : 
                                           teachers || [];
                                         
                                         return qualifiedTeachers.map((teacher) => {
-                                          const availableHours = getAvailableHours(teacher.id);
+                                          // Only exclude current assignment's hours for the originally assigned teacher
+                                          const isCurrentTeacher = teacher.id === assignment.teacherId;
+                                          const originalHours = assignment.hoursPerWeek;
+                                          const availableHours = getAvailableHours(
+                                            teacher.id, 
+                                            isCurrentTeacher ? originalHours : undefined
+                                          );
                                           return (
                                             <SelectItem key={teacher.id} value={teacher.id}>
                                               <div className="flex items-center justify-between w-full">
