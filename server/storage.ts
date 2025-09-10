@@ -183,6 +183,11 @@ export class DatabaseStorage implements IStorage {
     await db.delete(classes).where(eq(classes.id, id));
   }
 
+  async getClassByName(name: string): Promise<Class | undefined> {
+    const [classRecord] = await db.select().from(classes).where(eq(classes.name, name));
+    return classRecord || undefined;
+  }
+
   // Subjects
   async getSubjects(): Promise<Subject[]> {
     return await db.select().from(subjects).orderBy(subjects.name);

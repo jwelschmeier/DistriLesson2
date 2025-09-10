@@ -219,10 +219,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
 
         case "students":
+          // First, extract unique class names and create classes if they don't exist
+          const uniqueClasses = Array.from(new Set(rows.map((row: string[]) => row[2]).filter(Boolean)));
+          const classMap = new Map();
+          
+          for (const className of uniqueClasses) {
+            let classRecord = await storage.getClassByName(className);
+            if (!classRecord) {
+              // Extract grade from class name (e.g., "05A" -> grade 5)
+              const gradeMatch = className.match(/^(\d+)/);
+              const grade = gradeMatch ? parseInt(gradeMatch[1]) : 5;
+              
+              classRecord = await storage.createClass({
+                name: className,
+                grade: grade,
+                studentCount: 0,
+                subjectHours: {},
+              });
+            }
+            classMap.set(className, classRecord.id);
+          }
+
           const studentData = rows.map((row: string[]) => ({
             firstName: row[0] || "",
             lastName: row[1] || "",
-            classId: row[2] || null,
+            classId: classMap.get(row[2]) || null,
             grade: parseInt(row[3]) || 5,
           }));
           result = await storage.bulkCreateStudents(studentData);

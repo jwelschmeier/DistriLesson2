@@ -28,7 +28,7 @@ export const students = pgTable("students", {
 
 export const classes = pgTable("classes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: varchar("name", { length: 10 }).notNull().unique(),
+  name: varchar("name", { length: 50 }).notNull().unique(),
   grade: integer("grade").notNull(),
   studentCount: integer("student_count").notNull().default(0),
   subjectHours: json("subject_hours").$type<Record<string, number>>().notNull().default({}),
@@ -38,7 +38,7 @@ export const classes = pgTable("classes", {
 export const subjects = pgTable("subjects", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
-  shortName: varchar("short_name", { length: 10 }).notNull().unique(),
+  shortName: varchar("short_name", { length: 50 }).notNull().unique(),
   category: text("category").notNull(),
   hoursPerWeek: json("hours_per_week").$type<Record<string, number>>().notNull().default({}),
   createdAt: timestamp("created_at").defaultNow(),
