@@ -94,14 +94,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createTeacher(teacher: InsertTeacher): Promise<Teacher> {
-    const [newTeacher] = await db.insert(teachers).values(teacher).returning();
+    const [newTeacher] = await db.insert(teachers).values({
+      ...teacher,
+      subjects: teacher.subjects as string[],
+      qualifications: teacher.qualifications as string[]
+    }).returning();
     return newTeacher;
   }
 
   async updateTeacher(id: string, teacher: Partial<InsertTeacher>): Promise<Teacher> {
+    const updateData: any = { ...teacher };
+    if (teacher.subjects) {
+      updateData.subjects = teacher.subjects as string[];
+    }
+    if (teacher.qualifications) {
+      updateData.qualifications = teacher.qualifications as string[];
+    }
+    
     const [updatedTeacher] = await db
       .update(teachers)
-      .set(teacher)
+      .set(updateData)
       .where(eq(teachers.id, id))
       .returning();
     return updatedTeacher;
@@ -287,7 +299,12 @@ export class DatabaseStorage implements IStorage {
 
   // Bulk operations for CSV import
   async bulkCreateTeachers(teacherList: InsertTeacher[]): Promise<Teacher[]> {
-    return await db.insert(teachers).values(teacherList).returning();
+    const teacherData = teacherList.map(teacher => ({
+      ...teacher,
+      subjects: teacher.subjects as string[],
+      qualifications: teacher.qualifications as string[]
+    }));
+    return await db.insert(teachers).values(teacherData).returning();
   }
 
   async bulkCreateStudents(studentList: InsertStudent[]): Promise<Student[]> {

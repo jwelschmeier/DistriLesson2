@@ -1,9 +1,13 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import { storage } from "./storage";
 import { insertTeacherSchema, insertStudentSchema, insertClassSchema, insertSubjectSchema, insertAssignmentSchema } from "@shared/schema";
 import { z } from "zod";
+
+interface MulterRequest extends Request {
+  file?: Express.Multer.File;
+}
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -178,7 +182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // CSV Import route
-  app.post("/api/import/csv", upload.single("file"), async (req, res) => {
+  app.post("/api/import/csv", upload.single("file"), async (req: MulterRequest, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded" });
@@ -188,14 +192,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const csvContent = req.file.buffer.toString("utf-8");
       
       // Parse CSV content (simplified - in production would use a robust CSV parser)
-      const lines = csvContent.split("\n").filter(line => line.trim());
-      const headers = lines[0].split(",").map(h => h.trim());
-      const rows = lines.slice(1).map(line => line.split(",").map(cell => cell.trim()));
+      const lines = csvContent.split("\n").filter((line: string) => line.trim());
+      const headers = lines[0].split(",").map((h: string) => h.trim());
+      const rows = lines.slice(1).map((line: string) => line.split(",").map((cell: string) => cell.trim()));
 
       let result;
       switch (dataType) {
         case "teachers":
-          const teacherData = rows.map(row => ({
+          const teacherData = rows.map((row: string[]) => ({
             firstName: row[0] || "",
             lastName: row[1] || "",
             shortName: row[2] || "",
@@ -208,7 +212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
 
         case "students":
-          const studentData = rows.map(row => ({
+          const studentData = rows.map((row: string[]) => ({
             firstName: row[0] || "",
             lastName: row[1] || "",
             classId: row[2] || null,
@@ -218,7 +222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
 
         case "classes":
-          const classData = rows.map(row => ({
+          const classData = rows.map((row: string[]) => ({
             name: row[0] || "",
             grade: parseInt(row[1]) || 5,
             studentCount: parseInt(row[2]) || 0,
@@ -228,7 +232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
 
         case "subjects":
-          const subjectData = rows.map(row => ({
+          const subjectData = rows.map((row: string[]) => ({
             name: row[0] || "",
             shortName: row[1] || "",
             category: row[2] || "Hauptfach",

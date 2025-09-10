@@ -256,7 +256,7 @@ export default function Lehrerverwaltung() {
                           <FormItem>
                             <FormLabel>E-Mail</FormLabel>
                             <FormControl>
-                              <Input {...field} type="email" data-testid="input-email" />
+                              <Input {...field} type="email" value={field.value || ""} data-testid="input-email" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
