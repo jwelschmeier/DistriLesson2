@@ -128,20 +128,36 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteTeacher(id: string): Promise<void> {
-    // First delete all assignments for this teacher
-    await db.delete(assignments).where(eq(assignments.teacherId, id));
-    
-    // Also remove teacher as class teacher from classes
-    await db.update(classes)
-      .set({ classTeacher1Id: null })
-      .where(eq(classes.classTeacher1Id, id));
-    
-    await db.update(classes)
-      .set({ classTeacher2Id: null })
-      .where(eq(classes.classTeacher2Id, id));
-    
-    // Then delete the teacher
-    await db.delete(teachers).where(eq(teachers.id, id));
+    try {
+      console.log("Storage: Starting teacher deletion for ID:", id);
+      
+      // First delete all assignments for this teacher
+      console.log("Storage: Deleting assignments...");
+      const deleteAssignmentsResult = await db.delete(assignments).where(eq(assignments.teacherId, id));
+      console.log("Storage: Deleted assignments:", deleteAssignmentsResult);
+      
+      // Also remove teacher as class teacher from classes
+      console.log("Storage: Updating classes (removing as class teacher)...");
+      const updateClasses1 = await db.update(classes)
+        .set({ classTeacher1Id: null })
+        .where(eq(classes.classTeacher1Id, id));
+      console.log("Storage: Updated classes (teacher1):", updateClasses1);
+      
+      const updateClasses2 = await db.update(classes)
+        .set({ classTeacher2Id: null })
+        .where(eq(classes.classTeacher2Id, id));
+      console.log("Storage: Updated classes (teacher2):", updateClasses2);
+      
+      // Then delete the teacher
+      console.log("Storage: Deleting teacher...");
+      const deleteTeacherResult = await db.delete(teachers).where(eq(teachers.id, id));
+      console.log("Storage: Deleted teacher:", deleteTeacherResult);
+      
+      console.log("Storage: Teacher deletion completed successfully");
+    } catch (error) {
+      console.error("Storage: Error during teacher deletion:", error);
+      throw error;
+    }
   }
 
   // Students

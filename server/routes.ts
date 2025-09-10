@@ -62,10 +62,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/teachers/:id", async (req, res) => {
     try {
+      console.log("Attempting to delete teacher with ID:", req.params.id);
       await storage.deleteTeacher(req.params.id);
+      console.log("Teacher deleted successfully");
       res.status(204).send();
     } catch (error) {
-      res.status(500).json({ error: "Failed to delete teacher" });
+      console.error("Error deleting teacher:", error);
+      res.status(500).json({ error: "Failed to delete teacher", details: error instanceof Error ? error.message : String(error) });
     }
   });
 
