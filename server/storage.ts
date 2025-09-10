@@ -97,7 +97,8 @@ export class DatabaseStorage implements IStorage {
     const [newTeacher] = await db.insert(teachers).values({
       ...teacher,
       subjects: teacher.subjects as string[],
-      qualifications: teacher.qualifications as string[]
+      qualifications: teacher.qualifications as string[],
+      reductionHours: teacher.reductionHours as any || {}
     }).returning();
     return newTeacher;
   }
@@ -109,6 +110,9 @@ export class DatabaseStorage implements IStorage {
     }
     if (teacher.qualifications) {
       updateData.qualifications = teacher.qualifications as string[];
+    }
+    if (teacher.reductionHours) {
+      updateData.reductionHours = teacher.reductionHours as any;
     }
     
     const [updatedTeacher] = await db
@@ -307,7 +311,8 @@ export class DatabaseStorage implements IStorage {
     const teacherData = teacherList.map(teacher => ({
       ...teacher,
       subjects: teacher.subjects as string[],
-      qualifications: teacher.qualifications as string[]
+      qualifications: teacher.qualifications as string[],
+      reductionHours: teacher.reductionHours as any || {}
     }));
     return await db.insert(teachers).values(teacherData).returning();
   }
