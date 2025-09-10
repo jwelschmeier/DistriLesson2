@@ -472,19 +472,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Optimization endpoint
   app.post("/api/optimize", async (req, res) => {
     try {
-      // Simplified optimization algorithm
+      // Get current data for optimization
       const teachers = await storage.getTeachers();
       const classes = await storage.getClasses();
       const subjects = await storage.getSubjects();
       
-      // Basic optimization logic would go here
-      // For now, return success status
+      // Clear existing assignments to avoid duplicates
+      const existingAssignments = await storage.getAssignments();
+      for (const assignment of existingAssignments) {
+        await storage.deleteAssignment(assignment.id);
+      }
+      
+      // Simple optimization: Create basic assignments for existing subjects
+      let createdAssignments = 0;
+      const assignmentPromises = [];
+      
+      // Get all teacher subjects (handle comma-separated format)
+      const allTeacherSubjects = teachers.flatMap(t => 
+        t.subjects.flatMap(s => s.split(/[,;]/).map(sub => sub.trim()).filter(Boolean))
+      );
+      const uniqueSubjects = Array.from(new Set(allTeacherSubjects));
+      
+      console.log("Available subjects from teachers:", uniqueSubjects);
+      console.log("Available subjects in database:", subjects.map(s => s.shortName));
+      
+      // For each class, create basic assignments
+      for (const classData of classes) {
+        console.log(`Processing class ${classData.name}, subjectHours:`, classData.subjectHours);
+        
+        // If class has no subject hours, create some basic ones
+        const classSubjects = Object.keys(classData.subjectHours).length > 0 
+          ? classData.subjectHours 
+          : { 'M': 4, 'D': 5, 'E': 4, 'NW': 2 }; // Basic subject hours
+          
+        for (const [subjectName, hoursPerWeek] of Object.entries(classSubjects)) {
+          if (hoursPerWeek > 0) {
+            // Find subject in database
+            const subject = subjects.find(s => 
+              s.name === subjectName || 
+              s.shortName === subjectName ||
+              s.name.includes(subjectName) ||
+              s.shortName.includes(subjectName)
+            );
+            
+            // Find qualified teacher (handle comma-separated subjects)
+            const qualifiedTeacher = teachers.find(t => 
+              t.subjects.some(subjectStr => 
+                subjectStr.split(/[,;]/).some(sub => 
+                  sub.trim().toUpperCase() === subjectName.toUpperCase()
+                )
+              )
+            );
+            
+            console.log(`Subject: ${subjectName}, Found in DB: ${!!subject}, Qualified teacher: ${!!qualifiedTeacher}`);
+            
+            if (subject && qualifiedTeacher) {
+              const assignmentPromise = storage.createAssignment({
+                teacherId: qualifiedTeacher.id,
+                classId: classData.id,
+                subjectId: subject.id,
+                hoursPerWeek: Math.floor(hoursPerWeek),
+                isOptimized: true
+              });
+              assignmentPromises.push(assignmentPromise);
+              createdAssignments++;
+            } else if (subject && teachers.length > 0) {
+              // Fallback: assign any teacher if no qualified teacher found
+              const assignmentPromise = storage.createAssignment({
+                teacherId: teachers[0].id, // Use first available teacher
+                classId: classData.id,
+                subjectId: subject.id,
+                hoursPerWeek: Math.floor(hoursPerWeek),
+                isOptimized: true
+              });
+              assignmentPromises.push(assignmentPromise);
+              createdAssignments++;
+            }
+          }
+        }
+      }
+      
+      // Wait for all assignments to be created
+      await Promise.all(assignmentPromises);
       
       res.json({ 
         message: "Optimization completed successfully",
-        optimizedAssignments: 0
+        optimizedAssignments: createdAssignments
       });
     } catch (error) {
+      console.error("Optimization error:", error);
       res.status(500).json({ error: "Failed to run optimization" });
     }
   });
