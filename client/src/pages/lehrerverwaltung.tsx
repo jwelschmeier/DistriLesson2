@@ -57,10 +57,13 @@ const reductionCategories = [
   { key: "SO", label: "SO", description: "Sonstiges" },
 ];
 
-// Automatische Altersermäßigung berechnen (Excel-Formel nachgebaut)
-// =WENN(T9>60;" 3";WENN(T9>55;"1";"0")) 
+// Automatische Altersermäßigung berechnen mit Beschäftigungsumfang
 // Stichtag: 30.08. des jeweiligen Schuljahres
-function calculateAgeReduction(dateOfBirth: string): number {
+// Neue Regeln:
+// - 0,5 Stunden: nach Vollendung des 55. Lebensjahres bei mindestens 50% Beschäftigungsumfang
+// - 2,0 Stunden: nach Vollendung des 60. Lebensjahres und mindestens 75% Beschäftigungsumfang
+// - 1,5 Stunden: nach Vollendung des 60. Lebensjahres und mindestens 50% Beschäftigungsumfang
+function calculateAgeReduction(dateOfBirth: string, currentHours: number = 0, maxHours: number = 25): number {
   if (!dateOfBirth) return 0;
   
   const birthDate = new Date(dateOfBirth);
@@ -81,9 +84,22 @@ function calculateAgeReduction(dateOfBirth: string): number {
   
   const exactAge = age - (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? 1 : 0);
   
-  // Excel-Formel: =WENN(T9>60;" 3";WENN(T9>55;"1";"0"))
-  if (exactAge > 60) return 3;
-  if (exactAge > 55) return 1;
+  // Beschäftigungsumfang berechnen
+  const employmentPercentage = maxHours > 0 ? (currentHours / maxHours) * 100 : 0;
+  
+  // Altersermäßigung nach neuen Regeln
+  if (exactAge >= 60) {
+    if (employmentPercentage >= 75) {
+      return 2.0; // 2,0 Stunden bei >= 75% Beschäftigungsumfang
+    } else if (employmentPercentage >= 50) {
+      return 1.5; // 1,5 Stunden bei >= 50% Beschäftigungsumfang
+    }
+  } else if (exactAge >= 55) {
+    if (employmentPercentage >= 50) {
+      return 0.5; // 0,5 Stunden bei >= 50% Beschäftigungsumfang
+    }
+  }
+  
   return 0;
 }
 
@@ -215,7 +231,7 @@ export default function Lehrerverwaltung() {
       ...data,
       reductionHours: {
         ...data.reductionHours,
-        aE: calculateAgeReduction(data.dateOfBirth || "")
+        aE: calculateAgeReduction(data.dateOfBirth || "", data.currentHours || 0, data.maxHours || 25)
       }
     };
     
@@ -355,8 +371,20 @@ export default function Lehrerverwaltung() {
                         <div className="text-sm text-muted-foreground">
                           <p>Altersermäßigung (automatisch):</p>
                           <Badge variant="secondary" className="mt-1">
-                            {calculateAgeReduction(form.watch("dateOfBirth") || "")} Stunden
+                            {calculateAgeReduction(
+                              form.watch("dateOfBirth") || "", 
+                              form.watch("currentHours") || 0, 
+                              form.watch("maxHours") || 25
+                            )} Stunden
                           </Badge>
+                          <p className="text-xs mt-1">
+                            {(() => {
+                              const currentHours = form.watch("currentHours") || 0;
+                              const maxHours = form.watch("maxHours") || 25;
+                              const percentage = maxHours > 0 ? ((currentHours / maxHours) * 100).toFixed(1) : 0;
+                              return `Beschäftigungsumfang: ${percentage}%`;
+                            })()}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -490,7 +518,11 @@ export default function Lehrerverwaltung() {
                             </Label>
                             <Input 
                               type="number"
-                              value={calculateAgeReduction(form.watch("dateOfBirth") || "")}
+                              value={calculateAgeReduction(
+                                form.watch("dateOfBirth") || "", 
+                                form.watch("currentHours") || 0, 
+                                form.watch("maxHours") || 25
+                              )}
                               disabled
                               data-testid="input-reduction-aE"
                               className="bg-muted"
@@ -506,7 +538,9 @@ export default function Lehrerverwaltung() {
                               <div className="text-lg font-bold">
                                 {(() => {
                                   const reductions = form.watch("reductionHours") || {};
-                                  const ageReduction = calculateAgeReduction(form.watch("dateOfBirth") || "");
+                                  const currentHours = form.watch("currentHours") || 0;
+                                  const maxHours = form.watch("maxHours") || 25;
+                                  const ageReduction = calculateAgeReduction(form.watch("dateOfBirth") || "", currentHours, maxHours);
                                   const totalReduction = Object.entries(reductions).reduce((sum, [key, value]) => {
                                     return sum + (key === 'aE' ? ageReduction : (value || 0));
                                   }, 0);
@@ -525,8 +559,9 @@ export default function Lehrerverwaltung() {
                               <div className="text-lg font-bold text-primary">
                                 {(() => {
                                   const maxHours = form.watch("maxHours") || 25;
+                                  const currentHours = form.watch("currentHours") || 0;
                                   const reductions = form.watch("reductionHours") || {};
-                                  const ageReduction = calculateAgeReduction(form.watch("dateOfBirth") || "");
+                                  const ageReduction = calculateAgeReduction(form.watch("dateOfBirth") || "", currentHours, maxHours);
                                   const totalReduction = Object.entries(reductions).reduce((sum, [key, value]) => {
                                     return sum + (key === 'aE' ? ageReduction : (value || 0));
                                   }, 0);
