@@ -189,12 +189,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { dataType } = req.body;
-      const csvContent = req.file.buffer.toString("utf-8");
+      let csvContent = req.file.buffer.toString("utf-8");
       
-      // Parse CSV content (simplified - in production would use a robust CSV parser)
+      // Remove UTF-8 BOM if present
+      if (csvContent.charCodeAt(0) === 0xFEFF) {
+        csvContent = csvContent.slice(1);
+      }
+      
+      // Parse CSV content (handle semicolon-separated values with quotes)
       const lines = csvContent.split("\n").filter((line: string) => line.trim());
-      const headers = lines[0].split(",").map((h: string) => h.trim());
-      const rows = lines.slice(1).map((line: string) => line.split(",").map((cell: string) => cell.trim()));
+      const headers = lines[0].split(";").map((h: string) => h.trim().replace(/^"|"$/g, ''));
+      const rows = lines.slice(1).map((line: string) => 
+        line.split(";").map((cell: string) => cell.trim().replace(/^"|"$/g, ''))
+      ).filter(row => row.length > 1 && row[0]); // Filter out empty rows or rows without first name
 
       let result;
       switch (dataType) {
