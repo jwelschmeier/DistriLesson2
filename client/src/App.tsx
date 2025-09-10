@@ -10,6 +10,7 @@ import Planstellberechnung from "@/pages/planstellberechnung";
 import Lehrerplanstellen from "@/pages/lehrerplanstellen";
 import Lehrerverwaltung from "@/pages/lehrerverwaltung";
 import Klassenverwaltung from "@/pages/klassenverwaltung";
+import Faecherverwaltung from "@/pages/faecherverwaltung";
 import StdvLe from "@/pages/stdv-le";
 import StdvKlOptimum from "@/pages/stdv-kl-optimum";
 
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/lehrerplanstellen" component={Lehrerplanstellen} />
       <Route path="/lehrerverwaltung" component={Lehrerverwaltung} />
       <Route path="/klassenverwaltung" component={Klassenverwaltung} />
+      <Route path="/faecherverwaltung" component={Faecherverwaltung} />
       <Route path="/stdv-le" component={StdvLe} />
       <Route path="/stdv-kl-optimum" component={StdvKlOptimum} />
       <Route component={NotFound} />
