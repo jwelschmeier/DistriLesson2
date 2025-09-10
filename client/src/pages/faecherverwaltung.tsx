@@ -15,6 +15,7 @@ import { z } from "zod";
 import { Plus, Edit, Trash2, BookOpen } from "lucide-react";
 import { insertSubjectSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { Sidebar } from "@/components/layout/sidebar";
 
 type Subject = {
   id: string;
@@ -141,8 +142,12 @@ export default function Faecherverwaltung() {
   const categories = Array.from(new Set(subjects.map(s => s.category)));
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="flex h-screen bg-background">
+      <Sidebar />
+      
+      <main className="flex-1 overflow-auto">
+        <div className="container mx-auto p-6">
+          <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Fächerverwaltung</h1>
           <p className="text-gray-600 dark:text-gray-400">Verwalten Sie die Unterrichtsfächer</p>
@@ -331,7 +336,9 @@ export default function Faecherverwaltung() {
             </CardContent>
           </Card>
         )}
-      </div>
+        </div>
+        </div>
+      </main>
     </div>
   );
 }
