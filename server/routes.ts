@@ -260,13 +260,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
 
         case "subjects":
-          const subjectData = rows.map((row: string[]) => ({
-            name: row[0] || "",
-            shortName: row[1] || "",
-            category: row[2] || "Hauptfach",
-            hoursPerWeek: {},
-          }));
-          result = await storage.bulkCreateSubjects(subjectData);
+          // Check if this is a SCHILD NRW curriculum format (many columns)
+          if (headers.length > 10 && headers[0].toLowerCase().includes('klasse')) {
+            // Parse SCHILD curriculum format: extract subjects from triplet pattern
+            const subjects = new Set<{shortName: string, name: string}>();
+            
+            for (let i = 2; i < headers.length; i += 3) {
+              const shortNameHeader = headers[i];
+              const nameHeader = headers[i + 1];
+              
+              if (shortNameHeader && nameHeader) {
+                // Extract subject from header (e.g., "BI_FachKrz" -> "BI")
+                const shortName = shortNameHeader.split('_')[0];
+                const name = nameHeader.split('_')[0].replace(/([A-Z])/g, ' $1').trim();
+                
+                if (shortName && shortName !== 'AG') { // Skip empty and AG subjects
+                  subjects.add({ shortName, name });
+                }
+              }
+            }
+            
+            // Also extract from actual data rows
+            for (const row of rows) {
+              for (let i = 2; i < row.length; i += 3) {
+                const shortName = row[i]?.trim();
+                const name = row[i + 1]?.trim();
+                
+                if (shortName && name && shortName !== 'AG') {
+                  subjects.add({ shortName, name });
+                }
+              }
+            }
+            
+            // Convert to array and create subjects
+            const subjectData = Array.from(subjects).map(s => ({
+              name: s.name || s.shortName,
+              shortName: s.shortName,
+              category: "Hauptfach",
+              hoursPerWeek: {},
+            }));
+            
+            result = await storage.bulkCreateSubjectsWithConflictHandling(subjectData);
+          } else {
+            // Standard simple subjects format
+            const subjectData = rows.map((row: string[]) => ({
+              name: row[0] || "",
+              shortName: row[1] || "",
+              category: row[2] || "Hauptfach",
+              hoursPerWeek: {},
+            }));
+            result = await storage.bulkCreateSubjects(subjectData);
+          }
           break;
 
         default:

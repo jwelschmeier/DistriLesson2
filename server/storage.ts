@@ -323,6 +323,36 @@ export class DatabaseStorage implements IStorage {
   async bulkCreateSubjects(subjectList: InsertSubject[]): Promise<Subject[]> {
     return await db.insert(subjects).values(subjectList).returning();
   }
+
+  async bulkCreateSubjectsWithConflictHandling(subjectList: InsertSubject[]): Promise<Subject[]> {
+    const results: Subject[] = [];
+    
+    for (const subjectData of subjectList) {
+      try {
+        // Try to create the subject
+        const [subject] = await db
+          .insert(subjects)
+          .values(subjectData)
+          .returning();
+        results.push(subject);
+      } catch (error: any) {
+        // If it's a duplicate key error, get the existing subject
+        if (error.code === '23505') {
+          const [existingSubject] = await db
+            .select()
+            .from(subjects)
+            .where(eq(subjects.shortName, subjectData.shortName));
+          if (existingSubject) {
+            results.push(existingSubject);
+          }
+        } else {
+          throw error;
+        }
+      }
+    }
+    
+    return results;
+  }
 }
 
 export const storage = new DatabaseStorage();
