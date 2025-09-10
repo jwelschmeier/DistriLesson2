@@ -23,6 +23,18 @@ import { z } from "zod";
 const teacherFormSchema = insertTeacherSchema.extend({
   subjects: z.array(z.string()).min(1, "Mindestens ein Fach muss ausgewählt werden"),
   qualifications: z.array(z.string()).optional(),
+  dateOfBirth: z.string().optional(),
+  reductionHours: z.object({
+    sV: z.number().optional(), // Schülervertretung
+    sL: z.number().optional(), // Schulleitung  
+    SB: z.number().optional(), // Schwerbehinderung
+    LK: z.number().optional(), // Lehrerkonferenz
+    VG: z.number().optional(), // weitere Kategorie
+    FB: z.number().optional(), // Fachberater
+    aE: z.number().optional(), // Altersermäßigung (automatisch berechnet)
+    BA: z.number().optional(), // Besondere Aufgaben
+    SO: z.number().optional(), // Sonstiges
+  }).optional(),
 });
 
 type TeacherFormData = z.infer<typeof teacherFormSchema>;
@@ -32,6 +44,48 @@ const availableSubjects = [
   "Geschichte", "Erdkunde", "Politik", "Biologie", "Chemie", "Physik",
   "Sport", "Kunst", "Musik", "Religion", "Ethik", "Informatik", "Technik"
 ];
+
+// Kategorien für Ermäßigungsstunden mit Beschreibungen
+const reductionCategories = [
+  { key: "sV", label: "sV", description: "Schülervertretung" },
+  { key: "sL", label: "sL", description: "Schulleitung" },
+  { key: "SB", label: "SB", description: "Schwerbehinderung" },
+  { key: "LK", label: "LK", description: "Lehrerkonferenz" },
+  { key: "VG", label: "VG", description: "Weitere Kategorie" },
+  { key: "FB", label: "FB", description: "Fachberater" },
+  { key: "BA", label: "BA", description: "Besondere Aufgaben" },
+  { key: "SO", label: "SO", description: "Sonstiges" },
+];
+
+// Automatische Altersermäßigung berechnen (Excel-Formel nachgebaut)
+// =WENN(T9>60;" 3";WENN(T9>55;"1";"0")) 
+// Stichtag: 30.08. des jeweiligen Schuljahres
+function calculateAgeReduction(dateOfBirth: string): number {
+  if (!dateOfBirth) return 0;
+  
+  const birthDate = new Date(dateOfBirth);
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  
+  // Stichtag ist der 30.08. des aktuellen Schuljahres
+  // Wenn wir nach dem 30.08. sind, dann ist das aktuelle Schuljahr
+  // Wenn wir vor dem 30.08. sind, dann ist das vorherige Schuljahr relevant
+  const cutoffDate = new Date(currentYear, 7, 30); // 30. August (Monat 7 = August)
+  const schoolYear = now >= cutoffDate ? currentYear : currentYear - 1;
+  const schoolYearCutoff = new Date(schoolYear, 7, 30);
+  
+  // Alter am Stichtag berechnen
+  const age = schoolYearCutoff.getFullYear() - birthDate.getFullYear();
+  const monthDiff = schoolYearCutoff.getMonth() - birthDate.getMonth();
+  const dayDiff = schoolYearCutoff.getDate() - birthDate.getDate();
+  
+  const exactAge = age - (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? 1 : 0);
+  
+  // Excel-Formel: =WENN(T9>60;" 3";WENN(T9>55;"1";"0"))
+  if (exactAge > 60) return 3;
+  if (exactAge > 55) return 1;
+  return 0;
+}
 
 export default function Lehrerverwaltung() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -52,10 +106,15 @@ export default function Lehrerverwaltung() {
       lastName: "",
       shortName: "",
       email: "",
+      dateOfBirth: "",
       subjects: [],
       maxHours: 25,
       currentHours: 0,
       qualifications: [],
+      reductionHours: {
+        sV: 0, sL: 0, SB: 0, LK: 0, VG: 0, 
+        FB: 0, aE: 0, BA: 0, SO: 0
+      },
       isActive: true,
     },
   });
@@ -136,20 +195,34 @@ export default function Lehrerverwaltung() {
       lastName: teacher.lastName,
       shortName: teacher.shortName,
       email: teacher.email || "",
+      dateOfBirth: teacher.dateOfBirth || "",
       subjects: teacher.subjects,
       maxHours: teacher.maxHours,
       currentHours: teacher.currentHours,
       qualifications: teacher.qualifications,
+      reductionHours: teacher.reductionHours || {
+        sV: 0, sL: 0, SB: 0, LK: 0, VG: 0, 
+        FB: 0, aE: 0, BA: 0, SO: 0
+      },
       isActive: teacher.isActive,
     });
     setIsDialogOpen(true);
   };
 
   const handleSubmit = (data: TeacherFormData) => {
+    // Sicherstellen dass die berechnete Altersermäßigung im Payload enthalten ist
+    const finalData = {
+      ...data,
+      reductionHours: {
+        ...data.reductionHours,
+        aE: calculateAgeReduction(data.dateOfBirth || "")
+      }
+    };
+    
     if (editingTeacher) {
-      updateMutation.mutate({ id: editingTeacher.id, data });
+      updateMutation.mutate({ id: editingTeacher.id, data: finalData });
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(finalData);
     }
   };
 
@@ -264,6 +337,30 @@ export default function Lehrerverwaltung() {
                       />
                     </div>
 
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="dateOfBirth"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Geburtsdatum</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="date" value={field.value || ""} data-testid="input-date-of-birth" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="flex items-end">
+                        <div className="text-sm text-muted-foreground">
+                          <p>Altersermäßigung (automatisch):</p>
+                          <Badge variant="secondary" className="mt-1">
+                            {calculateAgeReduction(form.watch("dateOfBirth") || "")} Stunden
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+
                     <FormField
                       control={form.control}
                       name="subjects"
@@ -305,7 +402,7 @@ export default function Lehrerverwaltung() {
                               <Input 
                                 {...field} 
                                 type="number" 
-                                onChange={e => field.onChange(parseInt(e.target.value))}
+                                onChange={e => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
                                 data-testid="input-max-hours"
                               />
                             </FormControl>
@@ -323,7 +420,7 @@ export default function Lehrerverwaltung() {
                               <Input 
                                 {...field} 
                                 type="number" 
-                                onChange={e => field.onChange(parseInt(e.target.value))}
+                                onChange={e => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
                                 data-testid="input-current-hours"
                               />
                             </FormControl>
@@ -351,6 +448,96 @@ export default function Lehrerverwaltung() {
                         </FormItem>
                       )}
                     />
+
+                    {/* Ermäßigungsstunden */}
+                    <div className="space-y-4">
+                      <div className="border-t pt-4">
+                        <h3 className="text-lg font-medium mb-4">Ermäßigungsstunden</h3>
+                        <div className="grid grid-cols-3 gap-4">
+                          {reductionCategories.map((category) => (
+                            <div key={category.key}>
+                              <Label className="text-sm font-medium">
+                                {category.label} 
+                                <span className="text-xs text-muted-foreground block">
+                                  {category.description}
+                                </span>
+                              </Label>
+                              <Input 
+                                type="number"
+                                min="0"
+                                step="0.5"
+                                value={(form.watch("reductionHours") as any)?.[category.key] || 0}
+                                onChange={e => {
+                                  const currentReductions = form.getValues("reductionHours") || {};
+                                  form.setValue("reductionHours", {
+                                    ...currentReductions,
+                                    [category.key]: parseFloat(e.target.value) || 0
+                                  });
+                                }}
+                                data-testid={`input-reduction-${category.key}`}
+                                disabled={category.key === 'aE'} // Altersermäßigung automatisch berechnet
+                              />
+                            </div>
+                          ))}
+                          
+                          {/* Altersermäßigung (automatisch berechnet) */}
+                          <div>
+                            <Label className="text-sm font-medium">
+                              aE
+                              <span className="text-xs text-muted-foreground block">
+                                Altersermäßigung (automatisch)
+                              </span>
+                            </Label>
+                            <Input 
+                              type="number"
+                              value={calculateAgeReduction(form.watch("dateOfBirth") || "")}
+                              disabled
+                              data-testid="input-reduction-aE"
+                              className="bg-muted"
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* Gesamte Ermäßigung und endgültige Stundenzahl */}
+                        <div className="mt-4 p-3 bg-muted rounded-md">
+                          <div className="grid grid-cols-3 gap-4 text-sm">
+                            <div>
+                              <span className="font-medium">Gesamte Ermäßigung:</span>
+                              <div className="text-lg font-bold">
+                                {(() => {
+                                  const reductions = form.watch("reductionHours") || {};
+                                  const ageReduction = calculateAgeReduction(form.watch("dateOfBirth") || "");
+                                  const totalReduction = Object.entries(reductions).reduce((sum, [key, value]) => {
+                                    return sum + (key === 'aE' ? ageReduction : (value || 0));
+                                  }, 0);
+                                  return totalReduction.toFixed(1);
+                                })()} Stunden
+                              </div>
+                            </div>
+                            <div>
+                              <span className="font-medium">Grundstunden:</span>
+                              <div className="text-lg font-bold">
+                                {form.watch("maxHours") || 25} Stunden
+                              </div>
+                            </div>
+                            <div>
+                              <span className="font-medium">Endgültige Stundenzahl:</span>
+                              <div className="text-lg font-bold text-primary">
+                                {(() => {
+                                  const maxHours = form.watch("maxHours") || 25;
+                                  const reductions = form.watch("reductionHours") || {};
+                                  const ageReduction = calculateAgeReduction(form.watch("dateOfBirth") || "");
+                                  const totalReduction = Object.entries(reductions).reduce((sum, [key, value]) => {
+                                    return sum + (key === 'aE' ? ageReduction : (value || 0));
+                                  }, 0);
+                                  return Math.max(0, maxHours - totalReduction).toFixed(1);
+                                })()} Stunden
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
                     <FormField
                       control={form.control}
