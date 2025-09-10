@@ -155,44 +155,48 @@ export default function CSVImport() {
                 {/* File Upload */}
                 <div className="space-y-2">
                   <Label>CSV Datei</Label>
-                  <div
-                    className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                      dragActive
-                        ? "border-primary bg-primary/5"
-                        : "border-input hover:border-primary/50"
-                    }`}
-                    onDragEnter={handleDrag}
-                    onDragLeave={handleDrag}
-                    onDragOver={handleDrag}
-                    onDrop={handleDrop}
-                    data-testid="file-upload-area"
-                  >
-                    {selectedFile ? (
-                      <div className="flex items-center justify-center space-x-2">
-                        <FileText className="text-primary h-8 w-8" />
-                        <div>
-                          <p className="font-medium text-foreground">{selectedFile.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {(selectedFile.size / 1024).toFixed(1)} KB
-                          </p>
+                  <div className="relative">
+                    <div
+                      className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+                        dragActive
+                          ? "border-primary bg-primary/5"
+                          : "border-input hover:border-primary/50"
+                      }`}
+                      onDragEnter={handleDrag}
+                      onDragLeave={handleDrag}
+                      onDragOver={handleDrag}
+                      onDrop={handleDrop}
+                      onClick={() => document.getElementById('file-input')?.click()}
+                      data-testid="file-upload-area"
+                    >
+                      {selectedFile ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <FileText className="text-primary h-8 w-8" />
+                          <div>
+                            <p className="font-medium text-foreground">{selectedFile.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {(selectedFile.size / 1024).toFixed(1)} KB
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <>
-                        <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Datei hier ablegen oder klicken zum Auswählen
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Nur CSV-Dateien werden unterstützt
-                        </p>
-                      </>
-                    )}
+                      ) : (
+                        <>
+                          <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Datei hier ablegen oder klicken zum Auswählen
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Nur CSV-Dateien werden unterstützt
+                          </p>
+                        </>
+                      )}
+                    </div>
                     <input
+                      id="file-input"
                       type="file"
                       accept=".csv"
                       onChange={handleFileChange}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      className="hidden"
                       data-testid="input-file"
                     />
                   </div>
