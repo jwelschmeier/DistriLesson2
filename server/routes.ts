@@ -469,6 +469,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Subject normalization for database lookup
+  const findSubjectByName = (subjects: any[], semesterName: string, baseName: string) => {
+    // Comprehensive subject mapping for German schools
+    const subjectAliases: Record<string, string[]> = {
+      'D': ['D', 'DE', 'Deutsch'],
+      'D1': ['D1', 'DE1', 'Deutsch1'], 
+      'D2': ['D2', 'DE2', 'Deutsch2'],
+      'M': ['M', 'MA', 'Mathe', 'Mathematik'],
+      'M1': ['M1', 'MA1', 'Mathe1'],
+      'M2': ['M2', 'MA2', 'Mathe2'], 
+      'E': ['E', 'EN', 'Englisch', 'English'],
+      'E1': ['E1', 'EN1', 'Englisch1'],
+      'E2': ['E2', 'EN2', 'Englisch2'],
+      'L': ['L', 'F', 'FR', 'LA', 'FS', 'Französisch', 'Latein', 'Fremdsprache'],
+      'L1': ['L1', 'F1', 'FR1', 'LA1'],
+      'L2': ['L2', 'F2', 'FR2', 'LA2'],
+      'PK': ['PK', 'SW', 'Politik', 'Sozialwissenschaften'],
+      'PK1': ['PK1', 'SW1'], 
+      'PK2': ['PK2', 'SW2'],
+      'TC': ['TC', 'TX', 'Technik'],
+      'TC1': ['TC1', 'TX1'],
+      'TC2': ['TC2', 'TX2'],
+      'NW': ['NW', 'BI', 'BIO', 'CH', 'PH', 'Naturwissenschaften'],
+      'NW1': ['NW1', 'BI1', 'CH1', 'PH1'],
+      'NW2': ['NW2', 'BI2', 'CH2', 'PH2'],
+      'GE': ['GE', 'Geschichte'],
+      'GE1': ['GE1'], 'GE2': ['GE2'],
+      'EK': ['EK', 'Erdkunde', 'Geografie'],
+      'EK1': ['EK1'], 'EK2': ['EK2'],
+      'SP': ['SP', 'Sport'],
+      'SP1': ['SP1'], 'SP2': ['SP2'],
+      'KU': ['KU', 'Kunst'],
+      'KU1': ['KU1'], 'KU2': ['KU2'],
+      'MU': ['MU', 'Musik'],
+      'MU1': ['MU1'], 'MU2': ['MU2'],
+      'KR': ['KR', 'katholische Religion'],
+      'KR1': ['KR1'], 'KR2': ['KR2'],
+      'ER': ['ER', 'evangelische Religion'],
+      'ER1': ['ER1'], 'ER2': ['ER2']
+    };
+
+    // Try semester name first with all aliases
+    if (subjectAliases[semesterName]) {
+      for (const alias of subjectAliases[semesterName]) {
+        const found = subjects.find(s => s.shortName === alias);
+        if (found) return found;
+      }
+    }
+
+    // Try base name with all aliases
+    if (subjectAliases[baseName]) {
+      for (const alias of subjectAliases[baseName]) {
+        const found = subjects.find(s => s.shortName === alias);
+        if (found) return found;
+      }
+    }
+
+    // Last resort: direct name match
+    return subjects.find(s => s.shortName === semesterName) || 
+           subjects.find(s => s.shortName === baseName);
+  };
+
   // Helper function for optimization with workload tracking
   const findQualifiedTeacher = (baseSubject: string, teachers: Teacher[], teacherWorkloads: Map<string, number>, semesterHours: number) => {
     // Teacher subject mapping - normalize German subject abbreviations
@@ -606,12 +668,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               for (let semester = 1; semester <= 2; semester++) {
                 const semesterSubjectName = semesterSubjects[baseSubject].semesters[semester - 1];
                 
-                // Find or create subject in database
-                let subject = subjects.find(s => s.shortName === semesterSubjectName);
-                if (!subject) {
-                  // Fallback to base subject
-                  subject = subjects.find(s => s.shortName === baseSubject);
-                }
+                // Enhanced subject lookup with normalization
+                let subject = findSubjectByName(subjects, semesterSubjectName, baseSubject);
                 
                 if (subject) {
                   const assignmentPromise = storage.createAssignment({
