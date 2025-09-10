@@ -216,6 +216,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/assignments/:id", async (req, res) => {
+    try {
+      const assignmentData = insertAssignmentSchema.partial().parse(req.body);
+      const assignment = await storage.updateAssignment(req.params.id, assignmentData);
+      res.json(assignment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update assignment" });
+    }
+  });
+
+  app.delete("/api/assignments/:id", async (req, res) => {
+    try {
+      await storage.deleteAssignment(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete assignment" });
+    }
+  });
+
   // Statistics route
   app.get("/api/stats", async (req, res) => {
     try {
