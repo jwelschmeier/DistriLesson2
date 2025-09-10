@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, School, Users, Search, Filter } from "lucide-react";
+import { Plus, Edit, Trash2, School, Users, Search, Filter, Calendar } from "lucide-react";
+import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { insertClassSchema, insertStudentSchema, type Class, type Student, type Teacher, type InsertClass, type InsertStudent } from "@shared/schema";
 import { z } from "zod";
@@ -632,6 +633,16 @@ export default function Klassenverwaltung() {
                             )}
 
                             <div className="flex items-center space-x-2 pt-3">
+                              <Link href={`/stundenplaene?tab=class&id=${classData.id}`}>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  data-testid={`button-plan-class-${classData.id}`}
+                                  title="Stundenplan anzeigen"
+                                >
+                                  <Calendar className="h-4 w-4" />
+                                </Button>
+                              </Link>
                               <Button
                                 variant="outline"
                                 size="sm"

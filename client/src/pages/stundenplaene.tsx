@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation, useSearch } from "wouter";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,10 @@ interface ExtendedAssignment extends Assignment {
 }
 
 export default function Stundenplaene() {
+  const [location] = useLocation();
+  const searchParams = new URLSearchParams(useSearch());
+  
+  const [activeTab, setActiveTab] = useState<string>("teacher");
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>("");
   const [selectedClassId, setSelectedClassId] = useState<string>("");
 
@@ -35,6 +40,34 @@ export default function Stundenplaene() {
   const { data: assignments, isLoading: assignmentsLoading } = useQuery<Assignment[]>({
     queryKey: ["/api/assignments"],
   });
+
+  // Handle URL query parameters for deep linking
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const id = searchParams.get('id');
+    
+    // Set active tab if specified in URL
+    if (tab && (tab === 'teacher' || tab === 'class')) {
+      setActiveTab(tab);
+    }
+    
+    // Set selected teacher/class if ID is provided and data is loaded
+    if (id) {
+      if (tab === 'teacher' && teachers) {
+        // Check if the teacher ID exists in the data
+        const teacherExists = teachers.find(teacher => teacher.id === id);
+        if (teacherExists) {
+          setSelectedTeacherId(id);
+        }
+      } else if (tab === 'class' && classes) {
+        // Check if the class ID exists in the data
+        const classExists = classes.find(cls => cls.id === id);
+        if (classExists) {
+          setSelectedClassId(id);
+        }
+      }
+    }
+  }, [searchParams, teachers, classes]);
 
   // Create lookup maps for efficient joins
   const teacherMap = useMemo(() => {
@@ -148,7 +181,7 @@ export default function Stundenplaene() {
 
         {/* Main Content */}
         <div className="p-6">
-          <Tabs defaultValue="teacher" className="w-full" data-testid="tabs-stundenplaene">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" data-testid="tabs-stundenplaene">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="teacher" data-testid="tab-lehrer">
                 <Presentation className="h-4 w-4 mr-2" />
