@@ -174,18 +174,18 @@ export default function Klassenverwaltung() {
       grade: classData.grade,
       studentCount: classData.studentCount,
       subjectHours: classData.subjectHours,
-      classTeacher1Id: classData.classTeacher1Id || undefined,
-      classTeacher2Id: classData.classTeacher2Id || undefined,
+      classTeacher1Id: classData.classTeacher1Id || "none",
+      classTeacher2Id: classData.classTeacher2Id || "none",
     });
     setIsClassDialogOpen(true);
   };
 
   const handleClassSubmit = (data: ClassFormData) => {
-    // Convert empty strings to null for teacher IDs to explicitly clear assignments
+    // Convert "none" values to null for teacher IDs to explicitly clear assignments
     const sanitizedData = {
       ...data,
-      classTeacher1Id: data.classTeacher1Id === "" ? null : data.classTeacher1Id,
-      classTeacher2Id: data.classTeacher2Id === "" ? null : data.classTeacher2Id,
+      classTeacher1Id: data.classTeacher1Id === "none" ? null : data.classTeacher1Id,
+      classTeacher2Id: data.classTeacher2Id === "none" ? null : data.classTeacher2Id,
     };
     
     if (editingClass) {
@@ -423,14 +423,14 @@ export default function Klassenverwaltung() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Klassenlehrer 1</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <Select onValueChange={field.onChange} value={field.value || "none"}>
                               <FormControl>
                                 <SelectTrigger data-testid="select-class-teacher-1">
                                   <SelectValue placeholder="Klassenlehrer 1 auswählen..." />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="">Kein Klassenlehrer</SelectItem>
+                                <SelectItem value="none">Kein Klassenlehrer</SelectItem>
                                 {teachers?.map(teacher => (
                                   <SelectItem key={teacher.id} value={teacher.id}>
                                     {teacher.firstName} {teacher.lastName} ({teacher.shortName})
@@ -449,14 +449,14 @@ export default function Klassenverwaltung() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Klassenlehrer 2</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <Select onValueChange={field.onChange} value={field.value || "none"}>
                               <FormControl>
                                 <SelectTrigger data-testid="select-class-teacher-2">
                                   <SelectValue placeholder="Klassenlehrer 2 auswählen..." />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="">Kein Klassenlehrer</SelectItem>
+                                <SelectItem value="none">Kein Klassenlehrer</SelectItem>
                                 {teachers?.map(teacher => (
                                   <SelectItem key={teacher.id} value={teacher.id}>
                                     {teacher.firstName} {teacher.lastName} ({teacher.shortName})
