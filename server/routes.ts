@@ -196,11 +196,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         csvContent = csvContent.slice(1);
       }
       
-      // Parse CSV content (handle semicolon-separated values with quotes)
+      // Parse CSV content (auto-detect separator: semicolon or comma)
       const lines = csvContent.split("\n").filter((line: string) => line.trim());
-      const headers = lines[0].split(";").map((h: string) => h.trim().replace(/^"|"$/g, ''));
+      const firstLine = lines[0];
+      const separator = firstLine.includes(';') ? ';' : ',';
+      
+      const headers = firstLine.split(separator).map((h: string) => h.trim().replace(/^"|"$/g, ''));
       const rows = lines.slice(1).map((line: string) => 
-        line.split(";").map((cell: string) => cell.trim().replace(/^"|"$/g, ''))
+        line.split(separator).map((cell: string) => cell.trim().replace(/^"|"$/g, ''))
       ).filter(row => row.length > 1 && row[0]); // Filter out empty rows or rows without first name
 
       let result;
@@ -303,13 +306,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             result = await storage.bulkCreateSubjectsWithConflictHandling(subjectData);
           } else {
             // Standard simple subjects format
-            const subjectData = rows.map((row: string[]) => ({
-              name: row[0] || "",
-              shortName: row[1] || "",
-              category: row[2] || "Hauptfach",
-              hoursPerWeek: {},
-            }));
-            result = await storage.bulkCreateSubjects(subjectData);
+            const subjectData = rows
+              .filter(row => row[0] && row[1] && row[0] !== '**') // Skip empty entries and "**"
+              .map((row: string[]) => ({
+                name: row[1] || row[0], // Use full name (column 1) or fallback to shortName
+                shortName: row[0],
+                category: row[2] || "Hauptfach",
+                hoursPerWeek: {},
+              }));
+            
+            if (subjectData.length === 0) {
+              return res.status(400).json({ error: "No valid subjects found in CSV" });
+            }
+            
+            result = await storage.bulkCreateSubjectsWithConflictHandling(subjectData);
           }
           break;
 
