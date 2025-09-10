@@ -24,6 +24,9 @@ const teacherFormSchema = insertTeacherSchema.extend({
   subjects: z.array(z.string()).min(1, "Mindestens ein Fach muss ausgewählt werden"),
   qualifications: z.array(z.string()).optional(),
   dateOfBirth: z.string().optional(),
+  maxHours: z.string().optional(), // decimal field as string
+  currentHours: z.string().optional(), // decimal field as string
+  notes: z.string().optional(),
   reductionHours: z.object({
     sV: z.number().optional(), // Schülervertretung
     sL: z.number().optional(), // Schulleitung  
@@ -63,7 +66,7 @@ const reductionCategories = [
 // - 0,5 Stunden: nach Vollendung des 55. Lebensjahres bei mindestens 50% Beschäftigungsumfang
 // - 2,0 Stunden: nach Vollendung des 60. Lebensjahres und mindestens 75% Beschäftigungsumfang
 // - 1,5 Stunden: nach Vollendung des 60. Lebensjahres und mindestens 50% Beschäftigungsumfang
-function calculateAgeReduction(dateOfBirth: string, currentHours: number = 0, maxHours: number = 25): number {
+function calculateAgeReduction(dateOfBirth: string, currentHours: string | number = "0", maxHours: string | number = "25"): number {
   if (!dateOfBirth) return 0;
   
   const birthDate = new Date(dateOfBirth);
@@ -84,8 +87,10 @@ function calculateAgeReduction(dateOfBirth: string, currentHours: number = 0, ma
   
   const exactAge = age - (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? 1 : 0);
   
-  // Beschäftigungsumfang berechnen
-  const employmentPercentage = maxHours > 0 ? (currentHours / maxHours) * 100 : 0;
+  // Beschäftigungsumfang berechnen - String zu Number konvertieren
+  const currentHoursNum = typeof currentHours === 'string' ? parseFloat(currentHours) || 0 : currentHours;
+  const maxHoursNum = typeof maxHours === 'string' ? parseFloat(maxHours) || 25 : maxHours;
+  const employmentPercentage = maxHoursNum > 0 ? (currentHoursNum / maxHoursNum) * 100 : 0;
   
   // Altersermäßigung nach neuen Regeln
   if (exactAge >= 60) {
@@ -124,8 +129,9 @@ export default function Lehrerverwaltung() {
       email: "",
       dateOfBirth: "",
       subjects: [],
-      maxHours: 25,
-      currentHours: 0,
+      maxHours: "25.0",
+      currentHours: "0.0",
+      notes: "",
       qualifications: [],
       reductionHours: {
         sV: 0, sL: 0, SB: 0, LK: 0, VG: 0, 
@@ -215,6 +221,7 @@ export default function Lehrerverwaltung() {
       subjects: teacher.subjects,
       maxHours: teacher.maxHours,
       currentHours: teacher.currentHours,
+      notes: teacher.notes || "",
       qualifications: teacher.qualifications,
       reductionHours: teacher.reductionHours || {
         sV: 0, sL: 0, SB: 0, LK: 0, VG: 0, 
@@ -263,7 +270,7 @@ export default function Lehrerverwaltung() {
   const totalTeachers = teachers?.length || 0;
   const activeTeachers = teachers?.filter(t => t.isActive).length || 0;
   const averageWorkload = teachers?.length ? 
-    teachers.reduce((sum, t) => sum + (t.currentHours / t.maxHours), 0) / teachers.length * 100 : 0;
+    teachers.reduce((sum, t) => sum + (parseFloat(t.currentHours) / parseFloat(t.maxHours)), 0) / teachers.length * 100 : 0;
 
   return (
     <div className="flex h-screen bg-background">
@@ -379,8 +386,8 @@ export default function Lehrerverwaltung() {
                           </Badge>
                           <p className="text-xs mt-1">
                             {(() => {
-                              const currentHours = form.watch("currentHours") || 0;
-                              const maxHours = form.watch("maxHours") || 25;
+                              const currentHours = parseFloat(form.watch("currentHours") || "0");
+                              const maxHours = parseFloat(form.watch("maxHours") || "25");
                               const percentage = maxHours > 0 ? ((currentHours / maxHours) * 100).toFixed(1) : 0;
                               return `Beschäftigungsumfang: ${percentage}%`;
                             })()}
@@ -430,7 +437,8 @@ export default function Lehrerverwaltung() {
                               <Input 
                                 {...field} 
                                 type="number" 
-                                onChange={e => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
+                                step="0.5"
+                                onChange={e => field.onChange(e.target.value)}
                                 data-testid="input-max-hours"
                               />
                             </FormControl>
@@ -448,7 +456,8 @@ export default function Lehrerverwaltung() {
                               <Input 
                                 {...field} 
                                 type="number" 
-                                onChange={e => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
+                                step="0.5"
+                                onChange={e => field.onChange(e.target.value)}
                                 data-testid="input-current-hours"
                               />
                             </FormControl>
@@ -470,6 +479,25 @@ export default function Lehrerverwaltung() {
                               onChange={e => field.onChange(e.target.value.split('\n').filter(q => q.trim()))}
                               placeholder="z.B. Lehramt Sekundarstufe I&#10;Fachleitung Mathematik"
                               data-testid="textarea-qualifications"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="notes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Notizen</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              {...field}
+                              placeholder="Freie Anmerkungen zur Lehrkraft..."
+                              rows={3}
+                              data-testid="textarea-notes"
                             />
                           </FormControl>
                           <FormMessage />
@@ -558,8 +586,8 @@ export default function Lehrerverwaltung() {
                               <span className="font-medium">Endgültige Stundenzahl:</span>
                               <div className="text-lg font-bold text-primary">
                                 {(() => {
-                                  const maxHours = form.watch("maxHours") || 25;
-                                  const currentHours = form.watch("currentHours") || 0;
+                                  const maxHours = parseFloat(form.watch("maxHours") || "25");
+                                  const currentHours = parseFloat(form.watch("currentHours") || "0");
                                   const reductions = form.watch("reductionHours") || {};
                                   const ageReduction = calculateAgeReduction(form.watch("dateOfBirth") || "", currentHours, maxHours);
                                   const totalReduction = Object.entries(reductions).reduce((sum, [key, value]) => {
@@ -739,7 +767,7 @@ export default function Lehrerverwaltung() {
                     </thead>
                     <tbody className="bg-card divide-y divide-border">
                       {filteredTeachers.map((teacher) => {
-                        const workloadPercentage = (teacher.currentHours / teacher.maxHours) * 100;
+                        const workloadPercentage = (parseFloat(teacher.currentHours) / parseFloat(teacher.maxHours)) * 100;
                         return (
                           <tr key={teacher.id} data-testid={`row-teacher-${teacher.id}`}>
                             <td className="px-6 py-4 whitespace-nowrap">

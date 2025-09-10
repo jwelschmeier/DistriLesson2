@@ -11,8 +11,8 @@ export const teachers = pgTable("teachers", {
   email: text("email"),
   dateOfBirth: date("date_of_birth"),
   subjects: json("subjects").$type<string[]>().notNull().default([]),
-  maxHours: integer("max_hours").notNull().default(25),
-  currentHours: integer("current_hours").notNull().default(0),
+  maxHours: decimal("max_hours", { precision: 4, scale: 1 }).notNull().default('25.0'),
+  currentHours: decimal("current_hours", { precision: 4, scale: 1 }).notNull().default('0.0'),
   qualifications: json("qualifications").$type<string[]>().notNull().default([]),
   reductionHours: json("reduction_hours").$type<{
     sV?: number; // Schülervertretung
@@ -25,6 +25,7 @@ export const teachers = pgTable("teachers", {
     BA?: number; // Besondere Aufgaben
     SO?: number; // Sonstiges
   }>().notNull().default({}),
+  notes: text("notes").default(''),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
