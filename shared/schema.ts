@@ -65,6 +65,7 @@ export const assignments = pgTable("assignments", {
   classId: varchar("class_id").references(() => classes.id).notNull(),
   subjectId: varchar("subject_id").references(() => subjects.id).notNull(),
   hoursPerWeek: integer("hours_per_week").notNull(),
+  semester: varchar("semester", { length: 2 }).notNull().default("1"), // "1" for 1st semester, "2" for 2nd semester
   isOptimized: boolean("is_optimized").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });

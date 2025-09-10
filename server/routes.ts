@@ -469,7 +469,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Optimization endpoint
+  // Helper function for optimization
+  const findQualifiedTeacher = (baseSubject: string, teachers: Teacher[]) => {
+    // Teacher subject mapping - normalize German subject abbreviations
+    const subjectMappings: Record<string, string[]> = {
+      'D': ['D', 'DE', 'Deutsch'],
+      'M': ['M', 'MA', 'Mathe', 'Mathematik'],
+      'E': ['E', 'EN', 'Englisch', 'English'],
+      'L': ['L', 'F', 'FS', 'Französisch', 'Latein'],
+      'NW': ['NW', 'BI', 'BIO', 'CH', 'Chemie', 'PH', 'Physik'],
+      'GE': ['GE', 'Geschichte'],
+      'EK': ['EK', 'Erdkunde', 'Geografie'],
+      'PK': ['PK', 'Politik', 'SW', 'Sozialwissenschaften'],
+      'SP': ['SP', 'Sport'],
+      'KU': ['KU', 'Kunst'],
+      'MU': ['MU', 'Musik'],
+      'TC': ['TC', 'Technik', 'Tx'],
+      'KR': ['KR', 'katholische Religion'],
+      'ER': ['ER', 'evangelische Religion']
+    };
+    
+    const possibleSubjects = subjectMappings[baseSubject] || [baseSubject];
+    
+    return teachers.find((teacher: Teacher) => 
+      teacher.subjects.some((teacherSubjectStr: string) => 
+        teacherSubjectStr.split(/[,;]/).some((sub: string) => 
+          possibleSubjects.some((possible: string) => 
+            sub.trim().toUpperCase().includes(possible.toUpperCase()) ||
+            possible.toUpperCase().includes(sub.trim().toUpperCase())
+          )
+        )
+      )
+    );
+  };
+
+  // Optimization endpoint - Realistic semester-based optimization
   app.post("/api/optimize", async (req, res) => {
     try {
       // Get current data for optimization
@@ -483,70 +517,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.deleteAssignment(assignment.id);
       }
       
-      // Simple optimization: Create basic assignments for existing subjects
       let createdAssignments = 0;
-      const assignmentPromises = [];
+      const assignmentPromises: Promise<any>[] = [];
       
-      // Get all teacher subjects (handle comma-separated format)
-      const allTeacherSubjects = teachers.flatMap(t => 
-        t.subjects.flatMap(s => s.split(/[,;]/).map(sub => sub.trim()).filter(Boolean))
-      );
-      const uniqueSubjects = Array.from(new Set(allTeacherSubjects));
+      console.log("=== SEMESTER-BASED OPTIMIZATION STARTING ===");
+      console.log(`Teachers: ${teachers.length}, Classes: ${classes.length}, Subjects: ${subjects.length}`);
       
-      console.log("Available subjects from teachers:", uniqueSubjects);
-      console.log("Available subjects in database:", subjects.map(s => s.shortName));
+      // Define realistic semester subject mappings for Realschule
+      const semesterSubjects: Record<string, { semesters: string[], hours: number }> = {
+        'D': { semesters: ['D1', 'D2'], hours: 4 },
+        'M': { semesters: ['M1', 'M2'], hours: 4 }, 
+        'E': { semesters: ['E1', 'E2'], hours: 4 },
+        'L': { semesters: ['L1', 'L2'], hours: 3 }, // Second language (French/Latin)
+        'NW': { semesters: ['NW1', 'NW2'], hours: 2 }, // Natural Sciences
+        'GE': { semesters: ['GE1', 'GE2'], hours: 2 }, // History
+        'EK': { semesters: ['EK1', 'EK2'], hours: 1 }, // Geography
+        'PK': { semesters: ['PK1', 'PK2'], hours: 2 }, // Politics
+        'SP': { semesters: ['SP1', 'SP2'], hours: 3 }, // Sports
+        'KU': { semesters: ['KU1', 'KU2'], hours: 2 }, // Art
+        'MU': { semesters: ['MU1', 'MU2'], hours: 2 }, // Music
+        'TC': { semesters: ['TC1', 'TC2'], hours: 2 }, // Technology
+        'KR': { semesters: ['KR1', 'KR2'], hours: 2 }, // Catholic Religion
+        'ER': { semesters: ['ER1', 'ER2'], hours: 2 }  // Protestant Religion
+      };
       
-      // For each class, create basic assignments
+      // For each class, create semester-based assignments
       for (const classData of classes) {
-        console.log(`Processing class ${classData.name}, subjectHours:`, classData.subjectHours);
+        console.log(`\n=== Processing class ${classData.name} (Grade ${classData.grade}) ===`);
         
-        // If class has no subject hours, create some basic ones
-        const classSubjects = Object.keys(classData.subjectHours).length > 0 
-          ? classData.subjectHours 
-          : { 'M': 4, 'D': 5, 'E': 4, 'NW': 2 }; // Basic subject hours
+        // Determine which subjects this grade level needs
+        let gradeSubjects: string[] = [];
+        if (classData.grade >= 5 && classData.grade <= 10) {
+          gradeSubjects = ['D', 'M', 'E', 'SP'];
           
-        for (const [subjectName, hoursPerWeek] of Object.entries(classSubjects)) {
-          if (hoursPerWeek > 0) {
-            // Find subject in database
-            const subject = subjects.find(s => 
-              s.name === subjectName || 
-              s.shortName === subjectName ||
-              s.name.includes(subjectName) ||
-              s.shortName.includes(subjectName)
-            );
+          if (classData.grade >= 6) {
+            gradeSubjects.push('NW', 'GE', 'MU', 'KU');
+          }
+          if (classData.grade >= 7) {
+            gradeSubjects.push('L', 'TC', 'KR');
+          }
+          if (classData.grade >= 8) {
+            gradeSubjects.push('EK', 'PK');
+          }
+        }
+        
+        // Create assignments for each subject (both semesters with same teacher)
+        for (const baseSubject of gradeSubjects) {
+          if (semesterSubjects[baseSubject]) {
+            const qualifiedTeacher = findQualifiedTeacher(baseSubject, teachers);
             
-            // Find qualified teacher (handle comma-separated subjects)
-            const qualifiedTeacher = teachers.find(t => 
-              t.subjects.some(subjectStr => 
-                subjectStr.split(/[,;]/).some(sub => 
-                  sub.trim().toUpperCase() === subjectName.toUpperCase()
-                )
-              )
-            );
-            
-            console.log(`Subject: ${subjectName}, Found in DB: ${!!subject}, Qualified teacher: ${!!qualifiedTeacher}`);
-            
-            if (subject && qualifiedTeacher) {
-              const assignmentPromise = storage.createAssignment({
-                teacherId: qualifiedTeacher.id,
-                classId: classData.id,
-                subjectId: subject.id,
-                hoursPerWeek: Math.floor(hoursPerWeek),
-                isOptimized: true
-              });
-              assignmentPromises.push(assignmentPromise);
-              createdAssignments++;
-            } else if (subject && teachers.length > 0) {
-              // Fallback: assign any teacher if no qualified teacher found
-              const assignmentPromise = storage.createAssignment({
-                teacherId: teachers[0].id, // Use first available teacher
-                classId: classData.id,
-                subjectId: subject.id,
-                hoursPerWeek: Math.floor(hoursPerWeek),
-                isOptimized: true
-              });
-              assignmentPromises.push(assignmentPromise);
-              createdAssignments++;
+            if (qualifiedTeacher) {
+              console.log(`  ${baseSubject}: Assigned to ${qualifiedTeacher.shortName} (${qualifiedTeacher.firstName} ${qualifiedTeacher.lastName})`);
+              
+              // Create assignments for both semesters with the same teacher
+              for (let semester = 1; semester <= 2; semester++) {
+                const semesterSubjectName = semesterSubjects[baseSubject].semesters[semester - 1];
+                
+                // Find or create subject in database
+                let subject = subjects.find(s => s.shortName === semesterSubjectName);
+                if (!subject) {
+                  // Fallback to base subject
+                  subject = subjects.find(s => s.shortName === baseSubject);
+                }
+                
+                if (subject) {
+                  const assignmentPromise = storage.createAssignment({
+                    teacherId: qualifiedTeacher.id,
+                    classId: classData.id,
+                    subjectId: subject.id,
+                    hoursPerWeek: semesterSubjects[baseSubject].hours,
+                    semester: semester.toString(),
+                    isOptimized: true
+                  });
+                  assignmentPromises.push(assignmentPromise);
+                  createdAssignments++;
+                } else {
+                  console.log(`    Warning: Subject ${semesterSubjectName}/${baseSubject} not found in database`);
+                }
+              }
+            } else {
+              console.log(`  ${baseSubject}: No qualified teacher found`);
+              
+              // Fallback: assign any available teacher for continuity
+              if (teachers.length > 0) {
+                const fallbackTeacher = teachers[Math.floor(Math.random() * teachers.length)];
+                console.log(`    Fallback: Assigned to ${fallbackTeacher.shortName}`);
+                
+                for (let semester = 1; semester <= 2; semester++) {
+                  let subject = subjects.find(s => s.shortName === baseSubject);
+                  if (subject && fallbackTeacher) {
+                    const assignmentPromise = storage.createAssignment({
+                      teacherId: fallbackTeacher.id,
+                      classId: classData.id,
+                      subjectId: subject.id,
+                      hoursPerWeek: semesterSubjects[baseSubject].hours,
+                      semester: semester.toString(),
+                      isOptimized: true
+                    });
+                    assignmentPromises.push(assignmentPromise);
+                    createdAssignments++;
+                  }
+                }
+              }
             }
           }
         }
