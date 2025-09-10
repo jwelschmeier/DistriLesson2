@@ -469,8 +469,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Helper function for optimization with debug
-  const findQualifiedTeacher = (baseSubject: string, teachers: Teacher[]) => {
+  // Helper function for optimization with workload tracking
+  const findQualifiedTeacher = (baseSubject: string, teachers: Teacher[], teacherWorkloads: Map<string, number>, semesterHours: number) => {
     // Teacher subject mapping - normalize German subject abbreviations
     const subjectMappings: Record<string, string[]> = {
       'D': ['D', 'DE', 'Deutsch'],
@@ -492,6 +492,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const possibleSubjects = subjectMappings[baseSubject] || [baseSubject];
     
     const qualifiedTeacher = teachers.find((teacher: Teacher) => {
+      // CHECK WORKLOAD LIMITS FIRST
+      const currentWorkload = teacherWorkloads.get(teacher.id) || 0;
+      const totalHoursNeeded = currentWorkload + (semesterHours * 2); // Both semesters
+      
+      if (totalHoursNeeded > parseFloat(teacher.maxHours)) {
+        console.log(`    WORKLOAD LIMIT: ${teacher.shortName} (${totalHoursNeeded.toFixed(1)}h > ${teacher.maxHours}h)`);
+        return false;
+      }
+      
       // HARDCODED FIX: BEU should never teach KR or ER (only E, GE, EK)
       if ((baseSubject === 'KR' || baseSubject === 'ER') && teacher.shortName === 'BEU') {
         console.log(`    BLOCKED: ${teacher.shortName} cannot teach ${baseSubject} (only E, GE, EK)`);
@@ -526,6 +535,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let createdAssignments = 0;
       const assignmentPromises: Promise<any>[] = [];
+      
+      // Initialize workload tracking to respect teacher hour limits
+      const teacherWorkloads = new Map<string, number>();
+      teachers.forEach(teacher => {
+        teacherWorkloads.set(teacher.id, 0); // Start with 0 hours
+      });
       
       console.log("=== SEMESTER-BASED OPTIMIZATION STARTING ===");
       console.log(`Teachers: ${teachers.length}, Classes: ${classes.length}, Subjects: ${subjects.length}`);
@@ -576,10 +591,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               !(t.shortName === 'BEU' && (baseSubject === 'KR' || baseSubject === 'ER'))
             );
             
-            const qualifiedTeacher = findQualifiedTeacher(baseSubject, teacherPool);
+            const semesterHours = semesterSubjects[baseSubject].hours;
+            const qualifiedTeacher = findQualifiedTeacher(baseSubject, teacherPool, teacherWorkloads, semesterHours);
             
             if (qualifiedTeacher) {
-              // Teacher assigned successfully
+              // Teacher assigned successfully - UPDATE WORKLOAD TRACKER
+              const hoursForBothSemesters = semesterHours * 2;
+              const currentWorkload = teacherWorkloads.get(qualifiedTeacher.id) || 0;
+              teacherWorkloads.set(qualifiedTeacher.id, currentWorkload + hoursForBothSemesters);
+              
+              console.log(`  ${baseSubject}: ${qualifiedTeacher.shortName} (${currentWorkload + hoursForBothSemesters}h / ${qualifiedTeacher.maxHours}h)`);
               
               // Create assignments for both semesters with the same teacher
               for (let semester = 1; semester <= 2; semester++) {
