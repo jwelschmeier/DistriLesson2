@@ -226,6 +226,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function for planstellen calculation
+  async function performPlanstellenCalculation(teachers: any[], classes: any[], subjects: any[], storage: any) {
+    const results = [];
+    
+    // Simple example calculation: Calculate required hours per grade and subject
+    const gradeSubjectHours: Record<string, Record<string, number>> = {};
+    
+    // Calculate total hours needed per grade and subject
+    for (const classData of classes) {
+      const grade = classData.grade.toString();
+      if (!gradeSubjectHours[grade]) {
+        gradeSubjectHours[grade] = {};
+      }
+      
+      // Add subject hours from class
+      for (const [subjectName, hours] of Object.entries(classData.subjectHours)) {
+        if (!gradeSubjectHours[grade][subjectName]) {
+          gradeSubjectHours[grade][subjectName] = 0;
+        }
+        gradeSubjectHours[grade][subjectName] += hours as number;
+      }
+    }
+    
+    // Create planstelle entries for each grade/subject combination
+    for (const [grade, subjectHours] of Object.entries(gradeSubjectHours)) {
+      for (const [subjectName, requiredHours] of Object.entries(subjectHours)) {
+        const subject = subjects.find((s: any) => s.name === subjectName || s.shortName === subjectName);
+        
+        // Calculate available hours (simplified: sum all teachers with this subject)
+        const availableHours = teachers
+          .filter((teacher: any) => teacher.subjects.includes(subjectName))
+          .reduce((sum: number, teacher: any) => sum + parseFloat(teacher.currentHours || "0"), 0);
+        
+        const planstelle = await storage.createPlanstelle({
+          subjectId: subject?.id || null,
+          grade: parseInt(grade),
+          category: "grundbedarf",
+          component: `${subjectName} - Klasse ${grade}`,
+          lineType: "requirement",
+          formula: { description: `Calculated for grade ${grade}` },
+          color: "#3B82F6",
+          requiredHours: requiredHours.toString(),
+          availableHours: availableHours.toString(),
+          deficit: (requiredHours - availableHours).toString(),
+        });
+        
+        results.push(planstelle);
+      }
+    }
+    
+    return results;
+  }
+
   // Planstellen routes
   app.get("/api/planstellen", async (req, res) => {
     try {
@@ -233,6 +286,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(planstellen);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch planstellen" });
+    }
+  });
+
+  app.post("/api/calculate-planstellen", async (req, res) => {
+    try {
+      // Get current data for calculation
+      const teachers = await storage.getTeachers();
+      const classes = await storage.getClasses();
+      const subjects = await storage.getSubjects();
+      
+      // Perform planstellen calculation (simplified example)
+      const calculated = await performPlanstellenCalculation(teachers, classes, subjects, storage);
+      
+      return res.json({
+        message: "Planstellen calculation completed successfully",
+        calculated: calculated.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Planstellen calculation error:", error);
+      res.status(500).json({ error: "Failed to calculate planstellen" });
     }
   });
 

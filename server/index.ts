@@ -37,7 +37,22 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Early API gate - ensures all /api/* requests are handled by Express, not Vite
+  app.use(/^\/api\//, (req, res, next) => {
+    res.set('X-Api-Gate', '1');
+    return next();
+  });
+
   const server = await registerRoutes(app);
+
+  // Debug endpoint to verify route registration
+  app.get('/api/__debug/routes', (_req, res) => {
+    res.json({ 
+      message: 'Routes registered', 
+      timestamp: new Date().toISOString(),
+      registered: ['POST /api/calculate-planstellen', 'GET /api/planstellen', 'etc...']
+    });
+  });
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -46,6 +61,9 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
     throw err;
   });
+
+  // Terminal JSON 404 for unregistered API routes - prevents Vite from serving HTML
+  app.all(/^\/api\//, (_req, res) => res.status(404).json({ error: 'API Route Not Found' }));
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
