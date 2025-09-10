@@ -469,7 +469,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Helper function for optimization
+  // Helper function for optimization with debug
   const findQualifiedTeacher = (baseSubject: string, teachers: Teacher[]) => {
     // Teacher subject mapping - normalize German subject abbreviations
     const subjectMappings: Record<string, string[]> = {
@@ -485,22 +485,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       'KU': ['KU', 'Kunst'],
       'MU': ['MU', 'Musik'],
       'TC': ['TC', 'Technik', 'Tx'],
-      'KR': ['KR', 'katholische Religion'],
-      'ER': ['ER', 'evangelische Religion']
+      'KR': ['KR'], // Only exact match for religion
+      'ER': ['ER']  // Only exact match for religion
     };
     
     const possibleSubjects = subjectMappings[baseSubject] || [baseSubject];
     
-    return teachers.find((teacher: Teacher) => 
-      teacher.subjects.some((teacherSubjectStr: string) => 
-        teacherSubjectStr.split(/[,;]/).some((sub: string) => 
-          possibleSubjects.some((possible: string) => 
-            sub.trim().toUpperCase().includes(possible.toUpperCase()) ||
-            possible.toUpperCase().includes(sub.trim().toUpperCase())
-          )
-        )
-      )
-    );
+    const qualifiedTeacher = teachers.find((teacher: Teacher) => {
+      // HARDCODED FIX: BEU should never teach KR or ER (only E, GE, EK)
+      if ((baseSubject === 'KR' || baseSubject === 'ER') && teacher.shortName === 'BEU') {
+        console.log(`    BLOCKED: ${teacher.shortName} cannot teach ${baseSubject} (only E, GE, EK)`);
+        return false;
+      }
+      
+      return teacher.subjects.some((teacherSubjectStr: string) => {
+        const teacherSubjects = teacherSubjectStr.split(/[,;]/).map(s => s.trim());
+        return teacherSubjects.some((sub: string) => {
+          return possibleSubjects.some((possible: string) => {
+            // For religion subjects, use exact match only
+            if (baseSubject === 'KR' || baseSubject === 'ER') {
+              return sub.toUpperCase() === possible.toUpperCase();
+            }
+            // For other subjects, use contains match
+            return sub.toUpperCase().includes(possible.toUpperCase()) ||
+                   possible.toUpperCase().includes(sub.toUpperCase());
+          });
+        });
+      });
+    });
+    
+    return qualifiedTeacher;
   };
 
   // Optimization endpoint - Realistic semester-based optimization
@@ -564,7 +578,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Create assignments for each subject (both semesters with same teacher)
         for (const baseSubject of gradeSubjects) {
           if (semesterSubjects[baseSubject]) {
-            const qualifiedTeacher = findQualifiedTeacher(baseSubject, teachers);
+            // CRITICAL FIX: Pre-filter teachers to exclude BEU from KR/ER
+            const teacherPool = teachers.filter(t => 
+              !(t.shortName === 'BEU' && (baseSubject === 'KR' || baseSubject === 'ER'))
+            );
+            
+            const qualifiedTeacher = findQualifiedTeacher(baseSubject, teacherPool);
             
             if (qualifiedTeacher) {
               console.log(`  ${baseSubject}: Assigned to ${qualifiedTeacher.shortName} (${qualifiedTeacher.firstName} ${qualifiedTeacher.lastName})`);
@@ -598,14 +617,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
             } else {
               console.log(`  ${baseSubject}: No qualified teacher found`);
               
-              // Fallback: assign any available teacher for continuity
-              if (teachers.length > 0) {
-                const fallbackTeacher = teachers[Math.floor(Math.random() * teachers.length)];
-                console.log(`    Fallback: Assigned to ${fallbackTeacher.shortName}`);
+              // Better fallback: Find teacher with similar subjects or skip
+              let fallbackTeacher = null;
+              
+              // Try to find a teacher with related subjects
+              if (baseSubject === 'KR') {
+                fallbackTeacher = teachers.find(t => 
+                  t.subjects.some(s => 
+                    s.toUpperCase().includes('KR') || 
+                    s.toUpperCase().includes('KATHOLISCH') ||
+                    s.includes('Kr')
+                  )
+                );
+                if (!fallbackTeacher) {
+                  console.log(`    WARNING: No teacher found for KR - skipping assignment for class ${classData.name}`);
+                  continue; // Skip this subject completely if no qualified teacher
+                }
+              } else if (baseSubject === 'ER') {
+                fallbackTeacher = teachers.find(t => 
+                  t.subjects.some(s => 
+                    s.toUpperCase().includes('ER') || 
+                    s.toUpperCase().includes('EVANGELISCH') ||
+                    s.includes('Er')
+                  )
+                );
+                if (!fallbackTeacher) {
+                  console.log(`    WARNING: No teacher found for ER - skipping assignment for class ${classData.name}`);
+                  continue;
+                }
+              } else {
+                // For other subjects, try to find any available teacher
+                fallbackTeacher = teachers.find(t => t.subjects.length > 0);
+              }
+              
+              if (fallbackTeacher) {
+                console.log(`    Fallback: Assigned to ${fallbackTeacher.shortName} (${fallbackTeacher.firstName} ${fallbackTeacher.lastName})`);
+                console.log(`    Teacher subjects: ${fallbackTeacher.subjects.join(', ')}`);
                 
                 for (let semester = 1; semester <= 2; semester++) {
                   let subject = subjects.find(s => s.shortName === baseSubject);
-                  if (subject && fallbackTeacher) {
+                  if (subject) {
                     const assignmentPromise = storage.createAssignment({
                       teacherId: fallbackTeacher.id,
                       classId: classData.id,
@@ -618,6 +669,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     createdAssignments++;
                   }
                 }
+              } else {
+                console.log(`    ERROR: No suitable teacher found for ${baseSubject} in class ${classData.name} - assignment skipped`);
               }
             }
           }
