@@ -14,7 +14,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, School, Users, Search, Filter } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import { insertClassSchema, insertStudentSchema, type Class, type Student, type InsertClass, type InsertStudent } from "@shared/schema";
+import { insertClassSchema, insertStudentSchema, type Class, type Student, type Teacher, type InsertClass, type InsertStudent } from "@shared/schema";
 import { z } from "zod";
 
 const classFormSchema = insertClassSchema.extend({
@@ -50,6 +50,10 @@ export default function Klassenverwaltung() {
     queryKey: ["/api/students"],
   });
 
+  const { data: teachers, isLoading: teachersLoading } = useQuery<Teacher[]>({
+    queryKey: ["/api/teachers"],
+  });
+
   const classForm = useForm<ClassFormData>({
     resolver: zodResolver(classFormSchema),
     defaultValues: {
@@ -57,6 +61,8 @@ export default function Klassenverwaltung() {
       grade: 5,
       studentCount: 0,
       subjectHours: {},
+      classTeacher1Id: undefined,
+      classTeacher2Id: undefined,
     },
   });
 
@@ -168,15 +174,24 @@ export default function Klassenverwaltung() {
       grade: classData.grade,
       studentCount: classData.studentCount,
       subjectHours: classData.subjectHours,
+      classTeacher1Id: classData.classTeacher1Id || undefined,
+      classTeacher2Id: classData.classTeacher2Id || undefined,
     });
     setIsClassDialogOpen(true);
   };
 
   const handleClassSubmit = (data: ClassFormData) => {
+    // Convert empty strings to null for teacher IDs to explicitly clear assignments
+    const sanitizedData = {
+      ...data,
+      classTeacher1Id: data.classTeacher1Id === "" ? null : data.classTeacher1Id,
+      classTeacher2Id: data.classTeacher2Id === "" ? null : data.classTeacher2Id,
+    };
+    
     if (editingClass) {
-      updateClassMutation.mutate({ id: editingClass.id, data });
+      updateClassMutation.mutate({ id: editingClass.id, data: sanitizedData });
     } else {
-      createClassMutation.mutate(data);
+      createClassMutation.mutate(sanitizedData);
     }
   };
 
@@ -397,6 +412,58 @@ export default function Klassenverwaltung() {
                                 data-testid="input-student-count"
                               />
                             </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={classForm.control}
+                        name="classTeacher1Id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Klassenlehrer 1</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-class-teacher-1">
+                                  <SelectValue placeholder="Klassenlehrer 1 auswählen..." />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="">Kein Klassenlehrer</SelectItem>
+                                {teachers?.map(teacher => (
+                                  <SelectItem key={teacher.id} value={teacher.id}>
+                                    {teacher.firstName} {teacher.lastName} ({teacher.shortName})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={classForm.control}
+                        name="classTeacher2Id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Klassenlehrer 2</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-class-teacher-2">
+                                  <SelectValue placeholder="Klassenlehrer 2 auswählen..." />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="">Kein Klassenlehrer</SelectItem>
+                                {teachers?.map(teacher => (
+                                  <SelectItem key={teacher.id} value={teacher.id}>
+                                    {teacher.firstName} {teacher.lastName} ({teacher.shortName})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}

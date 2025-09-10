@@ -104,7 +104,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/classes", async (req, res) => {
     try {
-      const classData = insertClassSchema.parse(req.body);
+      // Allow null values for teacher fields to support "Kein Klassenlehrer" option
+      const createClassSchema = insertClassSchema.extend({
+        classTeacher1Id: z.string().uuid().nullable().optional(),
+        classTeacher2Id: z.string().uuid().nullable().optional(),
+      });
+      const classData = createClassSchema.parse(req.body);
       const newClass = await storage.createClass(classData);
       res.status(201).json(newClass);
     } catch (error) {
@@ -112,6 +117,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: error.errors });
       }
       res.status(500).json({ error: "Failed to create class" });
+    }
+  });
+
+  app.put("/api/classes/:id", async (req, res) => {
+    try {
+      // Create update schema that allows null for teacher fields to enable clearing assignments
+      const updateClassSchema = insertClassSchema.partial().extend({
+        classTeacher1Id: z.string().uuid().nullable().optional(),
+        classTeacher2Id: z.string().uuid().nullable().optional(),
+      });
+      const classData = updateClassSchema.parse(req.body);
+      const updatedClass = await storage.updateClass(req.params.id, classData);
+      res.json(updatedClass);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update class" });
+    }
+  });
+
+  app.delete("/api/classes/:id", async (req, res) => {
+    try {
+      await storage.deleteClass(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete class" });
     }
   });
 
@@ -135,6 +167,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: error.errors });
       }
       res.status(500).json({ error: "Failed to create subject" });
+    }
+  });
+
+  // Initialize default subjects
+  app.post("/api/subjects/init-defaults", async (req, res) => {
+    try {
+      const defaultSubjects = [
+        {
+          name: "Vertretungsreserve",
+          shortName: "VR",
+          category: "Sonderbereich",
+          hoursPerWeek: {},
+        },
+      ];
+
+      const results = await storage.bulkCreateSubjectsWithConflictHandling(defaultSubjects);
+      res.json({ 
+        message: "Default subjects initialized", 
+        subjects: results,
+        count: results.length 
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to initialize default subjects" });
     }
   });
 

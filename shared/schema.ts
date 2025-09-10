@@ -45,6 +45,8 @@ export const classes = pgTable("classes", {
   grade: integer("grade").notNull(),
   studentCount: integer("student_count").notNull().default(0),
   subjectHours: json("subject_hours").$type<Record<string, number>>().notNull().default({}),
+  classTeacher1Id: varchar("class_teacher_1_id").references(() => teachers.id),
+  classTeacher2Id: varchar("class_teacher_2_id").references(() => teachers.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -103,6 +105,8 @@ export const planstellen = pgTable("planstellen", {
 // Relations
 export const teachersRelations = relations(teachers, ({ many }) => ({
   assignments: many(assignments),
+  classesAsTeacher1: many(classes, { relationName: "classTeacher1" }),
+  classesAsTeacher2: many(classes, { relationName: "classTeacher2" }),
 }));
 
 export const studentsRelations = relations(students, ({ one }) => ({
@@ -115,6 +119,16 @@ export const studentsRelations = relations(students, ({ one }) => ({
 export const classesRelations = relations(classes, ({ many, one }) => ({
   students: many(students),
   assignments: many(assignments),
+  classTeacher1: one(teachers, {
+    fields: [classes.classTeacher1Id],
+    references: [teachers.id],
+    relationName: "classTeacher1",
+  }),
+  classTeacher2: one(teachers, {
+    fields: [classes.classTeacher2Id],
+    references: [teachers.id],
+    relationName: "classTeacher2",
+  }),
 }));
 
 export const planstellenScenariosRelations = relations(planstellenScenarios, ({ many }) => ({
@@ -166,6 +180,9 @@ export const insertStudentSchema = createInsertSchema(students).omit({
 export const insertClassSchema = createInsertSchema(classes).omit({
   id: true,
   createdAt: true,
+}).extend({
+  classTeacher1Id: z.string().uuid().nullable().optional(),
+  classTeacher2Id: z.string().uuid().nullable().optional(),
 });
 
 export const insertSubjectSchema = createInsertSchema(subjects).omit({

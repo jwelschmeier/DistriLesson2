@@ -43,6 +43,7 @@ export interface IStorage {
   // Classes
   getClasses(): Promise<Class[]>;
   getClass(id: string): Promise<Class | undefined>;
+  getClassByName(name: string): Promise<Class | undefined>;
   createClass(classData: InsertClass): Promise<Class>;
   updateClass(id: string, classData: Partial<InsertClass>): Promise<Class>;
   deleteClass(id: string): Promise<void>;
