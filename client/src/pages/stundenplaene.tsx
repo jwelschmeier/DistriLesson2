@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -214,6 +214,43 @@ export default function Stundenplaene() {
     
     return { totalHours, teacherCount };
   }, [classAssignments]);
+
+  // Calculate teacher workload (assigned hours per teacher)
+  const teacherWorkload = useMemo(() => {
+    if (!extendedAssignments) return new Map();
+    
+    const workloadMap = new Map<string, number>();
+    extendedAssignments.forEach(assignment => {
+      const current = workloadMap.get(assignment.teacherId) || 0;
+      workloadMap.set(assignment.teacherId, current + assignment.hoursPerWeek);
+    });
+    
+    return workloadMap;
+  }, [extendedAssignments]);
+
+  // Get qualified teachers for a specific subject
+  const getQualifiedTeachers = useCallback((subjectId: string) => {
+    if (!teachers || !subjects) return [];
+    
+    const subject = subjectMap.get(subjectId);
+    if (!subject) return teachers;
+    
+    return teachers.filter(teacher => {
+      // Check if teacher has this subject in their subjects array
+      return teacher.subjects && teacher.subjects.includes(subject.shortName);
+    });
+  }, [teachers, subjects, subjectMap]);
+
+  // Calculate available hours for a teacher
+  const getAvailableHours = useCallback((teacherId: string) => {
+    const teacher = teacherMap.get(teacherId);
+    if (!teacher) return 0;
+    
+    const maxHours = parseFloat(teacher.maxHours);
+    const assignedHours = teacherWorkload.get(teacherId) || 0;
+    
+    return Math.max(0, maxHours - assignedHours);
+  }, [teacherMap, teacherWorkload]);
 
   const selectedTeacher = selectedTeacherId ? teacherMap.get(selectedTeacherId) : null;
   const selectedClass = selectedClassId ? classMap.get(selectedClassId) : null;
@@ -619,11 +656,25 @@ export default function Stundenplaene() {
                                       <SelectValue placeholder="Lehrkraft wählen..." />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {teachers?.map((teacher) => (
-                                        <SelectItem key={teacher.id} value={teacher.id}>
-                                          {teacher.firstName} {teacher.lastName} ({teacher.shortName})
-                                        </SelectItem>
-                                      ))}
+                                      {(() => {
+                                        const qualifiedTeachers = newAssignment?.subjectId ? 
+                                          getQualifiedTeachers(newAssignment.subjectId) : 
+                                          teachers || [];
+                                        
+                                        return qualifiedTeachers.map((teacher) => {
+                                          const availableHours = getAvailableHours(teacher.id);
+                                          return (
+                                            <SelectItem key={teacher.id} value={teacher.id}>
+                                              <div className="flex items-center justify-between w-full">
+                                                <span>{teacher.firstName} {teacher.lastName} ({teacher.shortName})</span>
+                                                <span className="text-xs text-muted-foreground ml-2">
+                                                  {availableHours}h verfügbar
+                                                </span>
+                                              </div>
+                                            </SelectItem>
+                                          );
+                                        });
+                                      })()}
                                     </SelectContent>
                                   </Select>
                                 </TableCell>
@@ -726,11 +777,25 @@ export default function Stundenplaene() {
                                       </SelectValue>
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {teachers?.map((teacher) => (
-                                        <SelectItem key={teacher.id} value={teacher.id}>
-                                          {teacher.firstName} {teacher.lastName} ({teacher.shortName})
-                                        </SelectItem>
-                                      ))}
+                                      {(() => {
+                                        const qualifiedTeachers = newAssignment?.subjectId ? 
+                                          getQualifiedTeachers(newAssignment.subjectId) : 
+                                          teachers || [];
+                                        
+                                        return qualifiedTeachers.map((teacher) => {
+                                          const availableHours = getAvailableHours(teacher.id);
+                                          return (
+                                            <SelectItem key={teacher.id} value={teacher.id}>
+                                              <div className="flex items-center justify-between w-full">
+                                                <span>{teacher.firstName} {teacher.lastName} ({teacher.shortName})</span>
+                                                <span className="text-xs text-muted-foreground ml-2">
+                                                  {availableHours}h verfügbar
+                                                </span>
+                                              </div>
+                                            </SelectItem>
+                                          );
+                                        });
+                                      })()}
                                     </SelectContent>
                                   </Select>
                                 </TableCell>
