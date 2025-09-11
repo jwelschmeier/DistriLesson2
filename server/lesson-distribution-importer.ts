@@ -358,41 +358,46 @@ export class LessonDistributionImporter {
           continue;
         }
 
-        // Check if subject matches teacher's qualifications
-        // Use flexible matching to handle different subject name formats
+        // STRICT VALIDATION: Check if subject matches teacher's qualifications
+        // Only allow EXACT matches or very specific mappings to prevent false positives
         const subjectMatches = teacherSubjects.some(ts => {
-          // Direct match
+          // 1. Direct exact match
           if (ts === subjectShort) return true;
           
-          // Case-insensitive match
+          // 2. Case-insensitive exact match  
           if (ts.toLowerCase() === subjectShort.toLowerCase()) return true;
           
-          // Mapping common variations
-          const variations: { [key: string]: string[] } = {
-            'D': ['Deutsch', 'DE'],
-            'E': ['Englisch', 'EN', 'English'],
-            'M': ['Mathematik', 'Mathe', 'Math'],
-            'Fs': ['Französisch', 'F', 'French'],
-            'Sp': ['Sport', 'SP'],
-            'If': ['Informatik', 'IKG', 'IK'],
-            'Kr': ['KR', 'Katholische Religion'],
-            'Er': ['ER', 'Evangelische Religion'],
-            'Ph': ['Physik', 'PH'],
-            'Ch': ['Chemie', 'CH'],
-            'Bi': ['Biologie', 'BI'],
-            'Ge': ['Geschichte', 'GE'],
-            'Ek': ['Erdkunde', 'EK'],
-            'Pk': ['Politik', 'PK'],
-            'Ku': ['Kunst', 'KU'],
-            'Mu': ['Musik', 'MU'],
-            'Tc': ['Technik', 'TC']
+          // 3. Only very specific, documented mappings to prevent errors
+          const strictMappings: { [subjectRequested: string]: string[] } = {
+            // If Excel asks for 'D', teacher can have 'D' or 'Deutsch' 
+            'D': ['D', 'Deutsch'],
+            'E': ['E', 'Englisch', 'English'],
+            'M': ['M', 'Mathe', 'Mathematik'],
+            // If Excel asks for 'Fs', teacher must have 'Fs', 'F' or 'Französisch' 
+            'Fs': ['Fs', 'F', 'Französisch'],
+            'GE': ['GE', 'Ge', 'Geschichte'],
+            'EK': ['EK', 'Ek', 'Erdkunde'],
+            // These subjects need exact matches to prevent confusion
+            'PK': ['PK', 'Pk', 'Politik'],
+            'SW': ['SW', 'Sozialwissenschaften'],
+            'SP': ['SP', 'Sp', 'Sport'], 
+            'BI': ['BI', 'Bi', 'Biologie'],
+            'CH': ['CH', 'Ch', 'Chemie'],
+            'PH': ['PH', 'Ph', 'Physik'],
+            'KU': ['KU', 'Ku', 'Kunst'],
+            'MU': ['MU', 'Mu', 'Musik'],
+            'IF': ['IF', 'If', 'Informatik', 'IKG'],
+            'TC': ['TC', 'Tc', 'Technik'],
+            'HW': ['HW', 'Hauswirtschaft'],
+            'KR': ['KR', 'Kr', 'katholische Religion'],
+            'ER': ['ER', 'Er', 'evangelische Religion'],
+            'PP': ['PP', 'Pp', 'Praktische Philosophie']
           };
           
-          // Check if teacher subject matches any variation of requested subject
-          for (const [standard, variants] of Object.entries(variations)) {
-            if (variants.includes(subjectShort) && (ts === standard || variants.includes(ts))) {
-              return true;
-            }
+          // Check if the requested subject has allowed teacher qualifications
+          const allowedTeacherSubjects = strictMappings[subjectShort];
+          if (allowedTeacherSubjects) {
+            return allowedTeacherSubjects.includes(ts);
           }
           
           return false;
