@@ -6,6 +6,7 @@ import { setupAuth, isAuthenticated, isAdmin } from "./replitAuth";
 import { insertTeacherSchema, insertStudentSchema, insertClassSchema, insertSubjectSchema, insertAssignmentSchema, insertInvitationSchema, Teacher } from "@shared/schema";
 import { SchoolYearTransitionParams } from "./storage";
 import { calculateCorrectHours } from "@shared/parallel-subjects";
+import { LessonDistributionImporter } from "./lesson-distribution-importer";
 import { z } from "zod";
 
 interface MulterRequest extends Request {
@@ -1365,6 +1366,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(422).json({ error: "Validierungsfehler", details: error.message });
       }
       res.status(500).json({ error: "Fehler bei der Ausführung des Schuljahreswechsels" });
+    }
+  });
+
+  // NEW: Validated lesson distribution import route
+  app.post('/api/import/lesson-distribution-validated', upload.single('file'), isAuthenticated, isAdmin, async (req: MulterRequest, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'Keine Datei hochgeladen' });
+      }
+
+      // Write file to temporary location
+      const filePath = `/tmp/lesson-distribution-validated-${Date.now()}.xlsx`;
+      const fs = await import('fs/promises');
+      await fs.writeFile(filePath, req.file.buffer);
+
+      console.log('=== VALIDIERTER IMPORT GESTARTET ===');
+      console.log('Datei:', filePath);
+
+      // Get current school year
+      const schoolYears = await storage.getSchoolYears();
+      const currentSchoolYear = schoolYears.find(sy => sy.isCurrent) || schoolYears[0];
+      
+      if (!currentSchoolYear) {
+        return res.status(400).json({ error: 'Kein Schuljahr gefunden' });
+      }
+
+      // Import with validation
+      const importer = new LessonDistributionImporter(storage);
+      const result = await importer.importFromExcelValidated(filePath, currentSchoolYear.id);
+
+      // Clean up temporary file
+      await fs.unlink(filePath);
+
+      console.log('=== VALIDIERTER IMPORT ABGESCHLOSSEN ===');
+      console.log('Ergebnis:', result);
+
+      res.json(result);
+    } catch (error) {
+      console.error('Fehler beim validierten Import:', error);
+      res.status(500).json({ 
+        error: 'Import fehlgeschlagen', 
+        details: error instanceof Error ? error.message : 'Unbekannter Fehler'
+      });
     }
   });
 

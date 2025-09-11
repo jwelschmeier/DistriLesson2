@@ -506,7 +506,10 @@ export class LessonDistributionImporter {
       }
 
       // Clear existing assignments for this school year before importing new ones
-      await this.storage.deleteAssignmentsBySchoolYear(schoolYearId);
+      const existingAssignments = await this.storage.getAssignmentsBySchoolYear(schoolYearId);
+      for (const assignment of existingAssignments) {
+        await this.storage.deleteAssignment(assignment.id);
+      }
 
       // Refresh data after creating entities
       const [updatedTeachers, updatedSubjects, updatedClasses] = await Promise.all([
