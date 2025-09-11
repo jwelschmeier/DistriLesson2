@@ -24,6 +24,7 @@ import { z } from "zod";
 const teacherFormSchema = insertTeacherSchema.extend({
   subjects: z.array(z.string()).min(1, "Mindestens ein Fach muss ausgewählt werden"),
   qualifications: z.array(z.string()).optional(),
+  personnelNumber: z.string().optional(),
   dateOfBirth: z.string().optional(),
   maxHours: z.string().optional(), // decimal field as string
   currentHours: z.string().optional(), // decimal field as string
@@ -221,6 +222,7 @@ export default function Lehrerverwaltung() {
       firstName: teacher.firstName,
       lastName: teacher.lastName,
       shortName: teacher.shortName,
+      personnelNumber: teacher.personnelNumber || "",
       email: teacher.email || "",
       dateOfBirth: teacher.dateOfBirth || "",
       subjects: teacher.subjects,
@@ -350,6 +352,22 @@ export default function Lehrerverwaltung() {
                           </FormItem>
                         )}
                       />
+                      <FormField
+                        control={form.control}
+                        name="personnelNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Personalnummer</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="z.B. C9405000" data-testid="input-personnel-number" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4">
                       <FormField
                         control={form.control}
                         name="email"
@@ -754,6 +772,9 @@ export default function Lehrerverwaltung() {
                           Lehrkraft
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Personalnummer
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Fächer
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -789,6 +810,11 @@ export default function Lehrerverwaltung() {
                                   <div className="text-sm text-muted-foreground">{teacher.email}</div>
                                 </div>
                               </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="text-sm text-foreground font-mono">
+                                {teacher.personnelNumber || '-'}
+                              </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex flex-wrap gap-1">

@@ -18,6 +18,7 @@ export const teachers = pgTable("teachers", {
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   shortName: varchar("short_name", { length: 20 }).notNull().unique(),
+  personnelNumber: varchar("personnel_number", { length: 20 }),
   email: text("email"),
   dateOfBirth: date("date_of_birth"),
   subjects: json("subjects").$type<string[]>().notNull().default([]),
