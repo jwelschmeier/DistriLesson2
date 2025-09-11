@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { type Teacher, type Class, type Subject, type Assignment } from "@shared/schema";
+import { calculateCorrectHours } from "@shared/parallel-subjects";
 
 interface ExtendedAssignment extends Assignment {
   teacher?: Teacher;
@@ -139,7 +140,9 @@ export default function MasterStundenplan() {
     return classes.map(classItem => {
       const classAssignments = extendedAssignments.filter(a => a.classId === classItem.id);
       const totalAssignments = classAssignments.length;
-      const totalHours = classAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+      // Use correct calculation that handles parallel subjects
+      const correctHours = calculateCorrectHours(classItem.subjectHours, classItem.grade);
+      const totalHours = correctHours.totalHours;
       
       // Simplified coverage calculation - in a real system this would be more complex
       const assignedSubjects = new Set(classAssignments.map(a => a.subjectId));

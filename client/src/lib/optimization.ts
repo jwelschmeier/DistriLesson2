@@ -1,4 +1,5 @@
 import type { Teacher, Class, Subject, Assignment } from "@shared/schema";
+import { createCorrectedCurriculumHours } from "@shared/parallel-subjects";
 
 export interface OptimizationConstraints {
   teachers: Teacher[];
@@ -66,103 +67,8 @@ interface ConflictMatrix {
   };
 }
 
-// NRW Realschule curriculum requirements (Stundentafel)
-const NRW_CURRICULUM_HOURS: Record<number, Record<string, number>> = {
-  5: {
-    "Deutsch": 5,
-    "Mathematik": 4,
-    "Englisch": 4,
-    "Biologie": 2,
-    "Erdkunde": 2,
-    "Geschichte": 2,
-    "Sport": 3,
-    "Kunst": 2,
-    "Musik": 2,
-    "Religion": 2,
-  },
-  6: {
-    "Deutsch": 4,
-    "Mathematik": 4,
-    "Englisch": 4,
-    "Biologie": 2,
-    "Physik": 2,
-    "Erdkunde": 1,
-    "Geschichte": 2,
-    "Politik": 1,
-    "Sport": 3,
-    "Kunst": 2,
-    "Musik": 1,
-    "Religion": 2,
-  },
-  7: {
-    "Deutsch": 4,
-    "Mathematik": 4,
-    "Englisch": 4,
-    "Französisch": 4, // Wahlpflicht
-    "Biologie": 2,
-    "Physik": 2,
-    "Chemie": 2,
-    "Geschichte": 2,
-    "Politik": 2,
-    "Erdkunde": 1,
-    "Sport": 3,
-    "Kunst": 1,
-    "Musik": 1,
-    "Religion": 2,
-  },
-  8: {
-    "Deutsch": 4,
-    "Mathematik": 4,
-    "Englisch": 3,
-    "Französisch": 3, // Wahlpflicht
-    "Biologie": 1,
-    "Physik": 2,
-    "Chemie": 2,
-    "Geschichte": 2,
-    "Politik": 2,
-    "Erdkunde": 2,
-    "Sport": 3,
-    "Kunst": 2,
-    "Musik": 1,
-    "Religion": 2,
-    "Informatik": 2, // Wahlpflicht
-  },
-  9: {
-    "Deutsch": 4,
-    "Mathematik": 4,
-    "Englisch": 3,
-    "Französisch": 3, // Wahlpflicht
-    "Biologie": 2,
-    "Physik": 2,
-    "Chemie": 2,
-    "Geschichte": 2,
-    "Politik": 2,
-    "Erdkunde": 1,
-    "Sport": 3,
-    "Kunst": 1,
-    "Musik": 1,
-    "Religion": 2,
-    "Informatik": 2, // Wahlpflicht
-    "Technik": 2, // Wahlpflicht
-  },
-  10: {
-    "Deutsch": 4,
-    "Mathematik": 4,
-    "Englisch": 4,
-    "Französisch": 3, // Wahlpflicht
-    "Biologie": 2,
-    "Physik": 2,
-    "Chemie": 2,
-    "Geschichte": 2,
-    "Politik": 2,
-    "Erdkunde": 2,
-    "Sport": 3,
-    "Kunst": 1,
-    "Musik": 1,
-    "Religion": 2,
-    "Informatik": 2, // Wahlpflicht
-  },
-};
+// NRW Realschule curriculum requirements (Stundentafel) - korrigiert für parallele Fächer
+const NRW_CURRICULUM_HOURS: Record<number, Record<string, number>> = createCorrectedCurriculumHours();
 
 export function runOptimization(constraints: OptimizationConstraints): OptimizationResult {
   const { teachers, classes, subjects, currentAssignments, settings } = constraints;
@@ -214,8 +120,8 @@ function calculateTeacherWorkloads(teachers: Teacher[], currentAssignments: Assi
     return {
       teacherId: teacher.id,
       currentHours,
-      maxHours: teacher.maxHours,
-      utilization: (currentHours / teacher.maxHours) * 100,
+      maxHours: parseFloat(teacher.maxHours),
+      utilization: (currentHours / parseFloat(teacher.maxHours)) * 100,
       subjects: teacher.subjects,
       qualifications: teacher.qualifications,
     };

@@ -16,6 +16,7 @@ import { Plus, Edit, Trash2, School, Users, Search, Filter, Calendar } from "luc
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { insertClassSchema, insertStudentSchema, type Class, type Student, type Teacher, type InsertClass, type InsertStudent } from "@shared/schema";
+import { calculateCorrectHours } from "@shared/parallel-subjects";
 import { z } from "zod";
 
 const classFormSchema = insertClassSchema.extend({
@@ -613,6 +614,32 @@ export default function Klassenverwaltung() {
                               <span className="text-muted-foreground">Jahrgangsstufe:</span>
                               <span className="font-medium">{classData.grade}</span>
                             </div>
+
+                            {(() => {
+                              const correctHours = calculateCorrectHours(classData.subjectHours, classData.grade);
+                              const rawTotal = Object.values(classData.subjectHours).reduce((sum, hours) => sum + hours, 0);
+                              const parallelGroupsInfo = Object.entries(correctHours.parallelGroupHours).map(([group, hours]) => `${group}: ${hours}h`).join(', ');
+                              
+                              return (
+                                <div className="space-y-1">
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="text-muted-foreground">Gesamtstunden (korrekt):</span>
+                                    <span className="font-medium text-green-600">{correctHours.totalHours}h</span>
+                                  </div>
+                                  {rawTotal !== correctHours.totalHours && (
+                                    <div className="flex items-center justify-between text-xs">
+                                      <span className="text-muted-foreground">Ohne Parallelkorrektur:</span>
+                                      <span className="text-red-500 line-through">{rawTotal}h</span>
+                                    </div>
+                                  )}
+                                  {parallelGroupsInfo && (
+                                    <div className="text-xs text-muted-foreground">
+                                      Parallel: {parallelGroupsInfo}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
 
                             {studentsInClass.length > 0 && (
                               <div>

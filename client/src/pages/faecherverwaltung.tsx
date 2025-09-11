@@ -19,6 +19,7 @@ import { Plus, Edit, Trash2, BookOpen, Filter } from "lucide-react";
 import { insertSubjectSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { Sidebar } from "@/components/layout/sidebar";
+import { PARALLEL_GROUPS, getParallelGroupForSubject } from "@shared/parallel-subjects";
 
 type Subject = {
   id: string;
@@ -26,6 +27,7 @@ type Subject = {
   shortName: string;
   category: string;
   hoursPerWeek: Record<string, number>;
+  parallelGroup?: string | null;
   createdAt?: string;
 };
 

@@ -56,6 +56,7 @@ export const subjects = pgTable("subjects", {
   shortName: varchar("short_name", { length: 50 }).notNull().unique(),
   category: text("category").notNull(),
   hoursPerWeek: json("hours_per_week").$type<Record<string, number>>().notNull().default({}),
+  parallelGroup: varchar("parallel_group", { length: 50 }), // Parallele Fächergruppe (optional)
   createdAt: timestamp("created_at").defaultNow(),
 });
 

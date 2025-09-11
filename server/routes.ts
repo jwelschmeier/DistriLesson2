@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import multer from "multer";
 import { storage } from "./storage";
 import { insertTeacherSchema, insertStudentSchema, insertClassSchema, insertSubjectSchema, insertAssignmentSchema, Teacher } from "@shared/schema";
+import { calculateCorrectHours } from "@shared/parallel-subjects";
 import { z } from "zod";
 
 interface MulterRequest extends Request {
@@ -255,28 +256,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
   async function performPlanstellenCalculation(teachers: any[], classes: any[], subjects: any[], storage: any) {
     const results = [];
     
-    // Simple example calculation: Calculate required hours per grade and subject
-    const gradeSubjectHours: Record<string, Record<string, number>> = {};
+    // Calculate required hours per grade with correct handling of parallel subjects
+    const gradeHours: Record<string, { totalHours: number; parallelGroupHours: Record<string, number>; regularHours: Record<string, number> }> = {};
     
-    // Calculate total hours needed per grade and subject
+    // Calculate total hours needed per grade considering parallel subjects
     for (const classData of classes) {
       const grade = classData.grade.toString();
-      if (!gradeSubjectHours[grade]) {
-        gradeSubjectHours[grade] = {};
+      if (!gradeHours[grade]) {
+        gradeHours[grade] = { totalHours: 0, parallelGroupHours: {}, regularHours: {} };
       }
       
-      // Add subject hours from class
-      for (const [subjectName, hours] of Object.entries(classData.subjectHours)) {
-        if (!gradeSubjectHours[grade][subjectName]) {
-          gradeSubjectHours[grade][subjectName] = 0;
-        }
-        gradeSubjectHours[grade][subjectName] += hours as number;
+      // Use the correct calculation that handles parallel subjects
+      const classCorrectHours = calculateCorrectHours(classData.subjectHours, classData.grade);
+      
+      // Accumulate parallel group hours (taking maximum needed across classes)
+      for (const [groupId, hours] of Object.entries(classCorrectHours.parallelGroupHours)) {
+        gradeHours[grade].parallelGroupHours[groupId] = Math.max(
+          gradeHours[grade].parallelGroupHours[groupId] || 0, 
+          hours
+        );
       }
+      
+      // Accumulate regular subject hours
+      for (const [subjectName, hours] of Object.entries(classCorrectHours.regularHours)) {
+        if (!gradeHours[grade].regularHours[subjectName]) {
+          gradeHours[grade].regularHours[subjectName] = 0;
+        }
+        gradeHours[grade].regularHours[subjectName] += hours;
+      }
+      
+      // Update total hours
+      const parallelTotal = Object.values(gradeHours[grade].parallelGroupHours).reduce((sum, h) => sum + h, 0);
+      const regularTotal = Object.values(gradeHours[grade].regularHours).reduce((sum, h) => sum + h, 0);
+      gradeHours[grade].totalHours = parallelTotal + regularTotal;
     }
     
-    // Create planstelle entries for each grade/subject combination
-    for (const [grade, subjectHours] of Object.entries(gradeSubjectHours)) {
-      for (const [subjectName, requiredHours] of Object.entries(subjectHours)) {
+    // Create planstelle entries for each grade
+    for (const [grade, gradeData] of Object.entries(gradeHours)) {
+      // Create entries for parallel groups
+      for (const [groupId, hours] of Object.entries(gradeData.parallelGroupHours)) {
+        // Calculate available hours (simplified: sum all teachers with subjects in this group)
+        const availableHours = teachers
+          .filter((teacher: any) => {
+            // Check if teacher has any subject from this parallel group
+            const groupSubjects = groupId === "Differenzierung" ? ["FS", "SW", "NW", "IF", "TC", "MUS"] :
+                                 groupId === "Religion" ? ["KR", "ER", "PP"] : [];
+            return teacher.subjects.some((subj: string) => groupSubjects.includes(subj));
+          })
+          .reduce((sum: number, teacher: any) => sum + parseFloat(teacher.currentHours || "0"), 0);
+        
+        const planstelle = await storage.createPlanstelle({
+          subjectId: null, // Parallel groups don't map to single subjects
+          grade: parseInt(grade),
+          category: "grundbedarf",
+          component: `${groupId} - Klasse ${grade} (Parallelgruppe)`,
+          lineType: "requirement",
+          formula: { description: `Parallele Fächergruppe ${groupId} für Klasse ${grade}` },
+          color: "#10B981", // Green for parallel groups
+          requiredHours: hours.toString(),
+          availableHours: availableHours.toString(),
+          deficit: (hours - availableHours).toString(),
+        });
+        
+        results.push(planstelle);
+      }
+      
+      // Create entries for regular subjects
+      for (const [subjectName, requiredHours] of Object.entries(gradeData.regularHours)) {
         const subject = subjects.find((s: any) => s.name === subjectName || s.shortName === subjectName);
         
         // Calculate available hours (simplified: sum all teachers with this subject)
@@ -291,7 +337,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           component: `${subjectName} - Klasse ${grade}`,
           lineType: "requirement",
           formula: { description: `Calculated for grade ${grade}` },
-          color: "#3B82F6",
+          color: "#3B82F6", // Blue for regular subjects
           requiredHours: requiredHours.toString(),
           availableHours: availableHours.toString(),
           deficit: (requiredHours - availableHours).toString(),
