@@ -15,11 +15,19 @@ if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
 
 // Get callback URL based on environment
 function getCallbackURL(): string {
-  const domain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
+  // Prefer REPLIT_DEV_DOMAIN for development
+  let domain = process.env.REPLIT_DEV_DOMAIN || process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
+  
   if (domain.includes('localhost')) {
     return `http://${domain}/api/auth/google/callback`;
   }
-  return `https://${domain}/api/auth/google/callback`;
+  
+  // Ensure proper protocol for Replit domains
+  if (!domain.startsWith('http')) {
+    domain = `https://${domain}`;
+  }
+  
+  return `${domain}/api/auth/google/callback`;
 }
 
 export function getSession() {
