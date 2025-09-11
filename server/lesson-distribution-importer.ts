@@ -271,4 +271,284 @@ export class LessonDistributionImporter {
     }
     return null;
   }
+
+  // NEW: Validated import method that only allows assignments matching teacher subjects
+  async importFromExcelValidated(filePath: string, schoolYearId: string): Promise<ImportResult> {
+    const result: ImportResult = {
+      success: false,
+      imported: { teachers: 0, subjects: 0, classes: 0, assignments: 0 },
+      errors: [],
+      warnings: []
+    };
+
+    try {
+      console.log('=== VALIDIERTER EXCEL-IMPORT GESTARTET ===');
+      
+      // Load current teacher data with their correct subjects
+      const existingTeachers = await this.storage.getTeachers();
+      const teacherSubjectsMap: { [shortName: string]: string[] } = {};
+      
+      existingTeachers.forEach(teacher => {
+        if (teacher.subjects && Array.isArray(teacher.subjects)) {
+          teacherSubjectsMap[teacher.shortName] = teacher.subjects;
+        } else {
+          teacherSubjectsMap[teacher.shortName] = [];
+        }
+      });
+
+      console.log('Geladene Lehrerdaten:', Object.keys(teacherSubjectsMap).length);
+
+      // Read Excel file
+      const workbook = XLSX.readFile(filePath);
+      let foundSheet = null;
+      
+      // Try different common sheet names
+      const possibleSheetNames = [
+        'Detail je Fach',
+        'Unterrichtsverteilung', 
+        'Sheet1',
+        'Tabelle1',
+        workbook.SheetNames[0] // Fallback to first sheet
+      ];
+      
+      for (const sheetName of possibleSheetNames) {
+        if (workbook.SheetNames.includes(sheetName)) {
+          foundSheet = sheetName;
+          break;
+        }
+      }
+      
+      if (!foundSheet) {
+        result.errors.push(`Kein passendes Arbeitsblatt gefunden. Verfügbare Blätter: ${workbook.SheetNames.join(', ')}`);
+        return result;
+      }
+
+      console.log(`Verwende Arbeitsblatt: ${foundSheet}`);
+      const worksheet = workbook.Sheets[foundSheet];
+      const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+      
+      console.log(`Gesamte Zeilen in Excel: ${data.length}`);
+
+      // Parse lesson distribution records with validation
+      const records: LessonDistributionRecord[] = [];
+      const validationErrors: string[] = [];
+      
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        
+        // Skip empty rows
+        if (!row || row.length < 4) continue;
+        
+        const className = row[0]?.toString().trim();
+        const subjectShort = row[1]?.toString().trim();
+        const hoursPerWeek = parseFloat(row[2]);
+        const teacherShort = row[3]?.toString().trim();
+        const studentCount = parseInt(row[7]) || 30;
+        
+        // Validate required fields
+        if (!className || !subjectShort || isNaN(hoursPerWeek) || !teacherShort) {
+          result.warnings.push(`Zeile ${i + 1}: Unvollständige Daten übersprungen (${className}, ${subjectShort}, ${teacherShort})`);
+          continue;
+        }
+
+        // CRITICAL: Validate if teacher is qualified for this subject
+        const teacherSubjects = teacherSubjectsMap[teacherShort];
+        if (!teacherSubjects) {
+          validationErrors.push(`Zeile ${i + 1}: Lehrer ${teacherShort} nicht in Lehrerdaten gefunden`);
+          continue;
+        }
+
+        // Check if subject matches teacher's qualifications
+        // Use flexible matching to handle different subject name formats
+        const subjectMatches = teacherSubjects.some(ts => {
+          // Direct match
+          if (ts === subjectShort) return true;
+          
+          // Case-insensitive match
+          if (ts.toLowerCase() === subjectShort.toLowerCase()) return true;
+          
+          // Mapping common variations
+          const variations: { [key: string]: string[] } = {
+            'D': ['Deutsch', 'DE'],
+            'E': ['Englisch', 'EN', 'English'],
+            'M': ['Mathematik', 'Mathe', 'Math'],
+            'Fs': ['Französisch', 'F', 'French'],
+            'Sp': ['Sport', 'SP'],
+            'If': ['Informatik', 'IKG', 'IK'],
+            'Kr': ['KR', 'Katholische Religion'],
+            'Er': ['ER', 'Evangelische Religion'],
+            'Ph': ['Physik', 'PH'],
+            'Ch': ['Chemie', 'CH'],
+            'Bi': ['Biologie', 'BI'],
+            'Ge': ['Geschichte', 'GE'],
+            'Ek': ['Erdkunde', 'EK'],
+            'Pk': ['Politik', 'PK'],
+            'Ku': ['Kunst', 'KU'],
+            'Mu': ['Musik', 'MU'],
+            'Tc': ['Technik', 'TC']
+          };
+          
+          // Check if teacher subject matches any variation of requested subject
+          for (const [standard, variants] of Object.entries(variations)) {
+            if (variants.includes(subjectShort) && (ts === standard || variants.includes(ts))) {
+              return true;
+            }
+          }
+          
+          return false;
+        });
+
+        if (!subjectMatches) {
+          validationErrors.push(`Zeile ${i + 1}: ${teacherShort} ist nicht qualifiziert für ${subjectShort}. Qualifikationen: [${teacherSubjects.join(', ')}]`);
+          continue;
+        }
+
+        records.push({
+          className,
+          subjectShort,
+          hoursPerWeek,
+          teacherShort,
+          studentCount
+        });
+      }
+
+      console.log(`Gültige Datensätze nach Validierung: ${records.length}`);
+      console.log(`Validierungsfehler: ${validationErrors.length}`);
+      
+      // Add validation errors as warnings
+      result.warnings.push(...validationErrors);
+
+      if (records.length === 0) {
+        result.errors.push('Keine gültigen Datensätze gefunden, die mit den Lehrerdaten übereinstimmen');
+        return result;
+      }
+
+      // Continue with normal import process for valid records...
+      // Extract unique entities
+      const uniqueTeachers = new Set(records.map(r => r.teacherShort));
+      const uniqueSubjects = new Set(records.map(r => r.subjectShort));
+      const uniqueClasses = new Map<string, { grade: number, studentCount: number }>();
+      
+      // Group classes and determine student counts
+      records.forEach(r => {
+        const grade = parseInt(r.className.match(/(\d+)/)?.[1] || '5');
+        if (!uniqueClasses.has(r.className)) {
+          uniqueClasses.set(r.className, { grade, studentCount: r.studentCount });
+        }
+      });
+
+      // Get existing data from database
+      const [existingSubjects, existingClasses] = await Promise.all([
+        this.storage.getSubjects(),
+        this.storage.getClassesBySchoolYear(schoolYearId)
+      ]);
+
+      const existingSubjectShorts = new Set(existingSubjects.map(s => s.shortName));
+      const existingClassNames = new Set(existingClasses.map(c => c.name));
+
+      // Create missing subjects with NRW mapping
+      const nrwSubjectMapping: { [key: string]: string } = {
+        'D': 'Deutsch',
+        'E': 'Englisch', 
+        'M': 'Mathematik',
+        'GE': 'Geschichte',
+        'EK': 'Erdkunde',
+        'PK': 'Politik',
+        'BI': 'Biologie',
+        'CH': 'Chemie',
+        'PH': 'Physik',
+        'SP': 'Sport',
+        'KU': 'Kunst',
+        'MU': 'Musik',
+        'IF': 'Informatik',
+        'TC': 'Technik',
+        'HW': 'Hauswirtschaft',
+        'Fs': 'Französisch',
+        'SW': 'Sozialwissenschaften',
+        'KR': 'Katholische Religionslehre',
+        'ER': 'Evangelische Religionslehre',
+        'PP': 'Praktische Philosophie',
+        'IKG': 'Islamkunde',
+        'WP': 'Wahlpflichtbereich'
+      };
+
+      for (const subjectShort of Array.from(uniqueSubjects)) {
+        if (!existingSubjectShorts.has(subjectShort)) {
+          const subject: InsertSubject = {
+            name: nrwSubjectMapping[subjectShort] || subjectShort,
+            shortName: subjectShort,
+            category: this.getSubjectCategory(subjectShort),
+            hoursPerWeek: {},
+            parallelGroup: this.getParallelGroup(subjectShort)
+          };
+          
+          await this.storage.createSubject(subject);
+          result.imported.subjects++;
+        }
+      }
+
+      // Create missing classes
+      for (const [className, classInfo] of Array.from(uniqueClasses.entries())) {
+        if (!existingClassNames.has(className)) {
+          const classData: InsertClass = {
+            name: className,
+            grade: classInfo.grade,
+            studentCount: classInfo.studentCount,
+            schoolYearId: schoolYearId,
+            subjectHours: {},
+            targetHoursSemester1: null,
+            targetHoursSemester2: null
+          };
+          
+          await this.storage.createClass(classData);
+          result.imported.classes++;
+        }
+      }
+
+      // Clear existing assignments for this school year before importing new ones
+      await this.storage.deleteAssignmentsBySchoolYear(schoolYearId);
+
+      // Refresh data after creating entities
+      const [updatedTeachers, updatedSubjects, updatedClasses] = await Promise.all([
+        this.storage.getTeachers(),
+        this.storage.getSubjects(),
+        this.storage.getClassesBySchoolYear(schoolYearId)
+      ]);
+
+      // Create teacher-subject-class assignments (only for validated records)
+      for (const record of records) {
+        const teacher = updatedTeachers.find(t => t.shortName === record.teacherShort);
+        const subject = updatedSubjects.find(s => s.shortName === record.subjectShort);
+        const classObj = updatedClasses.find(c => c.name === record.className);
+
+        if (!teacher || !subject || !classObj) {
+          result.warnings.push(`Zuordnung übersprungen: ${record.teacherShort} -> ${record.subjectShort} in ${record.className} (fehlende Entität)`);
+          continue;
+        }
+
+        const assignment: InsertAssignment = {
+          teacherId: teacher.id,
+          subjectId: subject.id,
+          classId: classObj.id,
+          schoolYearId: schoolYearId,
+          hoursPerWeek: record.hoursPerWeek,
+          semester: "1" // Default to first semester
+        };
+        
+        await this.storage.createAssignment(assignment);
+        result.imported.assignments++;
+      }
+
+      result.success = true;
+      console.log('=== VALIDIERTER IMPORT ERFOLGREICH ABGESCHLOSSEN ===');
+      console.log('Import-Ergebnis:', result.imported);
+      console.log(`Validierungsfehler: ${validationErrors.length}`);
+      
+    } catch (error) {
+      result.errors.push(`Import-Fehler: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
+      console.error('Validierter Import-Fehler:', error);
+    }
+
+    return result;
+  }
 }
