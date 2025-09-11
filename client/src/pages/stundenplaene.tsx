@@ -195,20 +195,20 @@ export default function Stundenplaene() {
 
   // Calculate teacher summary statistics
   const teacherSummary = useMemo(() => {
-    const totalHours = teacherAssignments.reduce((sum, assignment) => sum + assignment.hoursPerWeek, 0);
+    const totalHours = teacherAssignments.reduce((sum, assignment) => sum + parseFloat(assignment.hoursPerWeek), 0);
     const s1Hours = teacherAssignments
       .filter(assignment => assignment.semester === "1")
-      .reduce((sum, assignment) => sum + assignment.hoursPerWeek, 0);
+      .reduce((sum, assignment) => sum + parseFloat(assignment.hoursPerWeek), 0);
     const s2Hours = teacherAssignments
       .filter(assignment => assignment.semester === "2")
-      .reduce((sum, assignment) => sum + assignment.hoursPerWeek, 0);
+      .reduce((sum, assignment) => sum + parseFloat(assignment.hoursPerWeek), 0);
     
     return { totalHours, s1Hours, s2Hours };
   }, [teacherAssignments]);
 
   // Calculate class summary statistics
   const classSummary = useMemo(() => {
-    const totalHours = classAssignments.reduce((sum, assignment) => sum + assignment.hoursPerWeek, 0);
+    const totalHours = classAssignments.reduce((sum, assignment) => sum + parseFloat(assignment.hoursPerWeek), 0);
     const uniqueTeachers = new Set(classAssignments.map(assignment => assignment.teacherId));
     const teacherCount = uniqueTeachers.size;
     
@@ -233,10 +233,10 @@ export default function Stundenplaene() {
       const assignedHours = {
         "1": classAssignments
           .filter(a => a.subjectId === subject.id && a.semester === "1")
-          .reduce((sum, a) => sum + a.hoursPerWeek, 0),
+          .reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0),
         "2": classAssignments
           .filter(a => a.subjectId === subject.id && a.semester === "2")
-          .reduce((sum, a) => sum + a.hoursPerWeek, 0)
+          .reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0)
       };
       
       requirements.push({
@@ -264,9 +264,9 @@ export default function Stundenplaene() {
       const current = workloadMap.get(teacherId) || { "1": 0, "2": 0, total: 0 };
       
       if (assignment.semester === "1") {
-        current["1"] += assignment.hoursPerWeek;
+        current["1"] += parseFloat(assignment.hoursPerWeek);
       } else if (assignment.semester === "2") {
-        current["2"] += assignment.hoursPerWeek;
+        current["2"] += parseFloat(assignment.hoursPerWeek);
       }
       current.total = current["1"] + current["2"];
       
@@ -992,7 +992,7 @@ export default function Stundenplaene() {
                                           const currentSemester = getEffectiveValue(assignment, 'semester') as "1" | "2";
                                           const availableHours = getAvailableHours(
                                             teacher.id, 
-                                            isCurrentTeacher ? originalHours : undefined,
+                                            isCurrentTeacher ? parseFloat(originalHours) : undefined,
                                             currentSemester
                                           );
                                           return (
@@ -1098,7 +1098,7 @@ export default function Stundenplaene() {
                                     type="number"
                                     min="1"
                                     max="40"
-                                    value={getEffectiveValue(assignment, 'hoursPerWeek') as number}
+                                    value={parseFloat(getEffectiveValue(assignment, 'hoursPerWeek') as string)}
                                     onChange={(e) => updateEditedAssignment(assignment.id, 'hoursPerWeek', parseInt(e.target.value) || 1)}
                                     data-testid={`input-hours-${assignment.id}`}
                                     className="w-20"

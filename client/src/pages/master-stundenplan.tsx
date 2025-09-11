@@ -110,11 +110,11 @@ export default function MasterStundenplan() {
       
       const semester1Hours = teacherAssignments
         .filter(a => a.semester === "1")
-        .reduce((sum, a) => sum + a.hoursPerWeek, 0);
+        .reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
       
       const semester2Hours = teacherAssignments
         .filter(a => a.semester === "2")
-        .reduce((sum, a) => sum + a.hoursPerWeek, 0);
+        .reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
       
       const totalHours = semester1Hours + semester2Hours;
       const maxHours = parseFloat(teacher.maxHours);
@@ -252,13 +252,13 @@ export default function MasterStundenplan() {
   // Calculate overall statistics
   const overallStats = useMemo(() => {
     const totalAssignments = filteredAssignments.length;
-    const totalHours = filteredAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+    const totalHours = filteredAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
     const semester1Hours = filteredAssignments
       .filter(a => a.semester === "1")
-      .reduce((sum, a) => sum + a.hoursPerWeek, 0);
+      .reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
     const semester2Hours = filteredAssignments
       .filter(a => a.semester === "2")
-      .reduce((sum, a) => sum + a.hoursPerWeek, 0);
+      .reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
     
     const overloadedTeachers = teacherWorkloads.filter(tw => tw.isOverloaded).length;
     const averageUtilization = teacherWorkloads.length > 0 
@@ -388,7 +388,7 @@ export default function MasterStundenplan() {
               </div>
               
               {/* View Mode Toggle */}
-              <div className="flex items-center space-x-1 bg-muted rounded-md p-1">
+              <div className="flex items-center space-x-1 bg-accent/50 border border-border rounded-md p-1">
                 <Button
                   variant={activeView === 'table' ? "default" : "ghost"}
                   size="sm"
@@ -419,7 +419,7 @@ export default function MasterStundenplan() {
         </header>
 
         {/* Statistics Overview */}
-        <div className="p-6 bg-muted/50">
+        <div className="p-6 bg-primary/5 border-b border-border">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card>
               <CardContent className="p-4">
@@ -477,7 +477,7 @@ export default function MasterStundenplan() {
         </div>
 
         {/* Filters and Search */}
-        <div className="px-6 py-4 border-b border-border bg-card">
+        <div className="px-6 py-4 border-b border-border bg-accent/30">
           <div className="flex flex-wrap gap-4 items-center">
             {/* Search */}
             <div className="flex items-center space-x-2 min-w-64">
@@ -629,17 +629,17 @@ export default function MasterStundenplan() {
                                   <p className="font-medium">
                                     {assignment.teacher?.firstName} {assignment.teacher?.lastName}
                                   </p>
-                                  <p className="text-sm text-muted-foreground">
+                                  <p className="text-sm font-medium text-primary">
                                     {assignment.teacher?.shortName}
                                   </p>
                                 </div>
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline">{assignment.class?.name}</Badge>
+                              <Badge variant="outline" className="bg-accent/20 text-foreground border-primary/30">{assignment.class?.name}</Badge>
                             </TableCell>
                             <TableCell>
-                              <Badge variant="secondary">{assignment.subject?.shortName}</Badge>
+                              <Badge variant="default" className="bg-primary/10 text-primary border-primary/50">{assignment.subject?.shortName}</Badge>
                             </TableCell>
                             <TableCell className="text-center">
                               <span className="font-medium">{assignment.hoursPerWeek}</span>
@@ -768,7 +768,7 @@ export default function MasterStundenplan() {
                                     <div>
                                       <div className="flex items-center text-xs font-medium text-muted-foreground mb-2">
                                         <span className="flex-1">1. Semester</span>
-                                        <span>{semester1Assignments.reduce((sum, a) => sum + a.hoursPerWeek, 0)}h</span>
+                                        <span>{semester1Assignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0)}h</span>
                                       </div>
                                       <div className="space-y-1">
                                         {semester1Assignments.map((assignment) => (
@@ -798,7 +798,7 @@ export default function MasterStundenplan() {
                                     <div>
                                       <div className="flex items-center text-xs font-medium text-muted-foreground mb-2">
                                         <span className="flex-1">2. Semester</span>
-                                        <span>{semester2Assignments.reduce((sum, a) => sum + a.hoursPerWeek, 0)}h</span>
+                                        <span>{semester2Assignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0)}h</span>
                                       </div>
                                       <div className="space-y-1">
                                         {semester2Assignments.map((assignment) => (
@@ -897,7 +897,7 @@ export default function MasterStundenplan() {
                               <div className="flex items-center justify-between mb-3">
                                 <h4 className="font-semibold text-sm">{cls.name}</h4>
                                 <Badge variant="outline" className="text-xs">
-                                  {classAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0)} Stunden
+                                  {classAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0)} Stunden
                                 </Badge>
                               </div>
                               
@@ -986,7 +986,7 @@ export default function MasterStundenplan() {
                               <div className="flex items-center justify-between mb-3">
                                 <h4 className="font-semibold text-sm">{cls.name}</h4>
                                 <Badge variant="outline" className="text-xs">
-                                  {classAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0)} Stunden
+                                  {classAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0)} Stunden
                                 </Badge>
                               </div>
                               

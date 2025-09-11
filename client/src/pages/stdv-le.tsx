@@ -179,7 +179,7 @@ export default function StdvLe() {
       : teacherAssignmentsInSemester;
     
     // Calculate current semester hours
-    const currentSemesterHours = existingAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+    const currentSemesterHours = existingAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
     
     // Add the new/updated assignment hours
     const totalSemesterHours = currentSemesterHours + assignment.hoursPerWeek;
@@ -214,8 +214,8 @@ export default function StdvLe() {
       teacherId: assignment.teacherId,
       classId: assignment.classId,
       subjectId: assignment.subjectId,
-      hoursPerWeek: assignment.hoursPerWeek,
-      semester: assignment.semester,
+      hoursPerWeek: parseFloat(assignment.hoursPerWeek),
+      semester: assignment.semester as "1" | "2",
       isOptimized: assignment.isOptimized,
     });
     setIsDialogOpen(true);
@@ -270,14 +270,14 @@ export default function StdvLe() {
   });
 
   const totalAssignments = assignments?.length || 0;
-  const totalHours = assignments?.reduce((sum, a) => sum + a.hoursPerWeek, 0) || 0;
+  const totalHours = assignments?.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0) || 0;
   const optimizedAssignments = assignments?.filter(a => a.isOptimized).length || 0;
   
   // Semester-specific statistics
   const semester1Assignments = assignments?.filter(a => a.semester === "1").length || 0;
   const semester2Assignments = assignments?.filter(a => a.semester === "2").length || 0;
-  const semester1Hours = assignments?.filter(a => a.semester === "1").reduce((sum, a) => sum + a.hoursPerWeek, 0) || 0;
-  const semester2Hours = assignments?.filter(a => a.semester === "2").reduce((sum, a) => sum + a.hoursPerWeek, 0) || 0;
+  const semester1Hours = assignments?.filter(a => a.semester === "1").reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0) || 0;
+  const semester2Hours = assignments?.filter(a => a.semester === "2").reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0) || 0;
 
   const getConflictStatus = (assignment: AssignmentWithDetails) => {
     if (!assignment.teacher || !assignment.subject) return null;
@@ -300,7 +300,7 @@ export default function StdvLe() {
     ) || [];
     
     // Calculate current semester hours for this teacher
-    const currentSemesterHours = teacherAssignmentsInSemester.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+    const currentSemesterHours = teacherAssignmentsInSemester.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
     const maxHoursPerSemester = parseFloat(assignment.teacher.maxHours);
     
     // Check for overload in this semester
