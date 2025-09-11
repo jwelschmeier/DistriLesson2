@@ -369,31 +369,36 @@ export default function Faecherverwaltung() {
             <CardTitle>Übersicht nach Kategorien</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-4">
               {Object.entries(CATEGORIES).map(([key, config]) => {
                 const categorySubjects = subjects.filter(s => s.category === key);
                 return (
-                  <div key={key} className="p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer" 
+                  <div key={key} className="p-4 border rounded-lg hover:shadow-sm transition-shadow cursor-pointer bg-card" 
                        onClick={() => setSelectedCategory(key)}>
                     <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
                         <Badge className={config.color}>{config.label}</Badge>
+                        <span className="text-lg font-semibold text-foreground">
+                          {categorySubjects.length} Fächer
+                        </span>
                       </div>
-                      <span className="text-2xl font-bold text-gray-700 dark:text-gray-300">
-                        {categorySubjects.length}
-                      </span>
                     </div>
-                    <div className="space-y-1 max-h-32 overflow-y-auto">
-                      {categorySubjects.slice(0, 5).map((subject) => (
-                        <div key={subject.id} className="text-sm text-gray-600 dark:text-gray-400">
-                          {subject.shortName} - {subject.name.substring(0, 30)}{subject.name.length > 30 ? '...' : ''}
+                    <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+                      {categorySubjects.map((subject) => (
+                        <div key={subject.id} className="flex items-center justify-between p-2 rounded bg-accent/30 hover:bg-accent/50 transition-colors">
+                          <div className="flex-1">
+                            <span className="font-medium text-sm text-foreground">{subject.shortName}</span>
+                            <span className="text-xs text-muted-foreground ml-2">{subject.name}</span>
+                          </div>
+                          {Object.keys(subject.hoursPerWeek).length > 0 && (
+                            <div className="text-xs text-muted-foreground">
+                              {Object.entries(subject.hoursPerWeek).map(([grade, hours]) => 
+                                `${grade}:${hours}h`
+                              ).join(', ')}
+                            </div>
+                          )}
                         </div>
                       ))}
-                      {categorySubjects.length > 5 && (
-                        <div className="text-xs text-gray-500 italic">
-                          +{categorySubjects.length - 5} weitere...
-                        </div>
-                      )}
                     </div>
                   </div>
                 );
