@@ -327,9 +327,14 @@ export default function Stundenplaene() {
           const canTeachSubject = newTeacher.subjects?.some((subjectEntry: any) => {
             if (typeof subjectEntry === 'string') {
               const subjectCodes = subjectEntry.split(',').map(s => s.trim());
-              return subjectCodes.includes(currentSubject.shortName);
+              return subjectCodes.some(code => 
+                code === currentSubject.shortName || 
+                code === currentSubject.name ||
+                code.toLowerCase() === currentSubject.name.toLowerCase() ||
+                code.toLowerCase() === currentSubject.shortName.toLowerCase()
+              );
             }
-            return subjectEntry === currentSubject.shortName;
+            return subjectEntry === currentSubject.shortName || subjectEntry === currentSubject.name;
           });
           
           // If new teacher can't teach current subject, clear the subject
@@ -952,10 +957,17 @@ export default function Stundenplaene() {
                                           
                                           return currentTeacher.subjects.some((subjectEntry: any) => {
                                             if (typeof subjectEntry === 'string') {
+                                              // Handle comma-separated subjects in a single string
                                               const subjectCodes = subjectEntry.split(',').map(s => s.trim());
-                                              return subjectCodes.includes(subject.shortName);
+                                              // Check both shortName and name matches
+                                              return subjectCodes.some(code => 
+                                                code === subject.shortName || 
+                                                code === subject.name ||
+                                                code.toLowerCase() === subject.name.toLowerCase() ||
+                                                code.toLowerCase() === subject.shortName.toLowerCase()
+                                              );
                                             }
-                                            return subjectEntry === subject.shortName;
+                                            return subjectEntry === subject.shortName || subjectEntry === subject.name;
                                           });
                                         }).map((subject) => (
                                           <SelectItem key={subject.id} value={subject.id}>
