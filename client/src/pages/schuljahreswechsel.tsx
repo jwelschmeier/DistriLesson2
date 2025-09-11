@@ -534,74 +534,183 @@ export default function Schuljahreswechsel() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <Alert>
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    <strong>In Entwicklung:</strong> Die vollständige Schuljahreswechsel-Funktionalität wird derzeit implementiert.
-                    Diese Seite zeigt eine Vorschau der geplanten Features.
-                  </AlertDescription>
-                </Alert>
-
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Geplante Funktionen:</h3>
-                  
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="p-4 border rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Users className="h-4 w-4 text-primary" />
-                        <span className="font-medium">Klassen-Migration</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Automatischer Übergang der Klassen (5a → 6a, etc.)
-                      </p>
-                    </div>
+                  {/* Migration Rules */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">Migrations-Regeln</h3>
                     
-                    <div className="p-4 border rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <BookOpen className="h-4 w-4 text-primary" />
-                        <span className="font-medium">Zuweisungs-Migration</span>
+                    <div className="grid gap-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="auto-migrate"
+                          checked={migrationRules.autoMigrateContinuousSubjects}
+                          onCheckedChange={(checked) => 
+                            setMigrationRules(prev => ({ ...prev, autoMigrateContinuousSubjects: !!checked }))
+                          }
+                          data-testid="checkbox-auto-migrate"
+                        />
+                        <Label htmlFor="auto-migrate" className="text-sm">
+                          Kontinuierliche Fächer automatisch migrieren (Deutsch, Mathematik, Englisch, Sport, Religion)
+                        </Label>
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        Intelligente Übertragung von Lehrer-Zuweisungen
-                      </p>
-                    </div>
-                    
-                    <div className="p-4 border rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <RefreshCw className="h-4 w-4 text-primary" />
-                        <span className="font-medium">Graduierung</span>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="handle-diff"
+                          checked={migrationRules.handleDifferenzierung}
+                          onCheckedChange={(checked) => 
+                            setMigrationRules(prev => ({ ...prev, handleDifferenzierung: !!checked }))
+                          }
+                          data-testid="checkbox-handle-diff"
+                        />
+                        <Label htmlFor="handle-diff" className="text-sm">
+                          Differenzierungs-Fächer verwalten (WP-Bereich, FS, SW, NW-Kurs)
+                        </Label>
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        Archivierung von Abschlussklassen (10. Klassen)
-                      </p>
-                    </div>
-                    
-                    <div className="p-4 border rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Calendar className="h-4 w-4 text-primary" />
-                        <span className="font-medium">Neue Eingangsklassen</span>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="archive-graduated"
+                          checked={migrationRules.archiveGraduatedClasses}
+                          onCheckedChange={(checked) => 
+                            setMigrationRules(prev => ({ ...prev, archiveGraduatedClasses: !!checked }))
+                          }
+                          data-testid="checkbox-archive-graduated"
+                        />
+                        <Label htmlFor="archive-graduated" className="text-sm">
+                          Abschlussklassen (10. Klassen) archivieren
+                        </Label>
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        Erstellung neuer 5. Klassen für das neue Schuljahr
-                      </p>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="preserve-inactive"
+                          checked={migrationRules.preserveInactiveTeachers}
+                          onCheckedChange={(checked) => 
+                            setMigrationRules(prev => ({ ...prev, preserveInactiveTeachers: !!checked }))
+                          }
+                          data-testid="checkbox-preserve-inactive"
+                        />
+                        <Label htmlFor="preserve-inactive" className="text-sm">
+                          Inaktive Lehrer beibehalten
+                        </Label>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="create-missing"
+                          checked={migrationRules.createMissingSubjects}
+                          onCheckedChange={(checked) => 
+                            setMigrationRules(prev => ({ ...prev, createMissingSubjects: !!checked }))
+                          }
+                          data-testid="checkbox-create-missing"
+                        />
+                        <Label htmlFor="create-missing" className="text-sm">
+                          Fehlende Fächer automatisch anlegen
+                        </Label>
+                      </div>
                     </div>
                   </div>
-                </div>
-
-                <Separator />
-
-                <div className="flex gap-3">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setCurrentStep("overview")}
-                    data-testid="button-back-overview"
-                  >
-                    Zurück zur Übersicht
-                  </Button>
-                  <Button disabled data-testid="button-continue-preparation">
-                    Weiter (In Entwicklung)
-                  </Button>
-                </div>
+                  
+                  <Separator />
+                  
+                  {/* New Classes Configuration */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold">Neue Eingangsklassen (5. Klasse)</h3>
+                      <Button
+                        onClick={addNewClass}
+                        size="sm"
+                        variant="outline"
+                        data-testid="button-add-class"
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Klasse hinzufügen
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {newClasses.map((cls, index) => (
+                        <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-3 p-3 border rounded-lg">
+                          <div>
+                            <Label htmlFor={`class-name-${index}`} className="text-xs">Klassenname</Label>
+                            <Input
+                              id={`class-name-${index}`}
+                              value={cls.name}
+                              onChange={(e) => updateNewClass(index, 'name', e.target.value)}
+                              placeholder="z.B. 5a"
+                              data-testid={`input-class-name-${index}`}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor={`class-grade-${index}`} className="text-xs">Jahrgangsstufe</Label>
+                            <Input
+                              id={`class-grade-${index}`}
+                              type="number"
+                              min="5"
+                              max="10"
+                              value={cls.grade}
+                              onChange={(e) => updateNewClass(index, 'grade', parseInt(e.target.value) || 5)}
+                              data-testid={`input-class-grade-${index}`}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor={`class-count-${index}`} className="text-xs">Erwartete Schülerzahl</Label>
+                            <Input
+                              id={`class-count-${index}`}
+                              type="number"
+                              min="1"
+                              max="35"
+                              value={cls.expectedStudentCount}
+                              onChange={(e) => updateNewClass(index, 'expectedStudentCount', parseInt(e.target.value) || 25)}
+                              data-testid={`input-class-count-${index}`}
+                            />
+                          </div>
+                          <div className="flex items-end">
+                            {newClasses.length > 1 && (
+                              <Button
+                                onClick={() => removeNewClass(index)}
+                                size="sm"
+                                variant="outline"
+                                className="text-red-600 hover:text-red-700"
+                                data-testid={`button-remove-class-${index}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="flex gap-3">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setCurrentStep("overview")}
+                      data-testid="button-back-overview"
+                    >
+                      Zurück zur Übersicht
+                    </Button>
+                    <Button 
+                      onClick={() => previewMutation.mutate()}
+                      disabled={!canProceed || previewMutation.isPending}
+                      data-testid="button-create-preview"
+                    >
+                      {previewMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Erstelle Vorschau...
+                        </>
+                      ) : (
+                        <>
+                          Vorschau erstellen
+                          <ArrowRight className="h-4 w-4 ml-2" />
+                        </>
+                      )}
+                    </Button>
+                  </div>
               </CardContent>
             </Card>
           )}
