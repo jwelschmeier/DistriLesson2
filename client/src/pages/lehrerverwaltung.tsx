@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, Presentation, Search, Filter, Calendar } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
-import { insertTeacherSchema, type Teacher, type InsertTeacher } from "@shared/schema";
+import { insertTeacherSchema, type Teacher, type InsertTeacher, type Subject } from "@shared/schema";
 import { z } from "zod";
 
 const teacherFormSchema = insertTeacherSchema.extend({
@@ -43,11 +43,7 @@ const teacherFormSchema = insertTeacherSchema.extend({
 
 type TeacherFormData = z.infer<typeof teacherFormSchema>;
 
-const availableSubjects = [
-  "Deutsch", "Mathematik", "Englisch", "Französisch", "Spanisch",
-  "Geschichte", "Erdkunde", "Politik", "Biologie", "Chemie", "Physik",
-  "Sport", "Kunst", "Musik", "Religion", "Ethik", "Informatik", "Technik"
-];
+// Load subjects dynamically from API instead of hardcoded list
 
 // Kategorien für Ermäßigungsstunden mit Beschreibungen
 const reductionCategories = [
@@ -120,6 +116,14 @@ export default function Lehrerverwaltung() {
   const { data: teachers, isLoading } = useQuery<Teacher[]>({
     queryKey: ["/api/teachers"],
   });
+
+  // Load subjects dynamically from API
+  const { data: subjects = [], isLoading: isLoadingSubjects } = useQuery<Subject[]>({
+    queryKey: ["/api/subjects"],
+  });
+
+  // Extract subject names for the form (using subject names consistently)
+  const availableSubjects = subjects.map(subject => subject.name);
 
   const form = useForm<TeacherFormData>({
     resolver: zodResolver(teacherFormSchema),
@@ -732,8 +736,8 @@ export default function Lehrerverwaltung() {
               <CardTitle>Lehrkräfte ({filteredTeachers.length})</CardTitle>
             </CardHeader>
             <CardContent>
-              {isLoading ? (
-                <div className="text-center py-8">Lade Lehrerdaten...</div>
+              {isLoading || isLoadingSubjects ? (
+                <div className="text-center py-8">Lädt Daten...</div>
               ) : filteredTeachers.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   {searchTerm || filterSubject !== "all" 

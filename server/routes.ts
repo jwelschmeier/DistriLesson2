@@ -153,14 +153,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/teachers/:id", async (req, res) => {
     try {
-      const teacherData = insertTeacherSchema.partial().parse(req.body);
+      console.log("PUT /api/teachers/:id - Request body:", JSON.stringify(req.body, null, 2));
+      console.log("Teacher ID:", req.params.id);
+      
+      // Convert string fields to proper types before validation
+      const processedData = { ...req.body };
+      
+      // Convert string numbers to decimal strings for Drizzle
+      if (processedData.maxHours && typeof processedData.maxHours === 'string') {
+        processedData.maxHours = processedData.maxHours.toString();
+      }
+      if (processedData.currentHours && typeof processedData.currentHours === 'string') {
+        processedData.currentHours = processedData.currentHours.toString();
+      }
+      
+      // Ensure reductionHours is properly formatted
+      if (processedData.reductionHours) {
+        // Convert any string numbers to actual numbers in reductionHours
+        const reductionHours: any = {};
+        for (const [key, value] of Object.entries(processedData.reductionHours)) {
+          if (value !== null && value !== undefined && value !== '') {
+            reductionHours[key] = typeof value === 'string' ? parseFloat(value as string) || 0 : value;
+          } else {
+            reductionHours[key] = 0;
+          }
+        }
+        processedData.reductionHours = reductionHours;
+      }
+      
+      console.log("Processed data:", JSON.stringify(processedData, null, 2));
+      
+      const teacherData = insertTeacherSchema.partial().parse(processedData);
+      console.log("Validated data:", JSON.stringify(teacherData, null, 2));
+      
       const teacher = await storage.updateTeacher(req.params.id, teacherData);
+      console.log("Updated teacher:", JSON.stringify(teacher, null, 2));
+      
       res.json(teacher);
     } catch (error) {
+      console.error("Error updating teacher:", error);
       if (error instanceof z.ZodError) {
+        console.error("Validation errors:", error.errors);
         return res.status(400).json({ error: error.errors });
       }
-      res.status(500).json({ error: "Failed to update teacher" });
+      res.status(500).json({ 
+        error: "Failed to update teacher",
+        details: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
