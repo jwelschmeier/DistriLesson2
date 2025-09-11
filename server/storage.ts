@@ -35,6 +35,79 @@ import { db } from "./db";
 import { eq, sql, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
+// School Year Transition Types
+export interface ClassTransition {
+  from: Class;
+  to: Class | null; // null = graduated class (10th grade)
+  action: "migrate" | "graduate" | "create_new";
+  studentCount: number;
+  newGrade?: number;
+  newName?: string;
+}
+
+export interface AssignmentMigration {
+  assignment: Assignment;
+  status: "auto_migrate" | "manual_check" | "not_migratable";
+  reason?: string;
+  targetGrade?: number;
+  targetHours?: number;
+  newAssignment?: Partial<InsertAssignment>;
+}
+
+export interface SchoolYearTransitionPreview {
+  classTransitions: ClassTransition[];
+  assignmentMigrations: AssignmentMigration[];
+  newClasses: {
+    name: string;
+    grade: number;
+    expectedStudentCount: number;
+  }[];
+  statistics: {
+    totalAssignments: number;
+    autoMigrations: number;
+    manualChecks: number;
+    nonMigratable: number;
+    graduatedClasses: number;
+    continuingClasses: number;
+  };
+}
+
+export interface SchoolYearTransitionParams {
+  newClasses: {
+    name: string;
+    grade: number;
+    expectedStudentCount: number;
+  }[];
+  migrationRules: {
+    autoMigrateContinuousSubjects: boolean;
+    handleDifferenzierung: boolean;
+    archiveGraduatedClasses: boolean;
+  };
+}
+
+export interface SchoolYearTransitionResult {
+  success: boolean;
+  newSchoolYear: SchoolYear;
+  migratedClasses: number;
+  migratedAssignments: number;
+  migratedStudents: number;
+  createdNewClasses: number;
+  graduatedClasses: number;
+  errors: string[];
+}
+
+export interface SchoolYearTransitionValidation {
+  valid: boolean;
+  warnings: string[];
+  errors: string[];
+  statistics: {
+    totalTeachers: number;
+    totalClasses: number;
+    totalAssignments: number;
+    incompleteClasses: number;
+  };
+}
+
 export interface IStorage {
   // School Years
   getSchoolYears(): Promise<SchoolYear[]>;
@@ -116,6 +189,11 @@ export interface IStorage {
   // Invitation operations
   createInvitation(invitation: InsertInvitation): Promise<Invitation>;
   getInvitations(): Promise<Invitation[]>;
+
+  // School Year Transition operations
+  previewSchoolYearTransition(fromSchoolYearId: string, toSchoolYearName: string): Promise<SchoolYearTransitionPreview>;
+  executeSchoolYearTransition(fromSchoolYearId: string, toSchoolYearName: string, params: SchoolYearTransitionParams): Promise<SchoolYearTransitionResult>;
+  validateSchoolYearTransition(fromSchoolYearId: string): Promise<SchoolYearTransitionValidation>;
   getInvitationByToken(token: string): Promise<Invitation | undefined>;
   getInvitationByEmail(email: string): Promise<Invitation | undefined>;
   markInvitationUsed(id: string, usedBy: string): Promise<void>;
@@ -648,6 +726,508 @@ export class DatabaseStorage implements IStorage {
 
   async deleteInvitation(id: string): Promise<void> {
     await db.delete(invitations).where(eq(invitations.id, id));
+  }
+
+  // School Year Transition operations
+  async validateSchoolYearTransition(fromSchoolYearId: string): Promise<SchoolYearTransitionValidation> {
+    try {
+      // Get current school year data
+      const currentSchoolYear = await this.getSchoolYear(fromSchoolYearId);
+      if (!currentSchoolYear) {
+        return {
+          valid: false,
+          errors: ["Aktuelles Schuljahr nicht gefunden"],
+          warnings: [],
+          statistics: { totalTeachers: 0, totalClasses: 0, totalAssignments: 0, incompleteClasses: 0 }
+        };
+      }
+
+      // Get all data for current school year
+      const [allTeachers, currentClasses, currentAssignments] = await Promise.all([
+        this.getTeachers(),
+        this.getClassesBySchoolYear(fromSchoolYearId),
+        this.getAssignmentsBySchoolYear(fromSchoolYearId)
+      ]);
+
+      const warnings: string[] = [];
+      const errors: string[] = [];
+
+      // Check for incomplete classes
+      const incompleteClasses = currentClasses.filter(c => 
+        !c.classTeacher1Id || c.studentCount === 0
+      );
+
+      if (incompleteClasses.length > 0) {
+        warnings.push(`${incompleteClasses.length} Klassen ohne Klassenlehrer oder ohne Schüler`);
+      }
+
+      // Check for missing assignments
+      const classesWithoutAssignments = currentClasses.filter(c => 
+        !currentAssignments.some(a => a.classId === c.id)
+      );
+
+      if (classesWithoutAssignments.length > 0) {
+        warnings.push(`${classesWithoutAssignments.length} Klassen ohne Zuweisungen`);
+      }
+
+      // Check for teachers with overload
+      const overloadedTeachers = allTeachers.filter(t => 
+        parseFloat(t.currentHours) > parseFloat(t.maxHours)
+      );
+
+      if (overloadedTeachers.length > 0) {
+        warnings.push(`${overloadedTeachers.length} Lehrer mit Überbelastung`);
+      }
+
+      return {
+        valid: errors.length === 0,
+        warnings,
+        errors,
+        statistics: {
+          totalTeachers: allTeachers.length,
+          totalClasses: currentClasses.length,
+          totalAssignments: currentAssignments.length,
+          incompleteClasses: incompleteClasses.length,
+        }
+      };
+    } catch (error) {
+      console.error("Error validating school year transition:", error);
+      return {
+        valid: false,
+        errors: ["Fehler bei der Validierung aufgetreten"],
+        warnings: [],
+        statistics: { totalTeachers: 0, totalClasses: 0, totalAssignments: 0, incompleteClasses: 0 }
+      };
+    }
+  }
+
+  async previewSchoolYearTransition(fromSchoolYearId: string, toSchoolYearName: string): Promise<SchoolYearTransitionPreview> {
+    try {
+      // Get current data
+      const [currentClasses, currentAssignments, allSubjects] = await Promise.all([
+        this.getClassesBySchoolYear(fromSchoolYearId),
+        this.getAssignmentsBySchoolYear(fromSchoolYearId),
+        this.getSubjects()
+      ]);
+
+      const classTransitions: ClassTransition[] = [];
+      const assignmentMigrations: AssignmentMigration[] = [];
+      const newClasses = [
+        { name: "5a", grade: 5, expectedStudentCount: 28 },
+        { name: "5b", grade: 5, expectedStudentCount: 26 }
+      ];
+
+      // Process class transitions
+      let graduatedClasses = 0;
+      let continuingClasses = 0;
+
+      for (const currentClass of currentClasses) {
+        if (currentClass.grade === 10) {
+          // Graduating class
+          classTransitions.push({
+            from: currentClass,
+            to: null,
+            action: "graduate",
+            studentCount: currentClass.studentCount
+          });
+          graduatedClasses++;
+        } else {
+          // Continuing class - advance grade
+          const newGrade = currentClass.grade + 1;
+          const newName = currentClass.name.replace(currentClass.grade.toString(), newGrade.toString());
+          
+          classTransitions.push({
+            from: currentClass,
+            to: null, // Will be created during transition
+            action: "migrate",
+            studentCount: currentClass.studentCount,
+            newGrade,
+            newName
+          });
+          continuingClasses++;
+        }
+      }
+
+      // Process assignment migrations based on subject curriculum rules
+      const autoMigratableSubjects = ["Deutsch", "Mathematik", "Englisch", "Sport", "KR", "ER", "PP"];
+      let autoMigrations = 0;
+      let manualChecks = 0;
+      let nonMigratable = 0;
+
+      for (const assignment of currentAssignments) {
+        const subject = allSubjects.find(s => s.id === assignment.subjectId);
+        const currentClass = currentClasses.find(c => c.id === assignment.classId);
+        
+        if (!subject || !currentClass) continue;
+
+        // Skip assignments for graduating classes
+        if (currentClass.grade === 10) {
+          assignmentMigrations.push({
+            assignment,
+            status: "not_migratable",
+            reason: "Klasse graduiert"
+          });
+          nonMigratable++;
+          continue;
+        }
+
+        const targetGrade = currentClass.grade + 1;
+        const targetHours = subject.hoursPerWeek[targetGrade.toString()] || 0;
+
+        if (autoMigratableSubjects.includes(subject.name)) {
+          // Auto-migratable subjects
+          if (targetHours > 0) {
+            assignmentMigrations.push({
+              assignment,
+              status: "auto_migrate",
+              targetGrade,
+              targetHours,
+              newAssignment: {
+                teacherId: assignment.teacherId,
+                subjectId: assignment.subjectId,
+                hoursPerWeek: targetHours,
+                semester: assignment.semester as "1" | "2"
+              }
+            });
+            autoMigrations++;
+          } else {
+            assignmentMigrations.push({
+              assignment,
+              status: "not_migratable",
+              reason: `${subject.name} endet nach Klasse ${currentClass.grade}`
+            });
+            nonMigratable++;
+          }
+        } else {
+          // Subjects requiring manual review (Biologie, Physik, etc.)
+          assignmentMigrations.push({
+            assignment,
+            status: "manual_check",
+            reason: `${subject.name} hat komplexe Übergangsregeln`,
+            targetGrade,
+            targetHours
+          });
+          manualChecks++;
+        }
+      }
+
+      return {
+        classTransitions,
+        assignmentMigrations,
+        newClasses,
+        statistics: {
+          totalAssignments: currentAssignments.length,
+          autoMigrations,
+          manualChecks,
+          nonMigratable,
+          graduatedClasses,
+          continuingClasses
+        }
+      };
+    } catch (error) {
+      console.error("Error creating school year transition preview:", error);
+      throw new Error("Fehler bei der Erstellung der Übergangs-Vorschau");
+    }
+  }
+
+  async executeSchoolYearTransition(fromSchoolYearId: string, toSchoolYearName: string, params: SchoolYearTransitionParams): Promise<SchoolYearTransitionResult> {
+    // Use database transaction for atomic execution
+    return await db.transaction(async (tx) => {
+      try {
+        const errors: string[] = [];
+        let migratedClasses = 0;
+        let migratedAssignments = 0;
+        let migratedStudents = 0;
+        let createdNewClasses = 0;
+        let graduatedClasses = 0;
+
+        // 1. Idempotency check - prevent duplicate transitions
+        const existingToSchoolYear = await tx
+          .select()
+          .from(schoolYears)
+          .where(eq(schoolYears.name, toSchoolYearName))
+          .limit(1);
+        
+        if (existingToSchoolYear.length > 0) {
+          throw new Error(`Schuljahr "${toSchoolYearName}" existiert bereits. Übergang wurde möglicherweise bereits ausgeführt.`);
+        }
+
+        // 2. Verify source school year exists and is valid
+        const [fromSchoolYear] = await tx
+          .select()
+          .from(schoolYears)
+          .where(eq(schoolYears.id, fromSchoolYearId));
+        
+        if (!fromSchoolYear) {
+          throw new Error(`Quell-Schuljahr mit ID ${fromSchoolYearId} nicht gefunden`);
+        }
+
+        // 3. Create new school year
+        const [newSchoolYear] = await tx.insert(schoolYears).values({
+          name: toSchoolYearName,
+          startDate: new Date().toISOString().split('T')[0],
+          endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          isCurrent: false
+        }).returning();
+
+        // 4. Get current data
+        const [currentClasses, currentAssignments, currentStudents, allSubjects] = await Promise.all([
+          tx.select().from(classes).where(eq(classes.schoolYearId, fromSchoolYearId)),
+          tx.select().from(assignments).where(eq(assignments.schoolYearId, fromSchoolYearId)),
+          tx.select().from(students).where(eq(students.schoolYearId, fromSchoolYearId)),
+          tx.select().from(subjects)
+        ]);
+
+        // 5. Create new classes for continuing students and migrate students
+        const newClassMap = new Map<string, string>(); // oldClassId -> newClassId
+
+        for (const currentClass of currentClasses) {
+          if (currentClass.grade === 10) {
+            // Archive graduating class - migrate students out of the class
+            const graduatingStudents = currentStudents.filter(s => s.classId === currentClass.id);
+            
+            for (const student of graduatingStudents) {
+              await tx
+                .update(students)
+                .set({ 
+                  classId: null, // Remove from class (graduated)
+                  schoolYearId: newSchoolYear.id // But keep in new school year for record keeping
+                })
+                .where(eq(students.id, student.id));
+              migratedStudents++;
+            }
+            
+            graduatedClasses++;
+          } else {
+            // Create new class for next grade
+            const newGrade = currentClass.grade + 1;
+            const newName = currentClass.name.replace(currentClass.grade.toString(), newGrade.toString());
+            
+            const [newClass] = await tx.insert(classes).values({
+              name: newName,
+              grade: newGrade,
+              studentCount: currentClass.studentCount,
+              subjectHours: {}, // Will be populated by assignments
+              classTeacher1Id: currentClass.classTeacher1Id,
+              classTeacher2Id: currentClass.classTeacher2Id,
+              schoolYearId: newSchoolYear.id
+            }).returning();
+            
+            newClassMap.set(currentClass.id, newClass.id);
+            migratedClasses++;
+
+            // Migrate students to new class
+            const classStudents = currentStudents.filter(s => s.classId === currentClass.id);
+            for (const student of classStudents) {
+              await tx
+                .update(students)
+                .set({ 
+                  classId: newClass.id,
+                  grade: newGrade,
+                  schoolYearId: newSchoolYear.id
+                })
+                .where(eq(students.id, student.id));
+              migratedStudents++;
+            }
+          }
+        }
+
+        // 6. Create new 5th grade classes
+        for (const newClassData of params.newClasses) {
+          await tx.insert(classes).values({
+            name: newClassData.name,
+            grade: newClassData.grade,
+            studentCount: newClassData.expectedStudentCount,
+            subjectHours: {},
+            schoolYearId: newSchoolYear.id
+          });
+          createdNewClasses++;
+        }
+
+        // 7. Migrate assignments using NRW curriculum rules
+        if (params.migrationRules.autoMigrateContinuousSubjects) {
+          const subjectMigrationRules = this.getNRWSubjectMigrationRules();
+          
+          for (const assignment of currentAssignments) {
+            const subject = allSubjects.find(s => s.id === assignment.subjectId);
+            const currentClass = currentClasses.find(c => c.id === assignment.classId);
+            
+            if (!subject || !currentClass || currentClass.grade === 10) continue;
+            
+            const newClassId = newClassMap.get(assignment.classId);
+            if (!newClassId) continue;
+
+            const targetGrade = currentClass.grade + 1;
+            const migrationRule = subjectMigrationRules[subject.shortName];
+            
+            if (migrationRule && migrationRule.canMigrateTo.includes(targetGrade)) {
+              const targetHours = subject.hoursPerWeek[targetGrade.toString()] || migrationRule.defaultHours[targetGrade] || 0;
+
+              if (targetHours > 0) {
+                await tx.insert(assignments).values({
+                  teacherId: assignment.teacherId,
+                  classId: newClassId,
+                  subjectId: assignment.subjectId,
+                  hoursPerWeek: targetHours,
+                  semester: assignment.semester as "1" | "2",
+                  schoolYearId: newSchoolYear.id
+                });
+                migratedAssignments++;
+              }
+            }
+          }
+        }
+
+        // 8. Set new school year as current
+        await tx.update(schoolYears).set({ isCurrent: false });
+        await tx
+          .update(schoolYears)
+          .set({ isCurrent: true })
+          .where(eq(schoolYears.id, newSchoolYear.id));
+
+        return {
+          success: true,
+          newSchoolYear,
+          migratedClasses,
+          migratedAssignments,
+          migratedStudents,
+          createdNewClasses,
+          graduatedClasses,
+          errors
+        };
+      } catch (error: any) {
+        console.error("Error executing school year transition:", error);
+        // Transaction will automatically rollback
+        throw error;
+      }
+    });
+  }
+
+  // NRW Realschule Subject Migration Rules
+  private getNRWSubjectMigrationRules(): Record<string, {
+    canMigrateTo: number[];
+    defaultHours: Record<number, number>;
+    category: string;
+    notes?: string;
+  }> {
+    return {
+      // Continuous subjects (5-10)
+      "DE": {
+        canMigrateTo: [6, 7, 8, 9, 10],
+        defaultHours: { 5: 5, 6: 4, 7: 4, 8: 4, 9: 4, 10: 4 },
+        category: "continuous"
+      },
+      "M": {
+        canMigrateTo: [6, 7, 8, 9, 10],
+        defaultHours: { 5: 4, 6: 4, 7: 4, 8: 4, 9: 4, 10: 4 },
+        category: "continuous"
+      },
+      "E": {
+        canMigrateTo: [6, 7, 8, 9, 10],
+        defaultHours: { 5: 4, 6: 4, 7: 4, 8: 3, 9: 3, 10: 4 },
+        category: "continuous"
+      },
+      "SP": {
+        canMigrateTo: [6, 7, 8, 9, 10],
+        defaultHours: { 5: 3, 6: 3, 7: 3, 8: 3, 9: 3, 10: 3 },
+        category: "continuous"
+      },
+      
+      // Religion/Philosophy parallel group (continuous)
+      "KR": {
+        canMigrateTo: [6, 7, 8, 9, 10],
+        defaultHours: { 5: 2, 6: 2, 7: 2, 8: 2, 9: 2, 10: 2 },
+        category: "continuous_parallel"
+      },
+      "ER": {
+        canMigrateTo: [6, 7, 8, 9, 10],
+        defaultHours: { 5: 2, 6: 2, 7: 2, 8: 2, 9: 2, 10: 2 },
+        category: "continuous_parallel"
+      },
+      "PP": {
+        canMigrateTo: [6, 7, 8, 9, 10],
+        defaultHours: { 5: 2, 6: 2, 7: 2, 8: 2, 9: 2, 10: 2 },
+        category: "continuous_parallel"
+      },
+
+      // Subjects starting in grade 6
+      "PH": {
+        canMigrateTo: [7, 8], // Pause in 9, resumes in 10
+        defaultHours: { 6: 2, 7: 2, 8: 2, 10: 2 },
+        category: "interrupted",
+        notes: "Pause in grade 9"
+      },
+      "GE": {
+        canMigrateTo: [7, 8, 9, 10],
+        defaultHours: { 6: 2, 7: 2, 8: 2, 9: 2, 10: 2 },
+        category: "continuous_from_6"
+      },
+      "PK": {
+        canMigrateTo: [7, 8, 9, 10],
+        defaultHours: { 6: 1, 7: 2, 8: 2, 9: 2, 10: 2 },
+        category: "continuous_from_6"
+      },
+
+      // Subjects starting in grade 7
+      "CH": {
+        canMigrateTo: [8, 9, 10],
+        defaultHours: { 7: 2, 8: 2, 9: 2, 10: 2 },
+        category: "continuous_from_7"
+      },
+
+      // Interrupted subjects
+      "BI": {
+        canMigrateTo: [6], // 5→6 OK, then pause in 7, resumes in 8
+        defaultHours: { 5: 2, 6: 2, 8: 1, 9: 2, 10: 2 },
+        category: "interrupted",
+        notes: "Pause in grade 7, reduced hours in grade 8"
+      },
+      "EK": {
+        canMigrateTo: [], // 5→6 NOT possible (pause), resumes in 7
+        defaultHours: { 5: 2, 7: 1, 8: 2, 9: 1, 10: 2 },
+        category: "interrupted",
+        notes: "Pause in grade 6, variable hours"
+      },
+      "KU": {
+        canMigrateTo: [6, 7], // 5→6→7 OK, pause in 8, brief in 9, ends
+        defaultHours: { 5: 2, 6: 2, 7: 1, 9: 1 },
+        category: "interrupted",
+        notes: "Pause in grade 8, ends after grade 9"
+      },
+      "MU": {
+        canMigrateTo: [6], // Ends after grade 6 (except as differentiation)
+        defaultHours: { 5: 2, 6: 1 },
+        category: "ending",
+        notes: "Ends after grade 6, available as differentiation 7-10"
+      },
+
+      // Differentiation subjects (7-10 only)
+      "FS": {
+        canMigrateTo: [8, 9, 10],
+        defaultHours: { 7: 3, 8: 4, 9: 3, 10: 4 },
+        category: "differentiation"
+      },
+      "SW": {
+        canMigrateTo: [8, 9, 10],
+        defaultHours: { 7: 3, 8: 4, 9: 3, 10: 4 },
+        category: "differentiation"
+      },
+      "NW": {
+        canMigrateTo: [8, 9, 10],
+        defaultHours: { 7: 3, 8: 4, 9: 3, 10: 4 },
+        category: "differentiation"
+      },
+      "IF": {
+        canMigrateTo: [8, 9, 10],
+        defaultHours: { 7: 3, 8: 4, 9: 3, 10: 4 },
+        category: "differentiation"
+      },
+      "TC": {
+        canMigrateTo: [8, 9, 10],
+        defaultHours: { 7: 3, 8: 4, 9: 3, 10: 4 },
+        category: "differentiation"
+      }
+    };
   }
 }
 

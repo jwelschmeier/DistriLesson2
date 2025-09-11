@@ -4,6 +4,7 @@ import multer from "multer";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isAdmin } from "./replitAuth";
 import { insertTeacherSchema, insertStudentSchema, insertClassSchema, insertSubjectSchema, insertAssignmentSchema, insertInvitationSchema, Teacher } from "@shared/schema";
+import { SchoolYearTransitionParams } from "./storage";
 import { calculateCorrectHours } from "@shared/parallel-subjects";
 import { z } from "zod";
 
@@ -1026,7 +1027,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     classId: classData.id,
                     subjectId: subject.id,
                     hoursPerWeek: semesterSubjects[baseSubject].hours,
-                    semester: semester.toString(),
+                    semester: semester === 1 ? "1" : "2",
                     isOptimized: true
                   });
                   assignmentPromises.push(assignmentPromise);
@@ -1102,7 +1103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       classId: classData.id,
                       subjectId: subject.id,
                       hoursPerWeek: semesterSubjects[baseSubject].hours,
-                      semester: semester.toString(),
+                      semester: semester === 1 ? "1" : "2",
                       isOptimized: true
                     });
                     assignmentPromises.push(assignmentPromise);
