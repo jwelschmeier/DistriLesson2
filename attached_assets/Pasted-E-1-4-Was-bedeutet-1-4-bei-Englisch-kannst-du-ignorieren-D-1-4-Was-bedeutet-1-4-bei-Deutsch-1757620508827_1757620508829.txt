@@ -1,0 +1,41 @@
+E 1-4 → Was bedeutet "1-4" bei Englisch? kannst du ignorieren
+D 1-4 → Was bedeutet "1-4" bei Deutsch? kannst du ignorieren
+
+
+M 1-4 → Was bedeutet "1-4" bei Mathematik?kannst du ignorieren
+
+
+PH 2.15 → Was bedeutet die Nummer nach dem Fach? kannst du ignorieren - sind Raumnummern
+BI 2.13 → Ähnlich bei Biologie - kannst du ignorieren - sind Raumnummern
+IF 2.12 → Bei Informatik - kannst du ignorieren - sind Raumnummern
+7 FS → Jahrgang 7, aber was ist "FS"? Französisch als Differenzierungsfach in Jahrgang 7
+8 INF → Jahrgang 8, ist "INF" = Informatik? ja
+9 MF → Jahrgang 9, was ist "MF"? Matheförder
+10 MF → Jahrgang 10, gleiches "MF" Matheförder
+8 MUS → Jahrgang 8, ist "MUS" = Musik? ja.
+9 SW → Jahrgang 9, was ist "SW"? Sozialwissenschaften
+10 SW → Jahrgang 10, gleiches "SW" Sozialwissenschaften
+6 KR2, 8 KR1 → Was sind die Nummern bei Katholischer Religion? mehrere Kurse die zeitgleich stattfinden. also wichtig nur einmal zählen für die klassengesamtstunden aber für jeden Lehrer natürlich
+7 KR1, 9 KR1 → Verschiedene KR-Gruppen? genau
+6 ER1, 6 ER2, 8 ER2, 9 ER1, 9 ER2, 10 ER1 → Evangelische Religion mit Nummern - mehrere Kurse die zeitgleich stattfinden. also wichtig nur einmal zählen für die klassengesamtstunden aber für jeden Lehrer natürlich
+7 PP1, 6 PP1, 5 PP1, 8 PP1, 9 PP1 → Was ist "PP"? Praktische Philosophie
+VR, VR1 → Was bedeutet das? Vertretungsreserve
+SOL → Eigenes Fach oder Abkürzung? eigenes Fach - Soziales Lernen
+EF → Was ist das für ein Fach?  Englsich Förder
+PK → Politik oder anderes? Politik
+AG_Erasmus → Erasmus AG - richtig
+AG_England → England AG- richtig
+AG_DELF → DELF AG - richtig
+AG_Bienen DS → Bienen AG - richtig
+AG_Kreativ → Kreativ AG - richtig
+AG_Senioren → Senioren AG - richtig
+BOE, SUT → Zwei Lehrer zusammen? ja genau
+DRE, KUE → Team-Teaching? richitg
+HES, NIE, SIN, ZEN, MOR, ERN → Große Lehrer-Gruppe - ignorieren
+FRI, HES, WEL → Dreier-Team - ignorieren
+EWE, THI → Zweier-Team - richtig
+SGST → Was ist das? - ignorieren
+LRST → Unbekannte Abkürzung - ignorieren
+BER → Fach oder Aktivität? - ignorieren
+FÖRS → Was bedeutet das? Förderrechtschreibung in Jahrgang 5
+6 FÖRS1 → FÖRS mit Nummer - Förderrechtschreibung in Jahrgang 6, erster Kurs
