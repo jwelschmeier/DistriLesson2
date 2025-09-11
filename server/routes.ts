@@ -1138,7 +1138,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fromSchoolYearIdSchema = z.string().uuid("Ungültige Schuljahr-ID");
       const fromSchoolYearId = fromSchoolYearIdSchema.parse(req.params.fromSchoolYearId);
       
-      const validation = await storage.validateSchoolYearTransition(fromSchoolYearId);
+      const rawValidation = await storage.validateSchoolYearTransition(fromSchoolYearId);
+      
+      // Get additional data needed for frontend ValidationResult type
+      const [allStudents, classes] = await Promise.all([
+        storage.getStudentsBySchoolYear(fromSchoolYearId),
+        storage.getClassesBySchoolYear(fromSchoolYearId)
+      ]);
+      
+      const graduatingClasses = classes.filter(c => c.grade === 10).length;
+      
+      // Transform to match frontend ValidationResult type exactly
+      const validation = {
+        valid: rawValidation.valid,
+        errors: rawValidation.errors,
+        warnings: rawValidation.warnings,
+        statistics: {
+          totalClasses: rawValidation.statistics.totalClasses,
+          totalStudents: allStudents.length,
+          totalTeachers: rawValidation.statistics.totalTeachers,
+          totalAssignments: rawValidation.statistics.totalAssignments,
+          graduatingClasses: graduatingClasses
+        }
+      };
+      
       res.json(validation);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1157,19 +1180,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/school-years/preview-transition', isAuthenticated, isAdmin, async (req, res) => {
     try {
-      // Complete Zod validation for request body
+      // Complete Zod validation for request body matching frontend format
       const previewRequestSchema = z.object({
         fromSchoolYearId: z.string().uuid("Ungültige Schuljahr-ID für Ausgangsjahr"),
         toSchoolYearName: z.string().min(1, "Zielschuljahr-Name ist erforderlich").max(50, "Name zu lang"),
-        options: z.object({
-          preserveClassTeachers: z.boolean().optional().default(true),
-          includeGraduating: z.boolean().optional().default(true)
-        }).optional().default({})
+        params: z.object({
+          newClasses: z.array(z.object({
+            name: z.string().min(1, "Klassenname erforderlich").max(10, "Klassenname zu lang"),
+            grade: z.number().int().min(5, "Mindestklasse 5").max(10, "Höchstklasse 10"),
+            expectedStudentCount: z.number().int().min(1, "Mindestens 1 Schüler").max(35, "Maximal 35 Schüler")
+          })).min(1, "Mindestens eine neue Klasse erforderlich"),
+          migrationRules: z.object({
+            autoMigrateContinuousSubjects: z.boolean().optional().default(true),
+            handleDifferenzierung: z.boolean().optional().default(true),
+            archiveGraduatedClasses: z.boolean().optional().default(true),
+            preserveInactiveTeachers: z.boolean().optional().default(false),
+            createMissingSubjects: z.boolean().optional().default(false)
+          }).optional().default({})
+        })
       });
       
-      const { fromSchoolYearId, toSchoolYearName, options } = previewRequestSchema.parse(req.body);
+      const { fromSchoolYearId, toSchoolYearName, params } = previewRequestSchema.parse(req.body);
 
-      const preview = await storage.previewSchoolYearTransition(fromSchoolYearId, toSchoolYearName);
+      const rawPreview = await storage.previewSchoolYearTransition(fromSchoolYearId, toSchoolYearName);
+      
+      // Transform to match frontend PreviewResult type
+      const preview = {
+        success: true,
+        preview: {
+          newClasses: params.newClasses,
+          migratedAssignments: rawPreview.assignmentMigrations.map(am => ({
+            teacherName: "Unknown", // TODO: Get teacher name from assignment
+            subject: "Unknown", // TODO: Get subject name from assignment  
+            fromClass: "Unknown", // TODO: Get class name from assignment
+            toClass: am.targetGrade ? `${am.targetGrade}a` : "Unknown", // TODO: Proper mapping
+            status: am.status === 'auto_migrate' ? 'auto' as const : 
+                   am.status === 'manual_check' ? 'manual_check' as const : 'skip' as const
+          })),
+          archivedClasses: rawPreview.classTransitions
+            .filter(ct => ct.action === 'graduate')
+            .map(ct => ({
+              name: ct.from.name,
+              studentCount: ct.studentCount
+            })),
+          migratedStudents: rawPreview.classTransitions
+            .filter(ct => ct.action === 'migrate')
+            .reduce((sum, ct) => sum + ct.studentCount, 0),
+          statistics: {
+            classesCreated: params.newClasses.length + rawPreview.statistics.continuingClasses,
+            assignmentsMigrated: rawPreview.statistics.autoMigrations,
+            studentsArchived: rawPreview.classTransitions
+              .filter(ct => ct.action === 'graduate')
+              .reduce((sum, ct) => sum + ct.studentCount, 0),
+            studentsMigrated: rawPreview.classTransitions
+              .filter(ct => ct.action === 'migrate')
+              .reduce((sum, ct) => sum + ct.studentCount, 0)
+          }
+        }
+      };
+      
       res.json(preview);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1227,18 +1296,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Execute the transition
-      const result = await storage.executeSchoolYearTransition(
+      const rawResult = await storage.executeSchoolYearTransition(
         fromSchoolYearId, 
         toSchoolYearName, 
         validatedParams
       );
       
-      if (!result.success) {
+      if (!rawResult.success) {
         return res.status(500).json({ 
           error: "Schuljahreswechsel fehlgeschlagen", 
-          details: result.errors 
+          details: rawResult.errors 
         });
       }
+
+      // Transform to match frontend TransitionResult type
+      const result = {
+        success: rawResult.success,
+        newSchoolYearId: rawResult.newSchoolYear.id,
+        statistics: {
+          classesCreated: rawResult.createdNewClasses + rawResult.migratedClasses,
+          assignmentsMigrated: rawResult.migratedAssignments,
+          studentsArchived: validatedParams.newClasses.reduce((sum, nc) => sum + nc.expectedStudentCount, 0), // Approximation
+          studentsMigrated: rawResult.migratedStudents
+        },
+        warnings: [], // TODO: Add warnings from transition process
+        errors: rawResult.errors
+      };
 
       res.json(result);
     } catch (error) {
