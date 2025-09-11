@@ -45,6 +45,7 @@ const CATEGORIES = {
   'Nebenfach': { label: 'Nebenfach', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200' },
   'AG': { label: 'AG', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' },
   'Sonderbereich': { label: 'Sonderbereich', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' },
+  'Differenzierungsfach': { label: 'Differenzierungsfach', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' },
 } as const;
 
 export default function Faecherverwaltung() {
