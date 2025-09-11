@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { GraduationCap, BarChart3, Upload, Calculator, Users, Presentation, School, Clock, Sparkles, BookOpen, Calendar } from "lucide-react";
+import { GraduationCap, BarChart3, Upload, Calculator, Users, Presentation, School, Clock, Sparkles, BookOpen, Calendar, Grid } from "lucide-react";
 
 const navigationItems = [
   { href: "/", label: "Dashboard", icon: BarChart3 },
@@ -11,6 +11,7 @@ const navigationItems = [
   { href: "/klassenverwaltung", label: "Klassenverwaltung", icon: School },
   { href: "/faecherverwaltung", label: "Fächerverwaltung", icon: BookOpen },
   { href: "/stundenplaene", label: "Stundenpläne", icon: Calendar },
+  { href: "/master-stundenplan", label: "Master-Stundenplan", icon: Grid },
   { href: "/stdv-le", label: "StdV-Le", icon: Clock },
   { href: "/stdv-kl-optimum", label: "StdV-Kl-Optimum", icon: Sparkles },
 ];

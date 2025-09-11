@@ -14,6 +14,7 @@ import Faecherverwaltung from "@/pages/faecherverwaltung";
 import StdvLe from "@/pages/stdv-le";
 import StdvKlOptimum from "@/pages/stdv-kl-optimum";
 import Stundenplaene from "@/pages/stundenplaene";
+import MasterStundenplan from "@/pages/master-stundenplan";
 
 function Router() {
   return (
@@ -28,6 +29,7 @@ function Router() {
       <Route path="/stdv-le" component={StdvLe} />
       <Route path="/stdv-kl-optimum" component={StdvKlOptimum} />
       <Route path="/stundenplaene" component={Stundenplaene} />
+      <Route path="/master-stundenplan" component={MasterStundenplan} />
       <Route component={NotFound} />
     </Switch>
   );
