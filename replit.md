@@ -6,6 +6,15 @@ This is a full-stack web application built for managing teacher schedules and cl
 
 Preferred communication style: Simple, everyday language.
 
+# Recent Changes
+
+**September 2025**:
+- Implemented comprehensive parallel subjects system to prevent double-counting of Differenzierungsfächer (FS, SW, NW-Kurs, IF, TC, Musik-Kurs) and Religionsfächer (KR, ER, PP) that run in parallel time slots
+- Added semester-based planning with separate target hours for 1st and 2nd semester in class management
+- Enhanced Master Schedule Overview with three view modes (table/grid/semester), advanced filtering, and CSV export capabilities
+- Fixed critical display bugs in class hour calculations and implemented robust semester-aware workload validation
+- Extended database schema with parallelGroup field for subjects and targetHoursSemester1/2 fields for classes
+
 # System Architecture
 
 ## Frontend Architecture
