@@ -35,11 +35,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Invitation management routes (Admin only)
   app.post('/api/admin/invitations', isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const invitationData = insertInvitationSchema.parse({
+      const userId = (req as any).user.claims.sub;
+      console.log(`DEBUG: Creating invitation with userId: ${userId} (type: ${typeof userId})`);
+      
+      const dataToValidate = {
         ...req.body,
-        createdBy: (req as any).user.claims.sub,
+        createdBy: userId,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
-      });
+      };
+      
+      console.log('DEBUG: Data to validate:', JSON.stringify(dataToValidate, null, 2));
+      
+      const invitationData = insertInvitationSchema.parse(dataToValidate);
       
       const invitation = await storage.createInvitation(invitationData);
       res.status(201).json(invitation);
