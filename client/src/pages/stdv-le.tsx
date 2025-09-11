@@ -69,6 +69,7 @@ export default function StdvLe() {
       classId: "",
       subjectId: "",
       hoursPerWeek: 1,
+      semester: "1",
       isOptimized: false,
     },
   });
@@ -194,6 +195,7 @@ export default function StdvLe() {
       classId: assignment.classId,
       subjectId: assignment.subjectId,
       hoursPerWeek: assignment.hoursPerWeek,
+      semester: assignment.semester,
       isOptimized: assignment.isOptimized,
     });
     setIsDialogOpen(true);
@@ -250,6 +252,12 @@ export default function StdvLe() {
   const totalAssignments = assignments?.length || 0;
   const totalHours = assignments?.reduce((sum, a) => sum + a.hoursPerWeek, 0) || 0;
   const optimizedAssignments = assignments?.filter(a => a.isOptimized).length || 0;
+  
+  // Semester-specific statistics
+  const semester1Assignments = assignments?.filter(a => a.semester === "1").length || 0;
+  const semester2Assignments = assignments?.filter(a => a.semester === "2").length || 0;
+  const semester1Hours = assignments?.filter(a => a.semester === "1").reduce((sum, a) => sum + a.hoursPerWeek, 0) || 0;
+  const semester2Hours = assignments?.filter(a => a.semester === "2").reduce((sum, a) => sum + a.hoursPerWeek, 0) || 0;
 
   const getConflictStatus = (assignment: AssignmentWithDetails) => {
     if (!assignment.teacher || !assignment.subject) return null;
@@ -402,6 +410,28 @@ export default function StdvLe() {
                       )}
                     />
 
+                    <FormField
+                      control={form.control}
+                      name="semester"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Halbjahr</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-semester">
+                                <SelectValue placeholder="Halbjahr auswählen" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="1">1. Halbjahr</SelectItem>
+                              <SelectItem value="2">2. Halbjahr</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
                     <div className="flex justify-end space-x-2 pt-4">
                       <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                         Abbrechen
@@ -424,44 +454,72 @@ export default function StdvLe() {
         {/* Content */}
         <div className="p-6 space-y-6">
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <Card data-testid="card-total-assignments">
-              <CardContent className="p-6">
+              <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-muted-foreground text-sm font-medium">Zuweisungen gesamt</p>
-                    <p className="text-3xl font-bold text-foreground">{totalAssignments}</p>
+                    <p className="text-muted-foreground text-xs font-medium">Zuweisungen gesamt</p>
+                    <p className="text-2xl font-bold text-foreground">{totalAssignments}</p>
                   </div>
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Clock className="text-blue-600 text-xl" />
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Clock className="text-blue-600 text-sm" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card data-testid="card-semester1">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-muted-foreground text-xs font-medium">1. HJ</p>
+                    <p className="text-lg font-bold text-foreground">{semester1Assignments} ({semester1Hours}h)</p>
+                  </div>
+                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <span className="text-orange-600 text-xs font-bold">1</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card data-testid="card-semester2">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-muted-foreground text-xs font-medium">2. HJ</p>
+                    <p className="text-lg font-bold text-foreground">{semester2Assignments} ({semester2Hours}h)</p>
+                  </div>
+                  <div className="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center">
+                    <span className="text-cyan-600 text-xs font-bold">2</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             <Card data-testid="card-total-hours">
-              <CardContent className="p-6">
+              <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-muted-foreground text-sm font-medium">Stunden gesamt</p>
-                    <p className="text-3xl font-bold text-foreground">{totalHours}</p>
+                    <p className="text-muted-foreground text-xs font-medium">Stunden gesamt</p>
+                    <p className="text-2xl font-bold text-foreground">{totalHours}</p>
                   </div>
-                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                    <Clock className="text-green-600 text-xl" />
+                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                    <Clock className="text-green-600 text-sm" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             <Card data-testid="card-optimized">
-              <CardContent className="p-6">
+              <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-muted-foreground text-sm font-medium">Optimiert</p>
-                    <p className="text-3xl font-bold text-foreground">{optimizedAssignments}</p>
+                    <p className="text-muted-foreground text-xs font-medium">Optimiert</p>
+                    <p className="text-2xl font-bold text-foreground">{optimizedAssignments}</p>
                   </div>
-                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <CheckCircle className="text-purple-600 text-xl" />
+                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <CheckCircle className="text-purple-600 text-sm" />
                   </div>
                 </div>
               </CardContent>
@@ -551,6 +609,9 @@ export default function StdvLe() {
                           Fach
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Halbjahr
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Stunden/Woche
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -593,6 +654,14 @@ export default function StdvLe() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                               {assignment.subject?.name || "Unbekannt"}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <Badge 
+                                variant={assignment.semester === "1" ? "default" : "secondary"}
+                                className={assignment.semester === "1" ? "bg-orange-100 text-orange-700" : "bg-cyan-100 text-cyan-700"}
+                              >
+                                {assignment.semester === "1" ? "1. HJ" : "2. HJ"}
+                              </Badge>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                               {assignment.hoursPerWeek}

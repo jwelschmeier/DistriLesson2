@@ -45,6 +45,8 @@ export const classes = pgTable("classes", {
   grade: integer("grade").notNull(),
   studentCount: integer("student_count").notNull().default(0),
   subjectHours: json("subject_hours").$type<Record<string, number>>().notNull().default({}),
+  targetHoursSemester1: decimal("target_hours_semester1", { precision: 4, scale: 1 }),
+  targetHoursSemester2: decimal("target_hours_semester2", { precision: 4, scale: 1 }),
   classTeacher1Id: varchar("class_teacher_1_id").references(() => teachers.id),
   classTeacher2Id: varchar("class_teacher_2_id").references(() => teachers.id),
   createdAt: timestamp("created_at").defaultNow(),
@@ -185,6 +187,8 @@ export const insertClassSchema = createInsertSchema(classes).omit({
 }).extend({
   classTeacher1Id: z.string().uuid().nullable().optional(),
   classTeacher2Id: z.string().uuid().nullable().optional(),
+  targetHoursSemester1: z.string().nullable().optional(),
+  targetHoursSemester2: z.string().nullable().optional(),
 });
 
 export const insertSubjectSchema = createInsertSchema(subjects).omit({

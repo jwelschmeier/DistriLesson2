@@ -23,6 +23,8 @@ const classFormSchema = insertClassSchema.extend({
   name: z.string().min(1, "Klassenname ist erforderlich"),
   grade: z.number().min(5).max(10),
   studentCount: z.number().min(0),
+  targetHoursSemester1: z.string().nullable().optional(),
+  targetHoursSemester2: z.string().nullable().optional(),
 });
 
 const studentFormSchema = insertStudentSchema.extend({
@@ -63,6 +65,8 @@ export default function Klassenverwaltung() {
       grade: 5,
       studentCount: 0,
       subjectHours: {},
+      targetHoursSemester1: null,
+      targetHoursSemester2: null,
       classTeacher1Id: undefined,
       classTeacher2Id: undefined,
     },
@@ -176,6 +180,8 @@ export default function Klassenverwaltung() {
       grade: classData.grade,
       studentCount: classData.studentCount,
       subjectHours: classData.subjectHours,
+      targetHoursSemester1: classData.targetHoursSemester1 || null,
+      targetHoursSemester2: classData.targetHoursSemester2 || null,
       classTeacher1Id: classData.classTeacher1Id || "none",
       classTeacher2Id: classData.classTeacher2Id || "none",
     });
@@ -418,6 +424,52 @@ export default function Klassenverwaltung() {
                           </FormItem>
                         )}
                       />
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={classForm.control}
+                          name="targetHoursSemester1"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Soll-Stunden 1. HJ</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  {...field} 
+                                  type="number"
+                                  step="0.5"
+                                  placeholder="z.B. 30.0"
+                                  value={field.value || ""}
+                                  onChange={e => field.onChange(e.target.value || null)}
+                                  data-testid="input-target-hours-semester1"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={classForm.control}
+                          name="targetHoursSemester2"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Soll-Stunden 2. HJ</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  {...field} 
+                                  type="number"
+                                  step="0.5"
+                                  placeholder="z.B. 30.0"
+                                  value={field.value || ""}
+                                  onChange={e => field.onChange(e.target.value || null)}
+                                  data-testid="input-target-hours-semester2"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
 
                       <FormField
                         control={classForm.control}
