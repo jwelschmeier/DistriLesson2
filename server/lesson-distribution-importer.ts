@@ -386,7 +386,9 @@ export class LessonDistributionImporter {
             'PH': ['PH', 'Ph', 'Physik'],
             'KU': ['KU', 'Ku', 'Kunst'],
             'MU': ['MU', 'Mu', 'Musik'],
-            'IF': ['IF', 'If', 'Informatik', 'IKG'],
+            'IF': ['IF', 'If', 'Informatik', 'IKG', 'Ikg'],
+            // IKG in Excel should map to Informatik qualifications
+            'IKG': ['IKG', 'Ikg', 'IF', 'If', 'Informatik'],
             'TC': ['TC', 'Tc', 'Technik'],
             'HW': ['HW', 'Hauswirtschaft'],
             'KR': ['KR', 'Kr', 'katholische Religion'],
