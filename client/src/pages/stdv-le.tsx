@@ -151,11 +151,17 @@ export default function StdvLe() {
       return { hasConflict: false, message: "", type: "warning" };
     }
 
-    // Check if teacher has qualification for this subject
-    if (!teacher.subjects.includes(subject.name)) {
+    // Parse teacher subjects - they are stored as comma-separated strings in an array
+    const teacherSubjects = teacher.subjects.flatMap(subjectString => 
+      subjectString.split(',').map(s => s.trim().toUpperCase())
+    );
+    
+    // Check if teacher has qualification for this subject using shortName
+    const subjectShortName = subject.shortName.trim().toUpperCase();
+    if (!teacherSubjects.includes(subjectShortName)) {
       return {
         hasConflict: true,
-        message: `${teacher.firstName} ${teacher.lastName} hat keine Qualifikation für ${subject.name}`,
+        message: `${teacher.firstName} ${teacher.lastName} hat keine Qualifikation für ${subject.name} (${subject.shortName})`,
         type: "error"
       };
     }
@@ -248,7 +254,14 @@ export default function StdvLe() {
   const getConflictStatus = (assignment: AssignmentWithDetails) => {
     if (!assignment.teacher || !assignment.subject) return null;
     
-    if (!assignment.teacher.subjects.includes(assignment.subject.name)) {
+    // Parse teacher subjects - they are stored as comma-separated strings in an array
+    const teacherSubjects = assignment.teacher.subjects.flatMap(subjectString => 
+      subjectString.split(',').map(s => s.trim().toUpperCase())
+    );
+    
+    // Check if teacher has qualification for this subject using shortName
+    const subjectShortName = assignment.subject.shortName.trim().toUpperCase();
+    if (!teacherSubjects.includes(subjectShortName)) {
       return { type: "error", message: "Keine Qualifikation" };
     }
     
