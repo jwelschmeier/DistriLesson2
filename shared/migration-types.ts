@@ -139,6 +139,11 @@ export const migrationExecuteResponseSchema = z.object({
   movedStudents: z.number().int().min(0),
   errors: z.array(z.string()).optional(),
   warnings: z.array(z.string()).optional(),
+  executionId: z.string().optional(),
+  dryRun: z.boolean().optional(),
+  executionSummary: z.any().optional(),
+  phase: z.string().optional(),
+  rollbackApplied: z.boolean().optional(),
 });
 
 export const migrationContextSchema = z.object({

@@ -28,12 +28,11 @@ export function Sidebar() {
             <GraduationCap className="text-primary-foreground text-lg" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-foreground">SCHILD NRW</h1>
-            <p className="text-sm text-muted-foreground">Unterrichtsverteilung</p>
+            <h1 className="text-lg font-semibold text-foreground">DistriLessonPlanner</h1>
+            <p className="text-sm text-muted-foreground">App zur Unterrichtsverteilung</p>
           </div>
         </div>
       </div>
-
       {/* Navigation Menu */}
       <nav className="flex-1 p-4 space-y-2">
         {navigationItems.map((item) => {
@@ -58,7 +57,6 @@ export function Sidebar() {
           );
         })}
       </nav>
-
       {/* User Info */}
       <div className="p-4 border-t border-border">
         <div className="flex items-center space-x-3">
