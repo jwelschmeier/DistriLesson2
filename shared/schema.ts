@@ -45,6 +45,7 @@ export const classes = pgTable("classes", {
   grade: integer("grade").notNull(),
   studentCount: integer("student_count").notNull().default(0),
   subjectHours: json("subject_hours").$type<Record<string, number>>().notNull().default({}),
+  targetHoursTotal: decimal("target_hours_total", { precision: 4, scale: 1 }),
   targetHoursSemester1: decimal("target_hours_semester1", { precision: 4, scale: 1 }),
   targetHoursSemester2: decimal("target_hours_semester2", { precision: 4, scale: 1 }),
   classTeacher1Id: varchar("class_teacher_1_id").references(() => teachers.id),
@@ -203,6 +204,14 @@ export const insertClassSchema = createInsertSchema(classes).omit({
       const num = parseFloat(val);
       return !isNaN(num) && num >= 0 && num <= 50;
     }, { message: "Soll-Stunden 2.HJ müssen zwischen 0 und 50 liegen" }),
+  targetHoursTotal: z.string()
+    .nullable()
+    .optional()
+    .refine((val) => {
+      if (val === null || val === undefined || val === "") return true;
+      const num = parseFloat(val);
+      return !isNaN(num) && num >= 0 && num <= 100;
+    }, { message: "Gesamtstunden müssen zwischen 0 und 100 liegen" }),
   grade: z.number().int().min(5).max(10),
   studentCount: z.number().int().min(0).max(35),
 });

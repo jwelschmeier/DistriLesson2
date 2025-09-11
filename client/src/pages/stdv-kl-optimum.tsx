@@ -436,17 +436,39 @@ export default function StdvKlOptimum() {
                     </div>
 
                     {optimizationResult.warnings.length > 0 && (
-                      <Alert>
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertDescription>
-                          <strong>Warnungen:</strong>
-                          <ul className="mt-2 list-disc list-inside text-sm">
-                            {optimizationResult.warnings.map((warning, index) => (
-                              <li key={index}>{warning}</li>
-                            ))}
-                          </ul>
-                        </AlertDescription>
-                      </Alert>
+                      <div className="space-y-2">
+                        {optimizationResult.warnings.filter(w => w.includes("Gesamtstunden")).length > 0 && (
+                          <Alert variant="destructive" data-testid="alert-total-hours">
+                            <AlertTriangle className="h-4 w-4" />
+                            <AlertDescription>
+                              <strong>Gesamtstunden-Constraints verletzt:</strong>
+                              <ul className="mt-2 list-disc list-inside text-sm">
+                                {optimizationResult.warnings
+                                  .filter(w => w.includes("Gesamtstunden"))
+                                  .map((warning, index) => (
+                                    <li key={index}>{warning}</li>
+                                  ))}
+                              </ul>
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                        
+                        {optimizationResult.warnings.filter(w => !w.includes("Gesamtstunden")).length > 0 && (
+                          <Alert data-testid="alert-general">
+                            <AlertTriangle className="h-4 w-4" />
+                            <AlertDescription>
+                              <strong>Allgemeine Warnungen:</strong>
+                              <ul className="mt-2 list-disc list-inside text-sm">
+                                {optimizationResult.warnings
+                                  .filter(w => !w.includes("Gesamtstunden"))
+                                  .map((warning, index) => (
+                                    <li key={index}>{warning}</li>
+                                  ))}
+                              </ul>
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}

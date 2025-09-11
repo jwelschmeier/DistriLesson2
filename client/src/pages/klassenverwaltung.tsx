@@ -65,6 +65,7 @@ export default function Klassenverwaltung() {
       grade: 5,
       studentCount: 0,
       subjectHours: {},
+      targetHoursTotal: null,
       targetHoursSemester1: null,
       targetHoursSemester2: null,
       classTeacher1Id: undefined,
@@ -180,6 +181,7 @@ export default function Klassenverwaltung() {
       grade: classData.grade,
       studentCount: classData.studentCount,
       subjectHours: classData.subjectHours,
+      targetHoursTotal: classData.targetHoursTotal || null,
       targetHoursSemester1: classData.targetHoursSemester1 || null,
       targetHoursSemester2: classData.targetHoursSemester2 || null,
       classTeacher1Id: classData.classTeacher1Id || "none",
@@ -418,6 +420,28 @@ export default function Klassenverwaltung() {
                                 type="number" 
                                 onChange={e => field.onChange(parseInt(e.target.value) || 0)}
                                 data-testid="input-student-count"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={classForm.control}
+                        name="targetHoursTotal"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Gesamtstunden</FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                type="number"
+                                step="0.5"
+                                placeholder="z.B. 60.0"
+                                value={field.value || ""}
+                                onChange={e => field.onChange(e.target.value || null)}
+                                data-testid="input-target-hours-total"
                               />
                             </FormControl>
                             <FormMessage />

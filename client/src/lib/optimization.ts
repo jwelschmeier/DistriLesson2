@@ -59,9 +59,17 @@ interface ClassRequirement {
   priority: number;
 }
 
+interface ClassTotalHoursConstraint {
+  classId: string;
+  targetTotalHours: number;
+  currentTotalHours: number;
+  isHardConstraint: boolean;
+  remainingHours: number;
+}
+
 interface ConflictMatrix {
   [key: string]: {
-    type: "qualification" | "workload" | "schedule" | "preference";
+    type: "qualification" | "workload" | "schedule" | "preference" | "total_hours";
     severity: "low" | "medium" | "high" | "critical";
     description: string;
   };
@@ -76,12 +84,14 @@ export function runOptimization(constraints: OptimizationConstraints): Optimizat
   // Initialize optimization state
   const teacherWorkloads = calculateTeacherWorkloads(teachers, currentAssignments);
   const classRequirements = calculateClassRequirements(classes, subjects, currentAssignments);
+  const classTotalHoursConstraints = calculateClassTotalHoursConstraints(classes, currentAssignments);
   const conflictMatrix = analyzeConflicts(teachers, classes, subjects, currentAssignments);
   
   // Generate recommended assignments using constraint satisfaction
   const recommendations = generateRecommendations(
     teacherWorkloads,
     classRequirements,
+    classTotalHoursConstraints,
     conflictMatrix,
     settings
   );
@@ -90,6 +100,7 @@ export function runOptimization(constraints: OptimizationConstraints): Optimizat
   const metrics = calculateOptimizationMetrics(
     teacherWorkloads,
     classRequirements,
+    classTotalHoursConstraints,
     recommendations,
     settings
   );
@@ -138,6 +149,24 @@ function calculateClassRequirements(
   classes.forEach(classData => {
     const curriculumHours = NRW_CURRICULUM_HOURS[classData.grade] || {};
     
+    // Calculate current total hours for this class
+    const classAssignments = currentAssignments.filter(a => a.classId === classData.id);
+    const currentTotalHours = classAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+    
+    // Check if targetHoursTotal is set as a hard constraint
+    const targetTotalHours = classData.targetHoursTotal ? parseFloat(classData.targetHoursTotal) : null;
+    const totalRemainingHours = targetTotalHours ? targetTotalHours - currentTotalHours : null;
+    
+    // Build list of unfulfilled subject requirements for this class
+    const classSubjectDeficits: Array<{
+      subjectId: string;
+      subjectName: string;
+      currentHours: number;
+      requiredHours: number;
+      deficit: number;
+      priority: number;
+    }> = [];
+    
     subjects.forEach(subject => {
       const requiredHours = curriculumHours[subject.name] || 0;
       if (requiredHours === 0) return;
@@ -148,18 +177,88 @@ function calculateClassRequirements(
       const currentHours = currentAssignment?.hoursPerWeek || 0;
       
       if (currentHours < requiredHours) {
-        requirements.push({
-          classId: classData.id,
+        const deficit = requiredHours - currentHours;
+        classSubjectDeficits.push({
           subjectId: subject.id,
-          requiredHours,
+          subjectName: subject.name,
           currentHours,
-          priority: calculatePriority(subject.name, requiredHours - currentHours),
+          requiredHours,
+          deficit,
+          priority: calculatePriority(subject.name, deficit),
         });
       }
     });
+    
+    // If we have total hours constraint, implement proper allocation planning
+    if (targetTotalHours !== null && totalRemainingHours !== null && classSubjectDeficits.length > 0) {
+      // Sort deficits by priority (highest first) for allocation
+      classSubjectDeficits.sort((a, b) => b.priority - a.priority);
+      
+      let availableHours = totalRemainingHours;
+      
+      // Allocate hours to subjects based on priority and available budget
+      classSubjectDeficits.forEach(subjectDeficit => {
+        if (availableHours <= 0) return;
+        
+        // Allocate hours up to the deficit, but not more than available
+        const hoursToAllocate = Math.min(subjectDeficit.deficit, availableHours);
+        
+        if (hoursToAllocate > 0) {
+          const adjustedRequiredHours = subjectDeficit.currentHours + hoursToAllocate;
+          
+          requirements.push({
+            classId: classData.id,
+            subjectId: subjectDeficit.subjectId,
+            requiredHours: adjustedRequiredHours,
+            currentHours: subjectDeficit.currentHours,
+            priority: subjectDeficit.priority,
+          });
+          
+          // Deduct allocated hours from available budget
+          availableHours -= hoursToAllocate;
+        }
+      });
+    } else {
+      // No total hours constraint - add all unfulfilled requirements
+      classSubjectDeficits.forEach(subjectDeficit => {
+        requirements.push({
+          classId: classData.id,
+          subjectId: subjectDeficit.subjectId,
+          requiredHours: subjectDeficit.requiredHours,
+          currentHours: subjectDeficit.currentHours,
+          priority: subjectDeficit.priority,
+        });
+      });
+    }
   });
   
   return requirements.sort((a, b) => b.priority - a.priority);
+}
+
+function calculateClassTotalHoursConstraints(
+  classes: Class[],
+  currentAssignments: Assignment[]
+): ClassTotalHoursConstraint[] {
+  const constraints: ClassTotalHoursConstraint[] = [];
+  
+  classes.forEach(classData => {
+    const targetTotalHours = classData.targetHoursTotal ? parseFloat(classData.targetHoursTotal) : null;
+    
+    if (targetTotalHours !== null) {
+      const classAssignments = currentAssignments.filter(a => a.classId === classData.id);
+      const currentTotalHours = classAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+      
+      constraints.push({
+        classId: classData.id,
+        targetTotalHours,
+        currentTotalHours,
+        isHardConstraint: true,
+        remainingHours: targetTotalHours - currentTotalHours,
+      });
+    }
+  });
+  
+  return constraints;
 }
 
 function calculatePriority(subjectName: string, hoursDifference: number): number {
@@ -199,14 +298,15 @@ function analyzeConflicts(
     // Check workload conflicts
     const teacherAssignments = currentAssignments.filter(a => a.teacherId === teacher.id);
     const totalHours = teacherAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+    const maxHours = parseFloat(teacher.maxHours);
     
-    if (totalHours > teacher.maxHours) {
+    if (totalHours > maxHours) {
       conflicts[`${assignment.teacherId}-overload`] = {
         type: "workload",
         severity: "high",
-        description: `${teacher.firstName} ${teacher.lastName} ist mit ${totalHours}h überbelastet (Max: ${teacher.maxHours}h)`,
+        description: `${teacher.firstName} ${teacher.lastName} ist mit ${totalHours}h überbelastet (Max: ${maxHours}h)`,
       };
-    } else if (totalHours > teacher.maxHours * 0.95) {
+    } else if (totalHours > maxHours * 0.95) {
       conflicts[`${assignment.teacherId}-nearoverload`] = {
         type: "workload",
         severity: "medium",
@@ -215,19 +315,179 @@ function analyzeConflicts(
     }
   });
   
+  // ENHANCED: Check class total hours conflicts with detailed analysis
+  classes.forEach(classData => {
+    const targetTotalHours = classData.targetHoursTotal ? parseFloat(classData.targetHoursTotal) : null;
+    if (targetTotalHours === null) return;
+    
+    const classAssignments = currentAssignments.filter(a => a.classId === classData.id);
+    const currentTotalHours = classAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+    const remainingHours = targetTotalHours - currentTotalHours;
+    
+    // CRITICAL: Hard constraint violation detection
+    if (currentTotalHours > targetTotalHours) {
+      conflicts[`${classData.id}-total-hours-exceeded`] = {
+        type: "total_hours",
+        severity: "critical",
+        description: `HARTE CONSTRAINT VERLETZT: Klasse ${classData.name} überschreitet Gesamtstunden-Limit: ${currentTotalHours}h > ${targetTotalHours}h (Überschreitung: ${currentTotalHours - targetTotalHours}h)`,
+      };
+    }
+    
+    // ENHANCED: Detect potential assignment attempt conflicts
+    if (remainingHours > 0 && remainingHours < 2) {
+      conflicts[`${classData.id}-total-hours-almost-full`] = {
+        type: "total_hours",
+        severity: "high",
+        description: `Klasse ${classData.name} hat nur noch ${remainingHours}h Spielraum (${currentTotalHours}h/${targetTotalHours}h) - Weitere Zuweisungen stark eingeschränkt`,
+      };
+    }
+    
+    // Check for underutilization (but only warn, not critical)
+    if (currentTotalHours < targetTotalHours * 0.8) {
+      conflicts[`${classData.id}-total-hours-underutilized`] = {
+        type: "total_hours",
+        severity: "medium",
+        description: `Klasse ${classData.name} hat deutlich zu wenige Stunden: ${currentTotalHours}h < ${targetTotalHours}h (Bedarf: ${targetTotalHours - currentTotalHours}h)`,
+      };
+    }
+    
+    // CRITICAL: Detect impossible curriculum requirements vs total hours constraint
+    const curriculumHours = NRW_CURRICULUM_HOURS[classData.grade] || {};
+    const totalCurriculumRequired = Object.values(curriculumHours).reduce((sum: number, hours: number) => sum + hours, 0);
+    
+    if (totalCurriculumRequired > targetTotalHours) {
+      conflicts[`${classData.id}-impossible-curriculum`] = {
+        type: "total_hours",
+        severity: "critical",
+        description: `UNMÖGLICHE KONFIGURATION: Klasse ${classData.name} (Stufe ${classData.grade}): Curriculum benötigt ${totalCurriculumRequired}h, aber Limit ist ${targetTotalHours}h (Defizit: ${totalCurriculumRequired - targetTotalHours}h)`,
+      };
+    }
+  });
+  
+  // ENHANCED: Check for assignment attempt conflicts that would violate constraints
+  teachers.forEach(teacher => {
+    const teacherAssignments = currentAssignments.filter(a => a.teacherId === teacher.id);
+    const teacherCurrentHours = teacherAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+    const maxHours = parseFloat(teacher.maxHours);
+    const teacherRemainingHours = maxHours - teacherCurrentHours;
+    
+    // Detect teachers who cannot take any more assignments
+    if (teacherRemainingHours <= 0) {
+      conflicts[`${teacher.id}-no-capacity`] = {
+        type: "workload",
+        severity: "high",
+        description: `Lehrkraft ${teacher.firstName} ${teacher.lastName} hat keine Kapazität für weitere Zuweisungen (${teacherCurrentHours}h/${maxHours}h)`,
+      };
+    } else if (teacherRemainingHours < 2) {
+      conflicts[`${teacher.id}-minimal-capacity`] = {
+        type: "workload",
+        severity: "medium",
+        description: `Lehrkraft ${teacher.firstName} ${teacher.lastName} hat nur noch minimale Kapazität: ${teacherRemainingHours}h verfügbar`,
+      };
+    }
+  });
+  
   return conflicts;
+}
+
+// NEW: Function to detect conflicts for potential assignments before they are made
+export function detectAssignmentConflicts(
+  potentialAssignment: RecommendedAssignment,
+  teachers: Teacher[],
+  classes: Class[],
+  subjects: Subject[],
+  currentAssignments: Assignment[]
+): { hasConflicts: boolean; conflicts: string[]; warnings: string[] } {
+  const conflicts: string[] = [];
+  const warnings: string[] = [];
+  
+  const teacher = teachers.find(t => t.id === potentialAssignment.teacherId);
+  const classData = classes.find(c => c.id === potentialAssignment.classId);
+  const subject = subjects.find(s => s.id === potentialAssignment.subjectId);
+  
+  if (!teacher || !classData || !subject) {
+    conflicts.push("Ungültige Entitäts-IDs in Zuweisung");
+    return { hasConflicts: true, conflicts, warnings };
+  }
+  
+  // Check teacher workload conflicts
+  const teacherAssignments = currentAssignments.filter(a => a.teacherId === teacher.id);
+  const teacherCurrentHours = teacherAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+  const projectedTeacherHours = teacherCurrentHours + potentialAssignment.hoursPerWeek;
+  const maxHours = parseFloat(teacher.maxHours);
+  
+  if (projectedTeacherHours > maxHours) {
+    conflicts.push(`Lehrkraft Überbelastung: ${teacher.firstName} ${teacher.lastName} würde ${projectedTeacherHours}h haben (Max: ${maxHours}h)`);
+  }
+  
+  // Check teacher qualification conflicts
+  if (!teacher.subjects.includes(subject.name)) {
+    warnings.push(`Qualifikationskonflikt: ${teacher.firstName} ${teacher.lastName} hat keine Qualifikation für ${subject.name}`);
+  }
+  
+  // CRITICAL: Check total hours constraint conflicts
+  if (classData.targetHoursTotal) {
+    const targetTotalHours = parseFloat(classData.targetHoursTotal);
+    const classAssignments = currentAssignments.filter(a => a.classId === classData.id);
+    const currentClassHours = classAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+    const projectedClassHours = currentClassHours + potentialAssignment.hoursPerWeek;
+    
+    if (projectedClassHours > targetTotalHours) {
+      conflicts.push(`HARTE CONSTRAINT: Klasse ${classData.name} würde Gesamtstunden-Limit überschreiten: ${projectedClassHours}h > ${targetTotalHours}h`);
+    }
+    
+    const remainingAfterAssignment = targetTotalHours - projectedClassHours;
+    if (remainingAfterAssignment < 1 && projectedClassHours < targetTotalHours) {
+      warnings.push(`Wenig Spielraum: Nach Zuweisung nur noch ${remainingAfterAssignment}h verfügbar für Klasse ${classData.name}`);
+    }
+  }
+  
+  // Check for duplicate assignments
+  const duplicateAssignment = currentAssignments.find(
+    a => a.teacherId === potentialAssignment.teacherId && 
+         a.classId === potentialAssignment.classId && 
+         a.subjectId === potentialAssignment.subjectId
+  );
+  
+  if (duplicateAssignment) {
+    conflicts.push(`Duplikat-Zuweisung: ${teacher.firstName} ${teacher.lastName} unterrichtet bereits ${subject.name} in ${classData.name}`);
+  }
+  
+  return {
+    hasConflicts: conflicts.length > 0,
+    conflicts,
+    warnings,
+  };
 }
 
 function generateRecommendations(
   teacherWorkloads: TeacherWorkload[],
   classRequirements: ClassRequirement[],
+  classTotalHoursConstraints: ClassTotalHoursConstraint[],
   conflictMatrix: ConflictMatrix,
   settings: OptimizationSettings
 ): RecommendedAssignment[] {
   const recommendations: RecommendedAssignment[] = [];
   
-  // Use constraint satisfaction algorithm
+  // Create a working copy of class hours tracking for HARD constraint enforcement
+  const classRemainingHours = new Map<string, number>();
+  classTotalHoursConstraints.forEach(constraint => {
+    classRemainingHours.set(constraint.classId, constraint.remainingHours);
+  });
+  
+  // Use constraint satisfaction algorithm with HARD enforcement
   for (const requirement of classRequirements) {
+    // HARD CONSTRAINT CHECK: Skip if no hours remaining for this class
+    const constraint = classTotalHoursConstraints.find(c => c.classId === requirement.classId);
+    if (constraint && constraint.isHardConstraint) {
+      const remainingHours = classRemainingHours.get(requirement.classId) || 0;
+      
+      // HARD BLOCK: Absolutely no assignments if no hours remaining
+      if (remainingHours <= 0) {
+        continue; // Skip this requirement completely - HARD constraint enforcement
+      }
+    }
+    
     const candidates = findSuitableTeachers(requirement, teacherWorkloads, settings);
     
     if (candidates.length === 0) {
@@ -238,26 +498,54 @@ function generateRecommendations(
     const bestCandidate = selectBestCandidate(candidates, requirement, settings);
     
     if (bestCandidate) {
-      const hoursToAssign = Math.min(
+      // Calculate maximum assignable hours considering all constraints
+      let hoursToAssign = Math.min(
         requirement.requiredHours - requirement.currentHours,
         bestCandidate.availableHours
       );
       
+      // HARD CONSTRAINT: Apply total hours constraint for this class
+      if (constraint && constraint.isHardConstraint) {
+        const remainingClassHours = classRemainingHours.get(requirement.classId) || 0;
+        
+        // NEVER exceed the total hours limit - this is a HARD constraint
+        hoursToAssign = Math.min(hoursToAssign, remainingClassHours);
+      }
+      
+      // Only proceed if we can assign at least 1 hour and have budget remaining
       if (hoursToAssign > 0) {
-        recommendations.push({
+        // Create the assignment
+        const assignment: RecommendedAssignment = {
           teacherId: bestCandidate.teacherId,
           classId: requirement.classId,
           subjectId: requirement.subjectId,
           hoursPerWeek: hoursToAssign,
           confidence: bestCandidate.score,
-          reasoning: bestCandidate.reasoning,
-        });
+          reasoning: [
+            ...bestCandidate.reasoning,
+            constraint ? `Harte Constraint: ${hoursToAssign}h von ${classRemainingHours.get(requirement.classId)}h verfügbar` : ""
+          ].filter(Boolean),
+        };
         
-        // Update workload for next iteration
+        recommendations.push(assignment);
+        
+        // Update teacher workload for next iteration
         const workload = teacherWorkloads.find(w => w.teacherId === bestCandidate.teacherId);
         if (workload) {
           workload.currentHours += hoursToAssign;
           workload.utilization = (workload.currentHours / workload.maxHours) * 100;
+        }
+        
+        // CRITICAL: Update class remaining hours tracking for HARD constraint enforcement
+        if (constraint) {
+          const currentRemaining = classRemainingHours.get(requirement.classId) || 0;
+          const newRemaining = currentRemaining - hoursToAssign;
+          classRemainingHours.set(requirement.classId, Math.max(0, newRemaining));
+          
+          // SAFETY CHECK: Ensure we never go negative (this should never happen with proper logic)
+          if (newRemaining < 0) {
+            console.error(`CRITICAL ERROR: Class ${requirement.classId} remaining hours went negative: ${newRemaining}`);
+          }
         }
       }
     }
@@ -356,6 +644,7 @@ function selectBestCandidate(
 function calculateOptimizationMetrics(
   teacherWorkloads: TeacherWorkload[],
   classRequirements: ClassRequirement[],
+  classTotalHoursConstraints: ClassTotalHoursConstraint[],
   recommendations: RecommendedAssignment[],
   settings: OptimizationSettings
 ): OptimizationMetric[] {
@@ -391,6 +680,14 @@ function calculateOptimizationMetrics(
     name: "Ressourceneffizienz",
     score: efficiencyScore,
     description: "Optimale Nutzung der verfügbaren Lehrerstunden",
+  });
+  
+  // Total hours constraint compliance score
+  const totalHoursComplianceScore = calculateTotalHoursComplianceScore(classTotalHoursConstraints, recommendations);
+  metrics.push({
+    name: "Gesamtstunden-Einhaltung",
+    score: totalHoursComplianceScore,
+    description: "Einhaltung der Gesamtstunden-Limits pro Klasse",
   });
   
   return metrics;
@@ -491,6 +788,11 @@ function evaluateOptimizationResult(
     warnings.push("Nicht alle erforderlichen Stunden konnten zugewiesen werden");
   }
   
+  const totalHoursMetric = metrics.find(m => m.name === "Gesamtstunden-Einhaltung");
+  if (totalHoursMetric && totalHoursMetric.score < 100) {
+    warnings.push("Gesamtstunden-Limits wurden verletzt oder nicht vollständig ausgeschöpft");
+  }
+  
   if (recommendations.length === 0) {
     warnings.push("Keine neuen Zuweisungen möglich mit den aktuellen Einstellungen");
   }
@@ -535,11 +837,37 @@ function countRemainingConflicts(
   return Math.max(0, Object.keys(conflictMatrix).length - recommendations.length);
 }
 
+function calculateTotalHoursComplianceScore(
+  classTotalHoursConstraints: ClassTotalHoursConstraint[],
+  recommendations: RecommendedAssignment[]
+): number {
+  if (classTotalHoursConstraints.length === 0) return 100;
+  
+  let compliantClasses = 0;
+  
+  classTotalHoursConstraints.forEach(constraint => {
+    const classRecommendations = recommendations.filter(r => r.classId === constraint.classId);
+    const recommendedHours = classRecommendations.reduce((sum, r) => sum + r.hoursPerWeek, 0);
+    const projectedTotal = constraint.currentTotalHours + recommendedHours;
+    
+    // Allow for a small tolerance (0.5 hours) for practical scheduling
+    const tolerance = 0.5;
+    if (Math.abs(projectedTotal - constraint.targetTotalHours) <= tolerance) {
+      compliantClasses++;
+    }
+  });
+  
+  return (compliantClasses / classTotalHoursConstraints.length) * 100;
+}
+
 // Utility functions for constraint satisfaction
 export function validateAssignment(
   assignment: RecommendedAssignment,
   teacher: Teacher,
-  subject: Subject
+  subject: Subject,
+  classData?: Class,
+  currentClassTotalHours?: number,
+  teacherCurrentHours?: number
 ): { isValid: boolean; violations: string[] } {
   const violations: string[] = [];
   
@@ -548,9 +876,12 @@ export function validateAssignment(
     violations.push(`Lehrkraft hat keine Qualifikation für ${subject.name}`);
   }
   
-  // Check working hours
-  if (teacher.currentHours + assignment.hoursPerWeek > teacher.maxHours) {
-    violations.push(`Zuweisung würde Maximale Arbeitszeit überschreiten`);
+  // Check working hours - use provided teacherCurrentHours or calculate from maxHours
+  const currentHours = teacherCurrentHours ?? 0;
+  const maxHours = parseFloat(teacher.maxHours);
+  
+  if (currentHours + assignment.hoursPerWeek > maxHours) {
+    violations.push(`Zuweisung würde Maximale Arbeitszeit überschreiten: ${currentHours + assignment.hoursPerWeek}h > ${maxHours}h`);
   }
   
   // Check minimum hours per assignment
@@ -558,9 +889,123 @@ export function validateAssignment(
     violations.push("Mindestens 1 Stunde pro Zuweisung erforderlich");
   }
   
+  // CRITICAL: Enhanced total hours constraint validation for class
+  if (classData?.targetHoursTotal && currentClassTotalHours !== undefined) {
+    const targetTotal = parseFloat(classData.targetHoursTotal);
+    const projectedTotal = currentClassTotalHours + assignment.hoursPerWeek;
+    
+    // HARD CONSTRAINT: Never allow exceeding target total hours
+    if (projectedTotal > targetTotal) {
+      violations.push(`HARTE CONSTRAINT VERLETZT: Zuweisung würde Gesamtstunden-Limit der Klasse überschreiten: ${projectedTotal}h > ${targetTotal}h`);
+    }
+    
+    // Also check if assignment leaves no room for other required subjects
+    const remainingAfterAssignment = targetTotal - projectedTotal;
+    if (remainingAfterAssignment < 0) {
+      violations.push(`KRITISCHER FEHLER: Negative verbleibende Stunden nach Zuweisung: ${remainingAfterAssignment}h`);
+    }
+  }
+  
+  // Check for zero or negative hour assignments
+  if (assignment.hoursPerWeek <= 0) {
+    violations.push("Zuweisungen müssen mindestens 1 Stunde haben");
+  }
+  
+  // Validate assignment IDs are not empty
+  if (!assignment.teacherId || !assignment.classId || !assignment.subjectId) {
+    violations.push("Alle Zuweisungs-IDs müssen gültig sein (teacherId, classId, subjectId)");
+  }
+  
   return {
     isValid: violations.length === 0,
     violations,
+  };
+}
+
+// Enhanced validation function that checks assignment against complete constraint context
+export function validateAssignmentWithContext(
+  assignment: RecommendedAssignment,
+  teachers: Teacher[],
+  subjects: Subject[],
+  classes: Class[],
+  currentAssignments: Assignment[],
+  classTotalHoursConstraints: ClassTotalHoursConstraint[]
+): { isValid: boolean; violations: string[]; warnings: string[] } {
+  const violations: string[] = [];
+  const warnings: string[] = [];
+  
+  // Find relevant entities
+  const teacher = teachers.find(t => t.id === assignment.teacherId);
+  const subject = subjects.find(s => s.id === assignment.subjectId);
+  const classData = classes.find(c => c.id === assignment.classId);
+  const constraint = classTotalHoursConstraints.find(c => c.classId === assignment.classId);
+  
+  if (!teacher) {
+    violations.push(`Lehrkraft mit ID ${assignment.teacherId} nicht gefunden`);
+    return { isValid: false, violations, warnings };
+  }
+  
+  if (!subject) {
+    violations.push(`Fach mit ID ${assignment.subjectId} nicht gefunden`);
+    return { isValid: false, violations, warnings };
+  }
+  
+  if (!classData) {
+    violations.push(`Klasse mit ID ${assignment.classId} nicht gefunden`);
+    return { isValid: false, violations, warnings };
+  }
+  
+  // Calculate current teacher hours
+  const teacherAssignments = currentAssignments.filter(a => a.teacherId === teacher.id);
+  const teacherCurrentHours = teacherAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+  
+  // Calculate current class hours
+  const classAssignments = currentAssignments.filter(a => a.classId === assignment.classId);
+  const currentClassTotalHours = classAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+  
+  // Use basic validation first
+  const basicValidation = validateAssignment(
+    assignment,
+    teacher,
+    subject,
+    classData,
+    currentClassTotalHours,
+    teacherCurrentHours
+  );
+  
+  violations.push(...basicValidation.violations);
+  
+  // Enhanced constraint-specific validations
+  if (constraint) {
+    const projectedClassTotal = currentClassTotalHours + assignment.hoursPerWeek;
+    const remainingHours = constraint.targetTotalHours - projectedClassTotal;
+    
+    // Hard constraint: never exceed target total hours
+    if (projectedClassTotal > constraint.targetTotalHours) {
+      violations.push(`HARTE CONSTRAINT: Klasse ${classData.name} würde Limit überschreiten: ${projectedClassTotal}h > ${constraint.targetTotalHours}h`);
+    }
+    
+    // Warning: if this assignment uses significant portion of remaining hours
+    if (remainingHours >= 0 && remainingHours < 2 && assignment.hoursPerWeek > 2) {
+      warnings.push(`Warnung: Zuweisung verbraucht fast alle verbleibenden Stunden (${remainingHours}h übrig)`);
+    }
+  }
+  
+  // Check for duplicate assignment (same teacher, class, subject)
+  const duplicateAssignment = currentAssignments.find(
+    a => a.teacherId === assignment.teacherId && 
+         a.classId === assignment.classId && 
+         a.subjectId === assignment.subjectId
+  );
+  
+  if (duplicateAssignment) {
+    violations.push(`Duplikat-Zuweisung: ${teacher.firstName} ${teacher.lastName} unterrichtet bereits ${subject.name} in ${classData.name}`);
+  }
+  
+  return {
+    isValid: violations.length === 0,
+    violations,
+    warnings,
   };
 }
 
