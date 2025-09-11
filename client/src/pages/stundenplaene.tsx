@@ -307,13 +307,43 @@ export default function Stundenplaene() {
 
   // Helper functions for editable table
   const updateEditedAssignment = (assignmentId: string, field: keyof Assignment, value: any) => {
-    setEditedAssignments(prev => ({
-      ...prev,
-      [assignmentId]: {
+    setEditedAssignments(prev => {
+      const currentAssignment = extendedAssignments?.find(a => a.id === assignmentId);
+      if (!currentAssignment) return prev;
+      
+      const updates: Partial<Assignment> = {
         ...prev[assignmentId],
         [field]: value,
-      },
-    }));
+      };
+      
+      // If teacher is changed, check if current subject is still valid
+      if (field === 'teacherId') {
+        const newTeacher = teacherMap.get(value);
+        const currentSubjectId = getEffectiveValue(currentAssignment, 'subjectId') as string;
+        const currentSubject = subjectMap.get(currentSubjectId);
+        
+        if (newTeacher && currentSubject) {
+          // Check if new teacher can teach current subject
+          const canTeachSubject = newTeacher.subjects?.some((subjectEntry: any) => {
+            if (typeof subjectEntry === 'string') {
+              const subjectCodes = subjectEntry.split(',').map(s => s.trim());
+              return subjectCodes.includes(currentSubject.shortName);
+            }
+            return subjectEntry === currentSubject.shortName;
+          });
+          
+          // If new teacher can't teach current subject, clear the subject
+          if (!canTeachSubject) {
+            updates.subjectId = '';
+          }
+        }
+      }
+      
+      return {
+        ...prev,
+        [assignmentId]: updates,
+      };
+    });
   };
 
   const getEffectiveValue = (assignment: Assignment, field: keyof Assignment) => {
@@ -910,11 +940,29 @@ export default function Stundenplaene() {
                                       </SelectValue>
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {subjects?.map((subject) => (
-                                        <SelectItem key={subject.id} value={subject.id}>
-                                          {subject.shortName} - {subject.name}
-                                        </SelectItem>
-                                      ))}
+                                      {(() => {
+                                        const currentTeacherId = getEffectiveValue(assignment, 'teacherId') as string;
+                                        const currentTeacher = teacherMap.get(currentTeacherId);
+                                        
+                                        if (!currentTeacher || !subjects) return [];
+                                        
+                                        // Get subjects that the current teacher can teach
+                                        return subjects.filter(subject => {
+                                          if (!currentTeacher.subjects || currentTeacher.subjects.length === 0) return false;
+                                          
+                                          return currentTeacher.subjects.some((subjectEntry: any) => {
+                                            if (typeof subjectEntry === 'string') {
+                                              const subjectCodes = subjectEntry.split(',').map(s => s.trim());
+                                              return subjectCodes.includes(subject.shortName);
+                                            }
+                                            return subjectEntry === subject.shortName;
+                                          });
+                                        }).map((subject) => (
+                                          <SelectItem key={subject.id} value={subject.id}>
+                                            {subject.shortName} - {subject.name}
+                                          </SelectItem>
+                                        ));
+                                      })()}
                                     </SelectContent>
                                   </Select>
                                 </TableCell>
