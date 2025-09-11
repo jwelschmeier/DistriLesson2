@@ -1205,18 +1205,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rawPreview = await storage.previewSchoolYearTransition(fromSchoolYearId, toSchoolYearName);
       
       // Transform to match frontend PreviewResult type
+      // Get lookup data for proper mapping
+      const [teachers, subjects, classes] = await Promise.all([
+        storage.getTeachers(),
+        storage.getSubjects(), 
+        storage.getClassesBySchoolYear(fromSchoolYearId)
+      ]);
+
       const preview = {
         success: true,
         preview: {
           newClasses: params.newClasses,
-          migratedAssignments: rawPreview.assignmentMigrations.map(am => ({
-            teacherName: "Unknown", // TODO: Get teacher name from assignment
-            subject: "Unknown", // TODO: Get subject name from assignment  
-            fromClass: "Unknown", // TODO: Get class name from assignment
-            toClass: am.targetGrade ? `${am.targetGrade}a` : "Unknown", // TODO: Proper mapping
-            status: am.status === 'auto_migrate' ? 'auto' as const : 
-                   am.status === 'manual_check' ? 'manual_check' as const : 'skip' as const
-          })),
+          migratedAssignments: rawPreview.assignmentMigrations.map(am => {
+            // Find related data
+            const teacher = teachers.find(t => t.id === am.assignment.teacherId);
+            const subject = subjects.find(s => s.id === am.assignment.subjectId);
+            const fromClass = classes.find(c => c.id === am.assignment.classId);
+            
+            // Determine target class based on grade advancement
+            let toClassName = "Abschluss";
+            if (am.targetGrade && am.targetGrade <= 10) {
+              // Advanced class (5a -> 6a, 6b -> 7b, etc.)
+              const currentGrade = fromClass?.grade || 5;
+              const classSuffix = fromClass?.name.slice(-1) || 'a'; // Get 'a', 'b', etc.
+              toClassName = `${am.targetGrade}${classSuffix}`;
+            }
+
+            return {
+              teacherName: teacher ? `${teacher.firstName} ${teacher.lastName}` : "Unbekannter Lehrer",
+              subject: subject?.shortName || subject?.name || "Unbekanntes Fach", 
+              fromClass: fromClass?.name || "Unbekannte Klasse",
+              toClass: toClassName,
+              status: am.status === 'auto_migrate' ? 'auto' as const : 
+                     am.status === 'manual_check' ? 'manual_check' as const : 'skip' as const
+            };
+          }),
           archivedClasses: rawPreview.classTransitions
             .filter(ct => ct.action === 'graduate')
             .map(ct => ({
