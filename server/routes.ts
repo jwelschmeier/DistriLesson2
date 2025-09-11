@@ -1368,6 +1368,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Excel Import Route
+  app.post('/api/import/lesson-distribution', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { filePath, schoolYearId } = req.body;
+      
+      if (!filePath || !schoolYearId) {
+        return res.status(400).json({ 
+          error: "Datei-Pfad und Schuljahr-ID sind erforderlich" 
+        });
+      }
+
+      const { LessonDistributionImporter } = await import('./lesson-distribution-importer.js');
+      const importer = new LessonDistributionImporter(storage);
+      
+      const result = await importer.importFromExcel(filePath, schoolYearId);
+      
+      if (result.success) {
+        res.json({
+          success: true,
+          message: `Import erfolgreich: ${result.imported.teachers} Lehrer, ${result.imported.subjects} Fächer, ${result.imported.classes} Klassen, ${result.imported.assignments} Zuweisungen`,
+          imported: result.imported,
+          warnings: result.warnings
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          error: "Import fehlgeschlagen",
+          errors: result.errors,
+          warnings: result.warnings
+        });
+      }
+    } catch (error) {
+      console.error("Error importing lesson distribution:", error);
+      res.status(500).json({ 
+        error: "Fehler beim Import der Unterrichtsverteilung",
+        details: error instanceof Error ? error.message : "Unbekannter Fehler"
+      });
+    }
+  });
+
   // School Years management routes
   app.get('/api/school-years', async (req, res) => {
     try {
