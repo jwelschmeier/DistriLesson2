@@ -33,14 +33,23 @@ const studentFormSchema = insertStudentSchema.extend({
   grade: z.number().min(5).max(10),
 });
 
+const gradeBulkEditSchema = z.object({
+  grade: z.number().min(5).max(10),
+  targetHoursTotal: z.string().min(1, "Gesamtstunden sind erforderlich"),
+  targetHoursSemester1: z.string().nullable().optional(),
+  targetHoursSemester2: z.string().nullable().optional(),
+});
+
 type ClassFormData = z.infer<typeof classFormSchema>;
 type StudentFormData = z.infer<typeof studentFormSchema>;
+type GradeBulkEditData = z.infer<typeof gradeBulkEditSchema>;
 
 export default function Klassenverwaltung() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterGrade, setFilterGrade] = useState("all");
   const [isClassDialogOpen, setIsClassDialogOpen] = useState(false);
   const [isStudentDialogOpen, setIsStudentDialogOpen] = useState(false);
+  const [isGradeBulkEditOpen, setIsGradeBulkEditOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<Class | null>(null);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const { toast } = useToast();
@@ -80,6 +89,16 @@ export default function Klassenverwaltung() {
       lastName: "",
       classId: "",
       grade: 5,
+    },
+  });
+
+  const gradeBulkForm = useForm<GradeBulkEditData>({
+    resolver: zodResolver(gradeBulkEditSchema),
+    defaultValues: {
+      grade: 5,
+      targetHoursTotal: "",
+      targetHoursSemester1: null,
+      targetHoursSemester2: null,
     },
   });
 
@@ -150,6 +169,29 @@ export default function Klassenverwaltung() {
     },
   });
 
+  const gradeBulkUpdateMutation = useMutation({
+    mutationFn: async (data: GradeBulkEditData) => {
+      const response = await apiRequest("POST", "/api/classes/bulk-update-grade", data);
+      return response.json();
+    },
+    onSuccess: (result) => {
+      toast({
+        title: "Jahrgangsstufe aktualisiert",
+        description: `${result.updatedCount} Klassen wurden erfolgreich aktualisiert.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/classes"] });
+      setIsGradeBulkEditOpen(false);
+      gradeBulkForm.reset();
+    },
+    onError: (error) => {
+      toast({
+        title: "Fehler beim Aktualisieren",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const createStudentMutation = useMutation({
     mutationFn: async (data: StudentFormData) => {
       const response = await apiRequest("POST", "/api/students", data);
@@ -209,6 +251,10 @@ export default function Klassenverwaltung() {
     if (confirm("Sind Sie sicher, dass Sie diese Klasse löschen möchten?")) {
       deleteClassMutation.mutate(id);
     }
+  };
+
+  const handleGradeBulkUpdate = (data: GradeBulkEditData) => {
+    gradeBulkUpdateMutation.mutate(data);
   };
 
   const handleStudentSubmit = (data: StudentFormData) => {
@@ -351,16 +397,17 @@ export default function Klassenverwaltung() {
                 </DialogContent>
               </Dialog>
 
-              <Dialog open={isClassDialogOpen} onOpenChange={setIsClassDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button data-testid="button-add-class" onClick={() => {
-                    setEditingClass(null);
-                    classForm.reset();
-                  }}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Klasse hinzufügen
-                  </Button>
-                </DialogTrigger>
+              <div className="flex gap-2">
+                <Dialog open={isClassDialogOpen} onOpenChange={setIsClassDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button data-testid="button-add-class" onClick={() => {
+                      setEditingClass(null);
+                      classForm.reset();
+                    }}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Klasse hinzufügen
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>
@@ -563,8 +610,130 @@ export default function Klassenverwaltung() {
                   </Form>
                 </DialogContent>
               </Dialog>
+
+              <Dialog open={isGradeBulkEditOpen} onOpenChange={setIsGradeBulkEditOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" data-testid="button-bulk-edit-grade">
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Jahrgangsstufe bearbeiten
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Jahrgangsstufe Bulk-Bearbeitung</DialogTitle>
+                  </DialogHeader>
+                  <Form {...gradeBulkForm}>
+                    <form onSubmit={gradeBulkForm.handleSubmit(handleGradeBulkUpdate)} className="space-y-4">
+                      <FormField
+                        control={gradeBulkForm.control}
+                        name="grade"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Jahrgangsstufe</FormLabel>
+                            <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value.toString()}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-bulk-grade">
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {[5, 6, 7, 8, 9, 10].map(grade => (
+                                  <SelectItem key={grade} value={grade.toString()}>
+                                    Klasse {grade}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={gradeBulkForm.control}
+                        name="targetHoursTotal"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Gesamtstunden</FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                type="number"
+                                step="0.5"
+                                placeholder="z.B. 60.0"
+                                data-testid="input-bulk-target-hours-total"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={gradeBulkForm.control}
+                          name="targetHoursSemester1"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Soll-Stunden 1. HJ</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  {...field} 
+                                  type="number"
+                                  step="0.5"
+                                  placeholder="z.B. 30.0"
+                                  value={field.value || ""}
+                                  onChange={e => field.onChange(e.target.value || null)}
+                                  data-testid="input-bulk-target-hours-semester1"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={gradeBulkForm.control}
+                          name="targetHoursSemester2"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Soll-Stunden 2. HJ</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  {...field} 
+                                  type="number"
+                                  step="0.5"
+                                  placeholder="z.B. 30.0"
+                                  value={field.value || ""}
+                                  onChange={e => field.onChange(e.target.value || null)}
+                                  data-testid="input-bulk-target-hours-semester2"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="flex justify-end space-x-2 pt-4">
+                        <Button type="button" variant="outline" onClick={() => setIsGradeBulkEditOpen(false)}>
+                          Abbrechen
+                        </Button>
+                        <Button 
+                          type="submit" 
+                          disabled={gradeBulkUpdateMutation.isPending}
+                          data-testid="button-save-bulk-grade"
+                        >
+                          {gradeBulkUpdateMutation.isPending ? "Aktualisiert..." : "Alle Klassen aktualisieren"}
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
+        </div>
         </header>
 
         {/* Content */}
