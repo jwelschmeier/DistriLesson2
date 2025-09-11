@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, boolean, timestamp, json, date, unique, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, boolean, timestamp, json, date, unique, index, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -122,6 +122,46 @@ export const planstellen = pgTable("planstellen", {
   calculatedAt: timestamp("calculated_at").defaultNow(),
 });
 
+// Authentication tables
+
+// Session storage table (required for Replit Auth)
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+// User storage table (required for Replit Auth)
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+  role: varchar("role").notNull().default("user"), // user, admin
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Invitations table for invitation-based access control
+export const invitations = pgTable("invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").notNull().unique(),
+  token: varchar("token").notNull().unique(), // for invitation link
+  role: varchar("role").notNull().default("user"), // user, admin
+  createdBy: varchar("created_by").references(() => users.id),
+  used: boolean("used").default(false),
+  usedBy: varchar("used_by").references(() => users.id),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  usedAt: timestamp("used_at"),
+});
+
 // Relations
 export const schoolYearsRelations = relations(schoolYears, ({ many }) => ({
   students: many(students),
@@ -201,6 +241,25 @@ export const planstellenRelations = relations(planstellen, ({ one }) => ({
   subject: one(subjects, {
     fields: [planstellen.subjectId],
     references: [subjects.id],
+  }),
+}));
+
+// Authentication relations
+export const usersRelations = relations(users, ({ many }) => ({
+  invitationsCreated: many(invitations, { relationName: "createdBy" }),
+  invitationsUsed: many(invitations, { relationName: "usedBy" }),
+}));
+
+export const invitationsRelations = relations(invitations, ({ one }) => ({
+  createdBy: one(users, {
+    fields: [invitations.createdBy],
+    references: [users.id],
+    relationName: "createdBy",
+  }),
+  usedBy: one(users, {
+    fields: [invitations.usedBy],
+    references: [users.id],
+    relationName: "usedBy",
   }),
 }));
 
@@ -292,6 +351,32 @@ export const insertPlanstelleSchema = createInsertSchema(planstellen).omit({
   calculatedAt: true,
 });
 
+// Authentication insert schemas
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  email: z.string().email("Gültige E-Mail-Adresse erforderlich").optional(),
+  role: z.enum(["user", "admin"], { invalid_type_error: "Rolle muss 'user' oder 'admin' sein" }).optional(),
+});
+
+export const insertInvitationSchema = createInsertSchema(invitations).omit({
+  id: true,
+  token: true,
+  used: true,
+  usedBy: true,
+  usedAt: true,
+  createdAt: true,
+}).extend({
+  email: z.string().email("Gültige E-Mail-Adresse erforderlich"),
+  role: z.enum(["user", "admin"], { invalid_type_error: "Rolle muss 'user' oder 'admin' sein" }),
+  createdBy: z.string().uuid("Ungültige Benutzer-ID"),
+  expiresAt: z.date().refine((date) => date > new Date(), { 
+    message: "Ablaufdatum muss in der Zukunft liegen" 
+  }),
+});
+
 // Types
 export type SchoolYear = typeof schoolYears.$inferSelect;
 export type InsertSchoolYear = z.infer<typeof insertSchoolYearSchema>;
@@ -309,3 +394,10 @@ export type PlanstellenScenario = typeof planstellenScenarios.$inferSelect;
 export type InsertPlanstellenScenario = z.infer<typeof insertPlanstellenScenarioSchema>;
 export type Planstelle = typeof planstellen.$inferSelect;
 export type InsertPlanstelle = z.infer<typeof insertPlanstelleSchema>;
+
+// Authentication types
+export type User = typeof users.$inferSelect;
+export type UpsertUser = typeof users.$inferInsert;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type Invitation = typeof invitations.$inferSelect;
+export type InsertInvitation = z.infer<typeof insertInvitationSchema>;

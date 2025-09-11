@@ -2,7 +2,8 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import { storage } from "./storage";
-import { insertTeacherSchema, insertStudentSchema, insertClassSchema, insertSubjectSchema, insertAssignmentSchema, Teacher } from "@shared/schema";
+import { setupAuth, isAuthenticated, isAdmin } from "./replitAuth";
+import { insertTeacherSchema, insertStudentSchema, insertClassSchema, insertSubjectSchema, insertAssignmentSchema, insertInvitationSchema, Teacher } from "@shared/schema";
 import { calculateCorrectHours } from "@shared/parallel-subjects";
 import { z } from "zod";
 
@@ -13,6 +14,108 @@ interface MulterRequest extends Request {
 const upload = multer({ storage: multer.memoryStorage() });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Auth middleware - setup authentication first
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Invitation management routes (Admin only)
+  app.post('/api/admin/invitations', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const invitationData = insertInvitationSchema.parse({
+        ...req.body,
+        createdBy: (req as any).user.claims.sub,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      });
+      
+      const invitation = await storage.createInvitation(invitationData);
+      res.status(201).json(invitation);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      if (error instanceof Error && error.message.includes("duplicate key")) {
+        return res.status(400).json({ error: "Eine Einladung für diese E-Mail-Adresse existiert bereits" });
+      }
+      console.error("Error creating invitation:", error);
+      res.status(500).json({ error: "Failed to create invitation" });
+    }
+  });
+
+  app.get('/api/admin/invitations', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const invitations = await storage.getInvitations();
+      res.json(invitations);
+    } catch (error) {
+      console.error("Error fetching invitations:", error);
+      res.status(500).json({ error: "Failed to fetch invitations" });
+    }
+  });
+
+  app.delete('/api/admin/invitations/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.deleteInvitation(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting invitation:", error);
+      res.status(500).json({ error: "Failed to delete invitation" });
+    }
+  });
+
+  // Public invitation validation route
+  app.get('/api/invitation/:token', async (req, res) => {
+    try {
+      const invitation = await storage.getInvitationByToken(req.params.token);
+      if (!invitation) {
+        return res.status(404).json({ error: "Einladung nicht gefunden oder bereits verwendet" });
+      }
+      
+      if (invitation.used) {
+        return res.status(400).json({ error: "Diese Einladung wurde bereits verwendet" });
+      }
+      
+      if (invitation.expiresAt < new Date()) {
+        return res.status(400).json({ error: "Diese Einladung ist abgelaufen" });
+      }
+      
+      res.json({ 
+        email: invitation.email, 
+        role: invitation.role,
+        valid: true 
+      });
+    } catch (error) {
+      console.error("Error validating invitation:", error);
+      res.status(500).json({ error: "Failed to validate invitation" });
+    }
+  });
+
+  // Global authentication middleware - protect all API routes except public ones
+  app.use('/api', (req, res, next) => {
+    const publicRoutes = ['/api/login', '/api/callback', '/api/invitation'];
+    const isPublicRoute = publicRoutes.some(route => req.path.startsWith(route));
+    
+    if (isPublicRoute) {
+      return next();
+    }
+    
+    // Apply authentication to all other API routes
+    return isAuthenticated(req, res, next);
+  });
+
+  // Protected routes - all routes below this point require authentication
   // Teachers routes
   app.get("/api/teachers", async (req, res) => {
     try {

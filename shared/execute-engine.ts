@@ -391,7 +391,7 @@ async function executePhase<T>(
   
   const summaryPhase = {
     phase,
-    status: 'running' as const,
+    status: 'running' as 'pending' | 'running' | 'completed' | 'failed',
     startTime: phaseStart,
   };
   summary.phases.push(summaryPhase);

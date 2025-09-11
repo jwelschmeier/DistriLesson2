@@ -7,6 +7,8 @@ import {
   planstellen,
   planstellenScenarios,
   schoolYears,
+  users,
+  invitations,
   type Teacher, 
   type InsertTeacher,
   type Student,
@@ -22,10 +24,16 @@ import {
   type PlanstellenScenario,
   type InsertPlanstellenScenario,
   type SchoolYear,
-  type InsertSchoolYear
+  type InsertSchoolYear,
+  type User,
+  type UpsertUser,
+  type InsertUser,
+  type Invitation,
+  type InsertInvitation
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql, desc } from "drizzle-orm";
+import { randomUUID } from "crypto";
 
 export interface IStorage {
   // School Years
@@ -99,6 +107,19 @@ export interface IStorage {
   bulkCreateStudents(students: InsertStudent[]): Promise<Student[]>;
   bulkCreateClasses(classes: InsertClass[]): Promise<Class[]>;
   bulkCreateSubjects(subjects: InsertSubject[]): Promise<Subject[]>;
+
+  // Authentication operations (required for Replit Auth)
+  getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
+
+  // Invitation operations
+  createInvitation(invitation: InsertInvitation): Promise<Invitation>;
+  getInvitations(): Promise<Invitation[]>;
+  getInvitationByToken(token: string): Promise<Invitation | undefined>;
+  getInvitationByEmail(email: string): Promise<Invitation | undefined>;
+  markInvitationUsed(id: string, usedBy: string): Promise<void>;
+  deleteInvitation(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -558,6 +579,75 @@ export class DatabaseStorage implements IStorage {
     }
     
     return results;
+  }
+
+  // Authentication operations (required for Replit Auth)
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
+  }
+
+  // Invitation operations
+  async createInvitation(invitationData: InsertInvitation): Promise<Invitation> {
+    // Generate a secure token for the invitation
+    const token = randomUUID();
+    
+    const invitation = {
+      ...invitationData,
+      token,
+    };
+    
+    const [newInvitation] = await db.insert(invitations).values(invitation).returning();
+    return newInvitation;
+  }
+
+  async getInvitations(): Promise<Invitation[]> {
+    return await db.select().from(invitations).orderBy(desc(invitations.createdAt));
+  }
+
+  async getInvitationByToken(token: string): Promise<Invitation | undefined> {
+    const [invitation] = await db.select().from(invitations).where(eq(invitations.token, token));
+    return invitation || undefined;
+  }
+
+  async getInvitationByEmail(email: string): Promise<Invitation | undefined> {
+    const [invitation] = await db.select().from(invitations).where(eq(invitations.email, email));
+    return invitation || undefined;
+  }
+
+  async markInvitationUsed(id: string, usedBy: string): Promise<void> {
+    await db
+      .update(invitations)
+      .set({
+        used: true,
+        usedBy,
+        usedAt: new Date(),
+      })
+      .where(eq(invitations.id, id));
+  }
+
+  async deleteInvitation(id: string): Promise<void> {
+    await db.delete(invitations).where(eq(invitations.id, id));
   }
 }
 
