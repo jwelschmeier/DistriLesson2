@@ -13,21 +13,17 @@ if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
   throw new Error("Google OAuth credentials not provided in environment variables");
 }
 
-// Get callback URL based on environment
+// Get callback URL based on environment - Replit requires HTTPS externally
 function getCallbackURL(): string {
   // Prefer REPLIT_DEV_DOMAIN for development
-  let domain = process.env.REPLIT_DEV_DOMAIN || process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
+  const domain = process.env.REPLIT_DEV_DOMAIN || process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
   
   if (domain.includes('localhost')) {
     return `http://${domain}/api/auth/google/callback`;
   }
   
-  // Ensure proper protocol for Replit domains
-  if (!domain.startsWith('http')) {
-    domain = `https://${domain}`;
-  }
-  
-  return `${domain}/api/auth/google/callback`;
+  // Replit apps are always HTTPS externally, even if HTTP internally
+  return `https://${domain}/api/auth/google/callback`;
 }
 
 export function getSession() {
@@ -39,6 +35,9 @@ export function getSession() {
     ttl: sessionTtl,
     tableName: "sessions",
   });
+  
+  const isProduction = !process.env.REPLIT_DEV_DOMAIN?.includes('localhost');
+  
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
@@ -46,7 +45,8 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
+      secure: isProduction, // HTTPS only in production (Replit)
+      sameSite: 'lax', // Allow cross-site requests for OAuth
       maxAge: sessionTtl,
     },
   });
@@ -109,10 +109,13 @@ export async function setupAuth(app: Express) {
   app.use(passport.session());
 
   // Configure Google OAuth Strategy
+  const callbackURL = getCallbackURL();
+  console.log(`Google OAuth Callback URL: ${callbackURL}`);
+  
   passport.use(new GoogleStrategy({
     clientID: GOOGLE_CLIENT_ID,
     clientSecret: GOOGLE_CLIENT_SECRET,
-    callbackURL: getCallbackURL()
+    callbackURL: callbackURL
   }, async (accessToken: string, refreshToken: string, profile: any, done: any) => {
     try {
       const user = { profile, accessToken, refreshToken };
