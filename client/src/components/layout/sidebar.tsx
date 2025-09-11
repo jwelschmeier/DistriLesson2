@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { GraduationCap, BarChart3, Upload, Calculator, Users, Presentation, School, Clock, Sparkles, BookOpen, Calendar, Grid } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { GraduationCap, BarChart3, Upload, Calculator, Users, Presentation, School, Clock, Sparkles, BookOpen, Calendar, Grid, Settings } from "lucide-react";
 
 const navigationItems = [
   { href: "/", label: "Dashboard", icon: BarChart3 },
@@ -16,8 +17,13 @@ const navigationItems = [
   { href: "/stdv-kl-optimum", label: "StdV-Kl-Optimum", icon: Sparkles },
 ];
 
+const adminNavigationItems = [
+  { href: "/admin", label: "Admin-Panel", icon: Settings },
+];
+
 export function Sidebar() {
   const [location] = useLocation();
+  const { isAdmin } = useAuth();
 
   return (
     <aside className="w-64 bg-card border-r border-border flex flex-col">
@@ -56,6 +62,38 @@ export function Sidebar() {
             </Link>
           );
         })}
+        
+        {/* Admin-only navigation items */}
+        {isAdmin && (
+          <>
+            <div className="pt-4 pb-2">
+              <div className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Administration
+              </div>
+            </div>
+            {adminNavigationItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location === item.href;
+              
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center space-x-3 px-3 py-2 rounded-md transition-colors",
+                    isActive
+                      ? "bg-accent text-accent-foreground font-medium"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  )}
+                  data-testid={`nav-admin-${item.href.replace('/', '')}`}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </>
+        )}
       </nav>
       {/* User Info */}
       <div className="p-4 border-t border-border">
