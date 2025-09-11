@@ -371,7 +371,10 @@ export const insertInvitationSchema = createInsertSchema(invitations).omit({
 }).extend({
   email: z.string().email("Gültige E-Mail-Adresse erforderlich"),
   role: z.enum(["user", "admin"], { invalid_type_error: "Rolle muss 'user' oder 'admin' sein" }),
-  createdBy: z.string().uuid("Ungültige Benutzer-ID"),
+  createdBy: z.string().refine((val) => {
+    // Accept both UUID format and Replit User ID format (numeric string)
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val) || /^[0-9]+$/.test(val);
+  }, { message: "Ungültige Benutzer-ID (muss UUID oder numerische ID sein)" }),
   expiresAt: z.date().refine((date) => date > new Date(), { 
     message: "Ablaufdatum muss in der Zukunft liegen" 
   }),

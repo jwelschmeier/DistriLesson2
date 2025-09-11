@@ -60,8 +60,21 @@ export default function AdminPanel() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to create invitation");
+        const errorData = await response.json();
+        let errorMessage = "Failed to create invitation";
+        
+        if (errorData.error) {
+          if (Array.isArray(errorData.error)) {
+            // Handle Zod validation errors
+            errorMessage = errorData.error.map((err: any) => err.message || `${err.path?.join('.')}: ${err.code}`).join(", ");
+          } else if (typeof errorData.error === 'string') {
+            errorMessage = errorData.error;
+          } else {
+            errorMessage = JSON.stringify(errorData.error);
+          }
+        }
+        
+        throw new Error(errorMessage);
       }
 
       return response.json();
