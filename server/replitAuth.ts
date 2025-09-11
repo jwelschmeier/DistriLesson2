@@ -5,9 +5,13 @@ import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 
-// Google OAuth Configuration - using your credentials from screenshot
-const GOOGLE_CLIENT_ID = "9648403016-mfsa6ikjm1js3s73qbrb0snctqln3ihp.apps.googleusercontent.com";
-const GOOGLE_CLIENT_SECRET = "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";
+// Google OAuth Configuration - from environment variables
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
+
+if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+  throw new Error("Google OAuth credentials not provided in environment variables");
+}
 
 // Get callback URL based on environment
 function getCallbackURL(): string {
