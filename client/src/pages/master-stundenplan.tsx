@@ -337,7 +337,7 @@ export default function MasterStundenplan() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-semibold text-foreground">Master-Stundenplan</h2>
-                <p className="text-muted-foreground">Umfassende Übersicht aller Stundenpläne</p>
+                <p className="text-foreground/70 font-medium">Umfassende Übersicht aller Stundenpläne</p>
               </div>
             </div>
           </header>
@@ -425,7 +425,7 @@ export default function MasterStundenplan() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Gesamt Zuweisungen</p>
+                    <p className="text-sm font-semibold text-foreground/70">Gesamt Zuweisungen</p>
                     <p className="text-2xl font-bold" data-testid="stat-total-assignments">{overallStats.totalAssignments}</p>
                   </div>
                   <BookOpen className="h-8 w-8 text-primary" />
@@ -437,9 +437,9 @@ export default function MasterStundenplan() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Gesamt Stunden</p>
+                    <p className="text-sm font-semibold text-foreground/70">Gesamt Stunden</p>
                     <p className="text-2xl font-bold" data-testid="stat-total-hours">{overallStats.totalHours}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-foreground/60 font-medium">
                       S1: {overallStats.semester1Hours} | S2: {overallStats.semester2Hours}
                     </p>
                   </div>
@@ -452,7 +452,7 @@ export default function MasterStundenplan() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Überlastete Lehrer</p>
+                    <p className="text-sm font-semibold text-foreground/70">Überlastete Lehrer</p>
                     <p className="text-2xl font-bold text-destructive" data-testid="stat-overloaded-teachers">{overallStats.overloadedTeachers}</p>
                   </div>
                   <AlertTriangle className="h-8 w-8 text-destructive" />
@@ -464,7 +464,7 @@ export default function MasterStundenplan() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Ø Auslastung</p>
+                    <p className="text-sm font-semibold text-foreground/70">Ø Auslastung</p>
                     <p className="text-2xl font-bold" data-testid="stat-average-utilization">
                       {Math.round(overallStats.averageUtilization)}%
                     </p>

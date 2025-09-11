@@ -707,7 +707,7 @@ export default function Stundenplaene() {
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-muted-foreground text-sm font-medium">Gesamtstunden</p>
+                            <p className="text-foreground/70 text-sm font-semibold">Gesamtstunden</p>
                             <p className="text-3xl font-bold text-foreground" data-testid="text-class-total-hours">
                               {classSummary.totalHours}
                             </p>
@@ -723,7 +723,7 @@ export default function Stundenplaene() {
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-muted-foreground text-sm font-medium">Lehrkräfte</p>
+                            <p className="text-foreground/70 text-sm font-semibold">Lehrkräfte</p>
                             <p className="text-3xl font-bold text-foreground" data-testid="text-class-teachers">
                               {classSummary.teacherCount}
                             </p>
@@ -747,15 +747,15 @@ export default function Stundenplaene() {
                     <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                         <div>
-                          <span className="text-muted-foreground">Klassenname:</span>
+                          <span className="text-foreground/70 font-medium">Klassenname:</span>
                           <p className="font-medium">{selectedClass.name}</p>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">Jahrgangsstufe:</span>
+                          <span className="text-foreground/70 font-medium">Jahrgangsstufe:</span>
                           <p className="font-medium">{selectedClass.grade}</p>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">Schüleranzahl:</span>
+                          <span className="text-foreground/70 font-medium">Schüleranzahl:</span>
                           <p className="font-medium">{selectedClass.studentCount}</p>
                         </div>
                       </div>
