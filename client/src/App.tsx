@@ -19,6 +19,7 @@ import StdvLe from "@/pages/stdv-le";
 import StdvKlOptimum from "@/pages/stdv-kl-optimum";
 import Stundenplaene from "@/pages/stundenplaene";
 import MasterStundenplan from "@/pages/master-stundenplan";
+import Schuljahreswechsel from "@/pages/schuljahreswechsel";
 
 function Router() {
   const { isAuthenticated, isLoading, isAdmin } = useAuth();
@@ -55,6 +56,7 @@ function Router() {
           <Route path="/stdv-kl-optimum" component={StdvKlOptimum} />
           <Route path="/stundenplaene" component={Stundenplaene} />
           <Route path="/master-stundenplan" component={MasterStundenplan} />
+          <Route path="/schuljahreswechsel" component={Schuljahreswechsel} />
           
           {/* Admin-only routes */}
           {isAdmin && (
