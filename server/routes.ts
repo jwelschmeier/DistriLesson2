@@ -522,6 +522,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Detect and create missing semester 2 assignments
+  app.post("/api/assignments/fix-missing-semester2", async (req, res) => {
+    try {
+      const { dryRun = true } = req.body;
+      
+      // Get all current assignments
+      const assignments = await storage.getAssignments();
+      const teachers = await storage.getTeachers();
+      const subjects = await storage.getSubjects();
+      const classes = await storage.getClasses();
+      
+      // Group assignments by teacher-subject-class combination
+      const assignmentMap = new Map<string, { semester1?: any, semester2?: any }>();
+      
+      for (const assignment of assignments) {
+        const teacher = teachers.find(t => t.id === assignment.teacherId);
+        const subject = subjects.find(s => s.id === assignment.subjectId);
+        const classObj = classes.find(c => c.id === assignment.classId);
+        
+        if (!teacher || !subject || !classObj) continue;
+        
+        const key = `${teacher.shortName}-${subject.shortName}-${classObj.name}`;
+        
+        if (!assignmentMap.has(key)) {
+          assignmentMap.set(key, {});
+        }
+        
+        const entry = assignmentMap.get(key)!;
+        if (assignment.semester === "1") {
+          entry.semester1 = assignment;
+        } else if (assignment.semester === "2") {
+          entry.semester2 = assignment;
+        }
+      }
+      
+      // Find missing semester 2 assignments
+      const missingAssignments = [];
+      const teacherIdMap = new Map(teachers.map(t => [t.shortName, t.id]));
+      const subjectIdMap = new Map(subjects.map(s => [s.shortName, s.id]));
+      const classIdMap = new Map(classes.map(c => [c.name, c.id]));
+      
+      for (const [key, entry] of assignmentMap.entries()) {
+        if (entry.semester1 && !entry.semester2) {
+          const [teacherShort, subjectShort, className] = key.split('-');
+          const teacherId = teacherIdMap.get(teacherShort);
+          const subjectId = subjectIdMap.get(subjectShort);
+          const classId = classIdMap.get(className);
+          
+          if (teacherId && subjectId && classId) {
+            missingAssignments.push({
+              teacherId,
+              subjectId, 
+              classId,
+              teacherShort,
+              subjectShort,
+              className,
+              hoursPerWeek: entry.semester1.hoursPerWeek,
+              semester: "2",
+              schoolYearId: entry.semester1.schoolYearId,
+              isOptimized: false
+            });
+          }
+        }
+      }
+      
+      const result = {
+        found: missingAssignments.length,
+        missingAssignments: missingAssignments.map(a => ({
+          teacher: a.teacherShort,
+          subject: a.subjectShort,
+          class: a.className,
+          hours: a.hoursPerWeek
+        })),
+        created: 0
+      };
+      
+      if (!dryRun && missingAssignments.length > 0) {
+        // Create the missing assignments
+        for (const assignment of missingAssignments) {
+          try {
+            const assignmentData = insertAssignmentSchema.parse({
+              teacherId: assignment.teacherId,
+              subjectId: assignment.subjectId,
+              classId: assignment.classId,
+              hoursPerWeek: assignment.hoursPerWeek,
+              semester: assignment.semester,
+              schoolYearId: assignment.schoolYearId,
+              isOptimized: assignment.isOptimized
+            });
+            
+            await storage.createAssignment(assignmentData);
+            result.created++;
+          } catch (error) {
+            console.error(`Failed to create assignment for ${assignment.teacherShort}-${assignment.subjectShort}-${assignment.className}:`, error);
+          }
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: dryRun 
+          ? `Gefunden: ${result.found} fehlende Semester 2 Zuweisungen (Testlauf)` 
+          : `Erstellt: ${result.created} von ${result.found} fehlenden Semester 2 Zuweisungen`,
+        dryRun,
+        ...result
+      });
+      
+    } catch (error) {
+      console.error("Error fixing missing semester 2 assignments:", error);
+      res.status(500).json({ 
+        error: "Failed to fix missing semester 2 assignments",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // Statistics route
   app.get("/api/stats", async (req, res) => {
     try {

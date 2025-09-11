@@ -164,6 +164,113 @@ export const schildTransformers = {
       hoursPerWeek: {},
     };
   },
+
+  assignment: (row: string[], headers?: string[]) => {
+    if (row.length < 6) return null;
+    
+    // Expected format: teacherShort, subjectShort, className, semester, hoursPerWeek, schoolYearId
+    const teacherShort = row[0]?.trim();
+    const subjectShort = row[1]?.trim();
+    const className = row[2]?.trim();
+    const semester = row[3]?.trim() || "1";
+    const hoursStr = row[4]?.trim();
+    const schoolYearId = row[5]?.trim();
+    
+    if (!teacherShort || !subjectShort || !className || !hoursStr) {
+      return null;
+    }
+    
+    const hoursPerWeek = parseFloat(hoursStr);
+    if (isNaN(hoursPerWeek) || hoursPerWeek <= 0) {
+      return null;
+    }
+    
+    return {
+      teacherShort,
+      subjectShort,
+      className,
+      semester,
+      hoursPerWeek,
+      schoolYearId,
+    };
+  },
+
+  // Enhanced assignment transformer for semester-specific distribution
+  assignmentWithSemesterSplit: (row: string[], headers?: string[]) => {
+    if (row.length < 4) return null;
+    
+    // Expected format: teacherShort, subjectShort, className, totalHoursPerWeek, semesterDistribution?
+    const teacherShort = row[0]?.trim();
+    const subjectShort = row[1]?.trim();
+    const className = row[2]?.trim();
+    const totalHoursStr = row[3]?.trim();
+    const semesterDistribution = row[4]?.trim(); // e.g., "both", "1", "2", "2-2", "3-1"
+    
+    if (!teacherShort || !subjectShort || !className || !totalHoursStr) {
+      return null;
+    }
+    
+    const totalHours = parseFloat(totalHoursStr);
+    if (isNaN(totalHours) || totalHours <= 0) {
+      return null;
+    }
+    
+    // Parse semester distribution
+    let semester1Hours = 0;
+    let semester2Hours = 0;
+    
+    if (!semesterDistribution || semesterDistribution === "both") {
+      // Equal distribution across both semesters
+      semester1Hours = totalHours;
+      semester2Hours = totalHours;
+    } else if (semesterDistribution === "1") {
+      // Only semester 1
+      semester1Hours = totalHours;
+      semester2Hours = 0;
+    } else if (semesterDistribution === "2") {
+      // Only semester 2
+      semester1Hours = 0;
+      semester2Hours = totalHours;
+    } else if (semesterDistribution.includes("-")) {
+      // Specific distribution like "3-1" or "2-2"
+      const [s1, s2] = semesterDistribution.split("-").map(s => parseFloat(s.trim()));
+      if (!isNaN(s1) && !isNaN(s2)) {
+        semester1Hours = s1;
+        semester2Hours = s2;
+      } else {
+        // Default to equal distribution if parsing fails
+        semester1Hours = totalHours;
+        semester2Hours = totalHours;
+      }
+    } else {
+      // Default to equal distribution
+      semester1Hours = totalHours;
+      semester2Hours = totalHours;
+    }
+    
+    // Return both assignments if both semesters have hours
+    const assignments = [];
+    if (semester1Hours > 0) {
+      assignments.push({
+        teacherShort,
+        subjectShort,
+        className,
+        semester: "1",
+        hoursPerWeek: semester1Hours,
+      });
+    }
+    if (semester2Hours > 0) {
+      assignments.push({
+        teacherShort,
+        subjectShort,
+        className,
+        semester: "2",
+        hoursPerWeek: semester2Hours,
+      });
+    }
+    
+    return assignments.length > 0 ? assignments : null;
+  },
 };
 
 // Validation functions
@@ -222,7 +329,104 @@ export const csvValidators = {
     
     return errors;
   },
+
+  validateAssignment: (assignment: any): string[] => {
+    const errors: string[] = [];
+    
+    if (!assignment.teacherShort) errors.push("Lehrerkürzel ist erforderlich");
+    if (!assignment.subjectShort) errors.push("Fachkürzel ist erforderlich");
+    if (!assignment.className) errors.push("Klassenname ist erforderlich");
+    if (!assignment.semester || !["1", "2"].includes(assignment.semester)) {
+      errors.push("Semester muss '1' oder '2' sein");
+    }
+    if (!assignment.hoursPerWeek || assignment.hoursPerWeek <= 0) {
+      errors.push("Wochenstunden müssen größer als 0 sein");
+    }
+    if (assignment.hoursPerWeek && assignment.hoursPerWeek > 10) {
+      errors.push("Wochenstunden scheinen unrealistisch hoch (>10)");
+    }
+    
+    return errors;
+  },
 };
+
+// Assignment-specific utility functions
+export function createMissingAssignments(
+  teacherShort: string,
+  subjectShort: string,
+  classes: string[],
+  hoursPerWeek: number,
+  semesterDistribution: "both" | "1" | "2" = "both"
+): any[] {
+  const assignments = [];
+  
+  for (const className of classes) {
+    if (semesterDistribution === "both" || semesterDistribution === "1") {
+      assignments.push({
+        teacherShort,
+        subjectShort,
+        className,
+        semester: "1",
+        hoursPerWeek,
+      });
+    }
+    if (semesterDistribution === "both" || semesterDistribution === "2") {
+      assignments.push({
+        teacherShort,
+        subjectShort,
+        className,
+        semester: "2",
+        hoursPerWeek,
+      });
+    }
+  }
+  
+  return assignments;
+}
+
+// Function to detect semester-specific subjects that need different distributions
+export function detectSemesterSpecificSubjects(assignments: any[]): Map<string, Set<string>> {
+  const semesterSubjects = new Map<string, Set<string>>();
+  
+  for (const assignment of assignments) {
+    const key = `${assignment.teacherShort}-${assignment.subjectShort}`;
+    
+    if (!semesterSubjects.has(key)) {
+      semesterSubjects.set(key, new Set());
+    }
+    
+    semesterSubjects.get(key)!.add(assignment.semester);
+  }
+  
+  return semesterSubjects;
+}
+
+// Function to generate missing semester 2 assignments based on semester 1 patterns
+export function generateMissingSemester2Assignments(
+  existingAssignments: any[]
+): any[] {
+  const missingAssignments = [];
+  const semester1Assignments = existingAssignments.filter(a => a.semester === "1");
+  const semester2Keys = new Set(
+    existingAssignments
+      .filter(a => a.semester === "2")
+      .map(a => `${a.teacherShort}-${a.subjectShort}-${a.className}`)
+  );
+  
+  for (const s1Assignment of semester1Assignments) {
+    const key = `${s1Assignment.teacherShort}-${s1Assignment.subjectShort}-${s1Assignment.className}`;
+    
+    // If no corresponding semester 2 assignment exists, create one
+    if (!semester2Keys.has(key)) {
+      missingAssignments.push({
+        ...s1Assignment,
+        semester: "2",
+      });
+    }
+  }
+  
+  return missingAssignments;
+}
 
 // Utility function to detect CSV format
 export function detectCSVFormat(csvContent: string): {
