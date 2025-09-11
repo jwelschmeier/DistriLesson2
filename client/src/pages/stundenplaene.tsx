@@ -327,12 +327,48 @@ export default function Stundenplaene() {
           const canTeachSubject = newTeacher.subjects?.some((subjectEntry: any) => {
             if (typeof subjectEntry === 'string') {
               const subjectCodes = subjectEntry.split(',').map(s => s.trim());
-              return subjectCodes.some(code => 
-                code === currentSubject.shortName || 
-                code === currentSubject.name ||
-                code.toLowerCase() === currentSubject.name.toLowerCase() ||
-                code.toLowerCase() === currentSubject.shortName.toLowerCase()
-              );
+              return subjectCodes.some(code => {
+                const codeNormalized = code.toLowerCase().trim();
+                const subjectShortNormalized = currentSubject.shortName.toLowerCase();
+                const subjectNameNormalized = currentSubject.name.toLowerCase();
+                
+                // Direct matches
+                if (codeNormalized === subjectShortNormalized || 
+                    codeNormalized === subjectNameNormalized) {
+                  return true;
+                }
+                
+                // Special mappings for common subject names
+                const subjectMappings = {
+                  'mathe': ['m', 'mathematik'],
+                  'physik': ['ph', 'p h'],
+                  'informatik': ['if', 'i f', 'ikg', 'inf'],
+                  'deutsch': ['d'],
+                  'englisch': ['e'],
+                  'biologie': ['bi', 'b i', 'nw'],
+                  'chemie': ['ch', 'c h'],
+                  'geschichte': ['ge', 'g e'],
+                  'erdkunde': ['ek', 'e k'],
+                  'kunst': ['ku', 'k u'],
+                  'musik': ['mu', 'm u'],
+                  'sport': ['sp', 's p'],
+                  'technik': ['tc', 't c'],
+                  'politik': ['pk', 'p k'],
+                  'sozialwissenschaften': ['sw', 's w']
+                };
+                
+                // Check if teacher's subject maps to this database subject
+                for (const [teacherSubject, dbVariants] of Object.entries(subjectMappings)) {
+                  if (codeNormalized.includes(teacherSubject)) {
+                    if (dbVariants.includes(subjectShortNormalized) || 
+                        dbVariants.includes(subjectNameNormalized)) {
+                      return true;
+                    }
+                  }
+                }
+                
+                return false;
+              });
             }
             return subjectEntry === currentSubject.shortName || subjectEntry === currentSubject.name;
           });
@@ -959,13 +995,49 @@ export default function Stundenplaene() {
                                             if (typeof subjectEntry === 'string') {
                                               // Handle comma-separated subjects in a single string
                                               const subjectCodes = subjectEntry.split(',').map(s => s.trim());
-                                              // Check both shortName and name matches
-                                              return subjectCodes.some(code => 
-                                                code === subject.shortName || 
-                                                code === subject.name ||
-                                                code.toLowerCase() === subject.name.toLowerCase() ||
-                                                code.toLowerCase() === subject.shortName.toLowerCase()
-                                              );
+                                              // Check both shortName and name matches with flexible mapping
+                                              return subjectCodes.some(code => {
+                                                const codeNormalized = code.toLowerCase().trim();
+                                                const subjectShortNormalized = subject.shortName.toLowerCase();
+                                                const subjectNameNormalized = subject.name.toLowerCase();
+                                                
+                                                // Direct matches
+                                                if (codeNormalized === subjectShortNormalized || 
+                                                    codeNormalized === subjectNameNormalized) {
+                                                  return true;
+                                                }
+                                                
+                                                // Special mappings for common subject names
+                                                const subjectMappings = {
+                                                  'mathe': ['m', 'mathematik'],
+                                                  'physik': ['ph', 'p h'],
+                                                  'informatik': ['if', 'i f', 'ikg', 'inf'],
+                                                  'deutsch': ['d'],
+                                                  'englisch': ['e'],
+                                                  'biologie': ['bi', 'b i', 'nw'],
+                                                  'chemie': ['ch', 'c h'],
+                                                  'geschichte': ['ge', 'g e'],
+                                                  'erdkunde': ['ek', 'e k'],
+                                                  'kunst': ['ku', 'k u'],
+                                                  'musik': ['mu', 'm u'],
+                                                  'sport': ['sp', 's p'],
+                                                  'technik': ['tc', 't c'],
+                                                  'politik': ['pk', 'p k'],
+                                                  'sozialwissenschaften': ['sw', 's w']
+                                                };
+                                                
+                                                // Check if teacher's subject maps to this database subject
+                                                for (const [teacherSubject, dbVariants] of Object.entries(subjectMappings)) {
+                                                  if (codeNormalized.includes(teacherSubject)) {
+                                                    if (dbVariants.includes(subjectShortNormalized) || 
+                                                        dbVariants.includes(subjectNameNormalized)) {
+                                                      return true;
+                                                    }
+                                                  }
+                                                }
+                                                
+                                                return false;
+                                              });
                                             }
                                             return subjectEntry === subject.shortName || subjectEntry === subject.name;
                                           });
