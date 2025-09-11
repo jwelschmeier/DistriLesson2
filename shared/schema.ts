@@ -187,8 +187,24 @@ export const insertClassSchema = createInsertSchema(classes).omit({
 }).extend({
   classTeacher1Id: z.string().uuid().nullable().optional(),
   classTeacher2Id: z.string().uuid().nullable().optional(),
-  targetHoursSemester1: z.string().nullable().optional(),
-  targetHoursSemester2: z.string().nullable().optional(),
+  targetHoursSemester1: z.string()
+    .nullable()
+    .optional()
+    .refine((val) => {
+      if (val === null || val === undefined || val === "") return true;
+      const num = parseFloat(val);
+      return !isNaN(num) && num >= 0 && num <= 50;
+    }, { message: "Soll-Stunden 1.HJ müssen zwischen 0 und 50 liegen" }),
+  targetHoursSemester2: z.string()
+    .nullable()
+    .optional()
+    .refine((val) => {
+      if (val === null || val === undefined || val === "") return true;
+      const num = parseFloat(val);
+      return !isNaN(num) && num >= 0 && num <= 50;
+    }, { message: "Soll-Stunden 2.HJ müssen zwischen 0 und 50 liegen" }),
+  grade: z.number().int().min(5).max(10),
+  studentCount: z.number().int().min(0).max(35),
 });
 
 export const insertSubjectSchema = createInsertSchema(subjects).omit({
@@ -199,6 +215,9 @@ export const insertSubjectSchema = createInsertSchema(subjects).omit({
 export const insertAssignmentSchema = createInsertSchema(assignments).omit({
   id: true,
   createdAt: true,
+}).extend({
+  semester: z.enum(["1", "2"], { invalid_type_error: "Semester muss '1' oder '2' sein" }),
+  hoursPerWeek: z.number().min(0.5, "Mindestens 0,5 Stunden pro Woche").max(10, "Maximal 10 Stunden pro Woche"),
 });
 
 export const insertPlanstellenScenarioSchema = createInsertSchema(planstellenScenarios).omit({

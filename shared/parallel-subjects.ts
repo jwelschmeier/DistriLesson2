@@ -51,7 +51,8 @@ export function getParallelGroupForSubject(subjectShortName: string): ParallelGr
 // Hilfsfunktion: Berechne korrekte Stunden ohne Doppelzählung paralleler Fächer
 export function calculateCorrectHours(
   subjectHours: Record<string, number>,
-  grade: number
+  grade: number,
+  semester?: "1" | "2" | null  // Optional semester parameter for future semester-specific logic
 ): { totalHours: number; parallelGroupHours: Record<string, number>; regularHours: Record<string, number> } {
   const parallelGroupHours: Record<string, number> = {};
   const regularHours: Record<string, number> = {};
@@ -63,12 +64,30 @@ export function calculateCorrectHours(
     
     if (parallelGroup && !processedGroups.has(parallelGroup.id)) {
       // Parallele Gruppe gefunden und noch nicht verarbeitet
-      const groupHours = parallelGroup.hoursPerGrade[grade] || 0;
+      let groupHours = parallelGroup.hoursPerGrade[grade] || 0;
+      
+      // For semester-specific calculations, we might need to divide hours
+      // Currently parallel groups are defined per full school year
+      // If semester is specified and we want per-semester hours, divide by 2
+      if (semester && groupHours > 0) {
+        // For now, assume parallel subjects run both semesters equally
+        // This could be enhanced later with semester-specific parallel group definitions
+        groupHours = Math.round(groupHours / 2 * 10) / 10; // Divide by 2, round to 1 decimal place
+      }
+      
       parallelGroupHours[parallelGroup.id] = groupHours;
       processedGroups.add(parallelGroup.id);
     } else if (!parallelGroup) {
       // Reguläres Fach (nicht in paralleler Gruppe)
-      regularHours[subjectName] = hours;
+      let subjectHours_calc = hours;
+      
+      // For semester-specific calculations, might need to adjust individual subject hours
+      if (semester && hours > 0) {
+        // For regular subjects, assume they run both semesters equally unless specified otherwise
+        subjectHours_calc = Math.round(hours / 2 * 10) / 10; // Divide by 2, round to 1 decimal place
+      }
+      
+      regularHours[subjectName] = subjectHours_calc;
     }
     // Fächer in bereits verarbeiteten parallelen Gruppen werden ignoriert
   }

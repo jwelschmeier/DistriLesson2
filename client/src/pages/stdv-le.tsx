@@ -167,20 +167,40 @@ export default function StdvLe() {
       };
     }
 
-    // Check teacher workload
-    const currentHours = parseFloat(teacher.currentHours) + assignment.hoursPerWeek;
-    if (currentHours > parseFloat(teacher.maxHours)) {
+    // Semester-aware workload calculation
+    // Get all assignments for this teacher in the target semester
+    const teacherAssignmentsInSemester = assignments?.filter(a => 
+      a.teacherId === assignment.teacherId && a.semester === assignment.semester
+    ) || [];
+    
+    // If we're editing, exclude the current assignment from calculation
+    const existingAssignments = editingAssignment 
+      ? teacherAssignmentsInSemester.filter(a => a.id !== editingAssignment.id)
+      : teacherAssignmentsInSemester;
+    
+    // Calculate current semester hours
+    const currentSemesterHours = existingAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+    
+    // Add the new/updated assignment hours
+    const totalSemesterHours = currentSemesterHours + assignment.hoursPerWeek;
+    
+    // Get teacher's maximum hours per semester (we assume maxHours is for the full school year)
+    const maxHoursPerSemester = parseFloat(teacher.maxHours);
+    
+    // Check if teacher would be overloaded in this semester
+    if (totalSemesterHours > maxHoursPerSemester) {
       return {
         hasConflict: true,
-        message: `${teacher.firstName} ${teacher.lastName} würde mit ${currentHours}h überbelastet (Max: ${teacher.maxHours}h)`,
+        message: `${teacher.firstName} ${teacher.lastName} würde im ${assignment.semester}. HJ mit ${totalSemesterHours}h überbelastet (Max: ${maxHoursPerSemester}h)`,
         type: "error"
       };
     }
 
-    if (currentHours > parseFloat(teacher.maxHours) * 0.9) {
+    // Warning threshold: 90% of max hours per semester
+    if (totalSemesterHours > maxHoursPerSemester * 0.9) {
       return {
         hasConflict: true,
-        message: `${teacher.firstName} ${teacher.lastName} würde stark ausgelastet (${currentHours}/${teacher.maxHours}h)`,
+        message: `${teacher.firstName} ${teacher.lastName} würde im ${assignment.semester}. HJ stark ausgelastet (${totalSemesterHours}/${maxHoursPerSemester}h)`,
         type: "warning"
       };
     }
@@ -273,12 +293,24 @@ export default function StdvLe() {
       return { type: "error", message: "Keine Qualifikation" };
     }
     
-    if (parseFloat(assignment.teacher.currentHours) > parseFloat(assignment.teacher.maxHours)) {
-      return { type: "error", message: "Überbelastung" };
+    // Semester-aware workload checking
+    // Get all assignments for this teacher in the same semester as this assignment
+    const teacherAssignmentsInSemester = assignments?.filter(a => 
+      a.teacherId === assignment.teacherId && a.semester === assignment.semester
+    ) || [];
+    
+    // Calculate current semester hours for this teacher
+    const currentSemesterHours = teacherAssignmentsInSemester.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+    const maxHoursPerSemester = parseFloat(assignment.teacher.maxHours);
+    
+    // Check for overload in this semester
+    if (currentSemesterHours > maxHoursPerSemester) {
+      return { type: "error", message: `Überbelastung ${assignment.semester}.HJ` };
     }
     
-    if (parseFloat(assignment.teacher.currentHours) > parseFloat(assignment.teacher.maxHours) * 0.9) {
-      return { type: "warning", message: "Hohe Belastung" };
+    // Warning threshold: 90% of max hours per semester
+    if (currentSemesterHours > maxHoursPerSemester * 0.9) {
+      return { type: "warning", message: `Hohe Belastung ${assignment.semester}.HJ` };
     }
     
     return { type: "success", message: "OK" };
