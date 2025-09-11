@@ -26,15 +26,13 @@ export const teachers = pgTable("teachers", {
   currentHours: decimal("current_hours", { precision: 4, scale: 1 }).notNull().default('0.0'),
   qualifications: json("qualifications").$type<string[]>().notNull().default([]),
   reductionHours: json("reduction_hours").$type<{
-    sV?: number; // Schülervertretung
-    sL?: number; // Schulleitung
-    SB?: number; // Schwerbehinderung
-    LK?: number; // Lehrerkonferenz
-    VG?: number; // weitere Kategorie
-    FB?: number; // Fachberater
-    aE?: number; // Altersermäßigung (automatisch berechnet)
-    BA?: number; // Besondere Aufgaben
+    AE?: number; // Altersermäßigung
+    BA?: number; // Besondere Aufgaben  
+    SL?: number; // Schulleitung
     SO?: number; // Sonstiges
+    LK?: number; // Lehrertopf
+    SB?: number; // Schwerbehinderung
+    VG?: number; // Vorgriffsstunden
   }>().notNull().default({}),
   notes: text("notes").default(''),
   isActive: boolean("is_active").notNull().default(true),
@@ -83,7 +81,7 @@ export const assignments = pgTable("assignments", {
   teacherId: varchar("teacher_id").references(() => teachers.id, { onDelete: "cascade" }).notNull(),
   classId: varchar("class_id").references(() => classes.id, { onDelete: "cascade" }).notNull(),
   subjectId: varchar("subject_id").references(() => subjects.id, { onDelete: "cascade" }).notNull(),
-  hoursPerWeek: integer("hours_per_week").notNull(),
+  hoursPerWeek: decimal("hours_per_week", { precision: 3, scale: 1 }).notNull(),
   semester: varchar("semester", { length: 2 }).notNull().default("1"), // "1" for 1st semester, "2" for 2nd semester
   isOptimized: boolean("is_optimized").notNull().default(false),
   schoolYearId: varchar("school_year_id").references(() => schoolYears.id, { onDelete: "restrict" }), // nullable for backward compatibility
