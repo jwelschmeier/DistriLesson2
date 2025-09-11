@@ -183,6 +183,7 @@ export default function Schuljahreswechsel() {
       return await response.json();
     },
     onSuccess: (data: PreviewResult) => {
+      console.log("Preview API Response:", data);
       setPreviewResult(data);
       toast({ title: "Vorschau erstellt", description: "Übergangsplan wurde generiert" });
       setCurrentStep("preview");
