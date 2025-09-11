@@ -424,6 +424,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/subjects/:id", async (req, res) => {
+    try {
+      const subjectData = insertSubjectSchema.partial().parse(req.body);
+      const subject = await storage.updateSubject(req.params.id, subjectData);
+      res.json(subject);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update subject" });
+    }
+  });
+
+  app.delete("/api/subjects/:id", async (req, res) => {
+    try {
+      await storage.deleteSubject(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete subject" });
+    }
+  });
+
   // Initialize default subjects
   app.post("/api/subjects/init-defaults", async (req, res) => {
     try {
