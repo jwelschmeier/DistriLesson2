@@ -92,6 +92,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
       }
+      if (error instanceof Error && error.message.includes("Keine aktuelle Schuljahr gefunden")) {
+        return res.status(400).json({ 
+          error: "Keine aktuelles Schuljahr konfiguriert",
+          details: "Bitte setzen Sie zuerst ein aktuelles Schuljahr über die Schuljahr-Verwaltung."
+        });
+      }
       res.status(500).json({ error: "Failed to create student" });
     }
   });
@@ -119,6 +125,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
+      }
+      if (error instanceof Error && error.message.includes("Keine aktuelle Schuljahr gefunden")) {
+        return res.status(400).json({ 
+          error: "Keine aktuelles Schuljahr konfiguriert",
+          details: "Bitte setzen Sie zuerst ein aktuelles Schuljahr über die Schuljahr-Verwaltung."
+        });
       }
       res.status(500).json({ error: "Failed to create class" });
     }
@@ -304,6 +316,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
+      }
+      if (error instanceof Error && error.message.includes("Keine aktuelle Schuljahr gefunden")) {
+        return res.status(400).json({ 
+          error: "Keine aktuelles Schuljahr konfiguriert",
+          details: "Bitte setzen Sie zuerst ein aktuelles Schuljahr über die Schuljahr-Verwaltung."
+        });
       }
       res.status(500).json({ error: "Failed to create assignment" });
     }

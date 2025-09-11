@@ -6,6 +6,7 @@ import {
   assignments, 
   planstellen,
   planstellenScenarios,
+  schoolYears,
   type Teacher, 
   type InsertTeacher,
   type Student,
@@ -19,12 +20,23 @@ import {
   type Planstelle,
   type InsertPlanstelle,
   type PlanstellenScenario,
-  type InsertPlanstellenScenario
+  type InsertPlanstellenScenario,
+  type SchoolYear,
+  type InsertSchoolYear
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql, desc } from "drizzle-orm";
 
 export interface IStorage {
+  // School Years
+  getSchoolYears(): Promise<SchoolYear[]>;
+  getSchoolYear(id: string): Promise<SchoolYear | undefined>;
+  getCurrentSchoolYear(): Promise<SchoolYear | undefined>;
+  createSchoolYear(schoolYear: InsertSchoolYear): Promise<SchoolYear>;
+  updateSchoolYear(id: string, schoolYear: Partial<InsertSchoolYear>): Promise<SchoolYear>;
+  deleteSchoolYear(id: string): Promise<void>;
+  setCurrentSchoolYear(id: string): Promise<SchoolYear>;
+
   // Teachers
   getTeachers(): Promise<Teacher[]>;
   getTeacher(id: string): Promise<Teacher | undefined>;
@@ -39,6 +51,7 @@ export interface IStorage {
   updateStudent(id: string, student: Partial<InsertStudent>): Promise<Student>;
   deleteStudent(id: string): Promise<void>;
   getStudentsByClass(classId: string): Promise<Student[]>;
+  getStudentsBySchoolYear(schoolYearId: string): Promise<Student[]>;
 
   // Classes
   getClasses(): Promise<Class[]>;
@@ -47,6 +60,7 @@ export interface IStorage {
   createClass(classData: InsertClass): Promise<Class>;
   updateClass(id: string, classData: Partial<InsertClass>): Promise<Class>;
   deleteClass(id: string): Promise<void>;
+  getClassesBySchoolYear(schoolYearId: string): Promise<Class[]>;
 
   // Subjects
   getSubjects(): Promise<Subject[]>;
@@ -63,6 +77,7 @@ export interface IStorage {
   deleteAssignment(id: string): Promise<void>;
   getAssignmentsByTeacher(teacherId: string): Promise<Assignment[]>;
   getAssignmentsByClass(classId: string): Promise<Assignment[]>;
+  getAssignmentsBySchoolYear(schoolYearId: string): Promise<Assignment[]>;
 
   // Planstellen
   getPlanstellen(): Promise<Planstelle[]>;
@@ -87,6 +102,108 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // School Years
+  async getSchoolYears(): Promise<SchoolYear[]> {
+    return await db.select().from(schoolYears).orderBy(desc(schoolYears.startDate));
+  }
+
+  async getSchoolYear(id: string): Promise<SchoolYear | undefined> {
+    const [schoolYear] = await db.select().from(schoolYears).where(eq(schoolYears.id, id));
+    return schoolYear || undefined;
+  }
+
+  async getCurrentSchoolYear(): Promise<SchoolYear | undefined> {
+    const [currentSchoolYear] = await db
+      .select()
+      .from(schoolYears)
+      .where(eq(schoolYears.isCurrent, true));
+    return currentSchoolYear || undefined;
+  }
+
+  async createSchoolYear(schoolYear: InsertSchoolYear): Promise<SchoolYear> {
+    const [newSchoolYear] = await db.insert(schoolYears).values(schoolYear).returning();
+    return newSchoolYear;
+  }
+
+  async updateSchoolYear(id: string, schoolYear: Partial<InsertSchoolYear>): Promise<SchoolYear> {
+    const [updatedSchoolYear] = await db
+      .update(schoolYears)
+      .set(schoolYear)
+      .where(eq(schoolYears.id, id))
+      .returning();
+    return updatedSchoolYear;
+  }
+
+  async deleteSchoolYear(id: string): Promise<void> {
+    try {
+      // Check if this school year has any dependent data
+      const [studentCount] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(students)
+        .where(eq(students.schoolYearId, id));
+      
+      const [classCount] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(classes)
+        .where(eq(classes.schoolYearId, id));
+      
+      const [assignmentCount] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(assignments)
+        .where(eq(assignments.schoolYearId, id));
+
+      // Provide specific error messages if data would be lost
+      if (studentCount.count > 0 || classCount.count > 0 || assignmentCount.count > 0) {
+        const dependencies = [];
+        if (studentCount.count > 0) dependencies.push(`${studentCount.count} Schüler`);
+        if (classCount.count > 0) dependencies.push(`${classCount.count} Klassen`);
+        if (assignmentCount.count > 0) dependencies.push(`${assignmentCount.count} Zuweisungen`);
+        
+        throw new Error(
+          `Das Schuljahr kann nicht gelöscht werden, da es noch folgende Daten enthält: ${dependencies.join(', ')}. ` +
+          `Bitte löschen Sie zuerst alle abhängigen Daten oder verwenden Sie den Schuljahreswechsel.`
+        );
+      }
+
+      // Safe to delete if no dependencies
+      await db.delete(schoolYears).where(eq(schoolYears.id, id));
+    } catch (error: any) {
+      // Handle database-level foreign key constraint violations
+      if (error.code === '23503') {
+        throw new Error(
+          `Das Schuljahr kann nicht gelöscht werden, da es noch von anderen Daten referenziert wird. ` +
+          `Bitte löschen Sie zuerst alle abhängigen Daten.`
+        );
+      }
+      
+      // Re-throw our custom errors or unknown errors
+      throw error;
+    }
+  }
+
+  async setCurrentSchoolYear(id: string): Promise<SchoolYear> {
+    // Use a transaction to ensure atomicity and handle potential unique constraint violations
+    const result = await db.transaction(async (tx) => {
+      // First, set all school years to not current
+      await tx.update(schoolYears).set({ isCurrent: false });
+      
+      // Then set the specified school year as current
+      const [updatedSchoolYear] = await tx
+        .update(schoolYears)
+        .set({ isCurrent: true })
+        .where(eq(schoolYears.id, id))
+        .returning();
+      
+      if (!updatedSchoolYear) {
+        throw new Error(`Schuljahr mit ID ${id} nicht gefunden`);
+      }
+      
+      return updatedSchoolYear;
+    });
+    
+    return result;
+  }
+
   // Teachers
   async getTeachers(): Promise<Teacher[]> {
     return await db.select().from(teachers).orderBy(teachers.lastName);
@@ -171,7 +288,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createStudent(student: InsertStudent): Promise<Student> {
-    const [newStudent] = await db.insert(students).values(student).returning();
+    // Ensure schoolYearId is set by auto-assigning current school year if missing
+    let finalStudentData = { ...student };
+    
+    if (!finalStudentData.schoolYearId) {
+      const currentSchoolYear = await this.getCurrentSchoolYear();
+      if (!currentSchoolYear) {
+        throw new Error(
+          "Keine aktuelle Schuljahr gefunden. Bitte setzen Sie zuerst ein aktuelles Schuljahr."
+        );
+      }
+      finalStudentData.schoolYearId = currentSchoolYear.id;
+    }
+    
+    const [newStudent] = await db.insert(students).values(finalStudentData).returning();
     return newStudent;
   }
 
@@ -192,6 +322,10 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(students).where(eq(students.classId, classId));
   }
 
+  async getStudentsBySchoolYear(schoolYearId: string): Promise<Student[]> {
+    return await db.select().from(students).where(eq(students.schoolYearId, schoolYearId));
+  }
+
   // Classes
   async getClasses(): Promise<Class[]> {
     return await db.select().from(classes).orderBy(classes.name);
@@ -203,7 +337,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createClass(classData: InsertClass): Promise<Class> {
-    const [newClass] = await db.insert(classes).values(classData).returning();
+    // Ensure schoolYearId is set by auto-assigning current school year if missing
+    let finalClassData = { ...classData };
+    
+    if (!finalClassData.schoolYearId) {
+      const currentSchoolYear = await this.getCurrentSchoolYear();
+      if (!currentSchoolYear) {
+        throw new Error(
+          "Keine aktuelle Schuljahr gefunden. Bitte setzen Sie zuerst ein aktuelles Schuljahr."
+        );
+      }
+      finalClassData.schoolYearId = currentSchoolYear.id;
+    }
+    
+    const [newClass] = await db.insert(classes).values(finalClassData).returning();
     return newClass;
   }
 
@@ -223,6 +370,10 @@ export class DatabaseStorage implements IStorage {
   async getClassByName(name: string): Promise<Class | undefined> {
     const [classRecord] = await db.select().from(classes).where(eq(classes.name, name));
     return classRecord || undefined;
+  }
+
+  async getClassesBySchoolYear(schoolYearId: string): Promise<Class[]> {
+    return await db.select().from(classes).where(eq(classes.schoolYearId, schoolYearId));
   }
 
   // Subjects
@@ -264,7 +415,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAssignment(assignment: InsertAssignment): Promise<Assignment> {
-    const [newAssignment] = await db.insert(assignments).values(assignment).returning();
+    // Ensure schoolYearId is set by auto-assigning current school year if missing
+    let finalAssignmentData = { ...assignment };
+    
+    if (!finalAssignmentData.schoolYearId) {
+      const currentSchoolYear = await this.getCurrentSchoolYear();
+      if (!currentSchoolYear) {
+        throw new Error(
+          "Keine aktuelle Schuljahr gefunden. Bitte setzen Sie zuerst ein aktuelles Schuljahr."
+        );
+      }
+      finalAssignmentData.schoolYearId = currentSchoolYear.id;
+    }
+    
+    const [newAssignment] = await db.insert(assignments).values(finalAssignmentData).returning();
     return newAssignment;
   }
 
@@ -287,6 +451,10 @@ export class DatabaseStorage implements IStorage {
 
   async getAssignmentsByClass(classId: string): Promise<Assignment[]> {
     return await db.select().from(assignments).where(eq(assignments.classId, classId));
+  }
+
+  async getAssignmentsBySchoolYear(schoolYearId: string): Promise<Assignment[]> {
+    return await db.select().from(assignments).where(eq(assignments.schoolYearId, schoolYearId));
   }
 
   // Planstellen

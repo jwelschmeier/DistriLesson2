@@ -1,7 +1,17 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, boolean, timestamp, json, date } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, boolean, timestamp, json, date, unique, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// School Years table for versioning and school year transitions
+export const schoolYears = pgTable("school_years", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // "2024/25", "2025/26", etc.
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  isCurrent: boolean("is_current").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
 
 export const teachers = pgTable("teachers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -34,24 +44,28 @@ export const students = pgTable("students", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
-  classId: varchar("class_id").references(() => classes.id),
+  classId: varchar("class_id").references(() => classes.id, { onDelete: "set null" }),
   grade: integer("grade").notNull(),
+  schoolYearId: varchar("school_year_id").references(() => schoolYears.id, { onDelete: "restrict" }), // nullable for backward compatibility
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const classes = pgTable("classes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: varchar("name", { length: 50 }).notNull().unique(),
+  name: varchar("name", { length: 50 }).notNull(),
   grade: integer("grade").notNull(),
   studentCount: integer("student_count").notNull().default(0),
   subjectHours: json("subject_hours").$type<Record<string, number>>().notNull().default({}),
   targetHoursTotal: decimal("target_hours_total", { precision: 4, scale: 1 }),
   targetHoursSemester1: decimal("target_hours_semester1", { precision: 4, scale: 1 }),
   targetHoursSemester2: decimal("target_hours_semester2", { precision: 4, scale: 1 }),
-  classTeacher1Id: varchar("class_teacher_1_id").references(() => teachers.id),
-  classTeacher2Id: varchar("class_teacher_2_id").references(() => teachers.id),
+  classTeacher1Id: varchar("class_teacher_1_id").references(() => teachers.id, { onDelete: "set null" }),
+  classTeacher2Id: varchar("class_teacher_2_id").references(() => teachers.id, { onDelete: "set null" }),
+  schoolYearId: varchar("school_year_id").references(() => schoolYears.id, { onDelete: "restrict" }), // nullable for backward compatibility
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  uniqueClassPerYear: unique("unique_class_per_year").on(table.name, table.schoolYearId),
+}));
 
 export const subjects = pgTable("subjects", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -65,12 +79,13 @@ export const subjects = pgTable("subjects", {
 
 export const assignments = pgTable("assignments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  teacherId: varchar("teacher_id").references(() => teachers.id).notNull(),
-  classId: varchar("class_id").references(() => classes.id).notNull(),
-  subjectId: varchar("subject_id").references(() => subjects.id).notNull(),
+  teacherId: varchar("teacher_id").references(() => teachers.id, { onDelete: "cascade" }).notNull(),
+  classId: varchar("class_id").references(() => classes.id, { onDelete: "cascade" }).notNull(),
+  subjectId: varchar("subject_id").references(() => subjects.id, { onDelete: "cascade" }).notNull(),
   hoursPerWeek: integer("hours_per_week").notNull(),
   semester: varchar("semester", { length: 2 }).notNull().default("1"), // "1" for 1st semester, "2" for 2nd semester
   isOptimized: boolean("is_optimized").notNull().default(false),
+  schoolYearId: varchar("school_year_id").references(() => schoolYears.id, { onDelete: "restrict" }), // nullable for backward compatibility
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -108,6 +123,12 @@ export const planstellen = pgTable("planstellen", {
 });
 
 // Relations
+export const schoolYearsRelations = relations(schoolYears, ({ many }) => ({
+  students: many(students),
+  classes: many(classes),
+  assignments: many(assignments),
+}));
+
 export const teachersRelations = relations(teachers, ({ many }) => ({
   assignments: many(assignments),
   classesAsTeacher1: many(classes, { relationName: "classTeacher1" }),
@@ -118,6 +139,10 @@ export const studentsRelations = relations(students, ({ one }) => ({
   class: one(classes, {
     fields: [students.classId],
     references: [classes.id],
+  }),
+  schoolYear: one(schoolYears, {
+    fields: [students.schoolYearId],
+    references: [schoolYears.id],
   }),
 }));
 
@@ -133,6 +158,10 @@ export const classesRelations = relations(classes, ({ many, one }) => ({
     fields: [classes.classTeacher2Id],
     references: [teachers.id],
     relationName: "classTeacher2",
+  }),
+  schoolYear: one(schoolYears, {
+    fields: [classes.schoolYearId],
+    references: [schoolYears.id],
   }),
 }));
 
@@ -158,6 +187,10 @@ export const assignmentsRelations = relations(assignments, ({ one }) => ({
     fields: [assignments.subjectId],
     references: [subjects.id],
   }),
+  schoolYear: one(schoolYears, {
+    fields: [assignments.schoolYearId],
+    references: [schoolYears.id],
+  }),
 }));
 
 export const planstellenRelations = relations(planstellen, ({ one }) => ({
@@ -172,6 +205,22 @@ export const planstellenRelations = relations(planstellen, ({ one }) => ({
 }));
 
 // Insert schemas
+export const insertSchoolYearSchema = createInsertSchema(schoolYears).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  name: z.string().min(1, "Schuljahr-Name ist erforderlich").max(20, "Name zu lang"),
+  startDate: z.string().refine((val) => {
+    const date = new Date(val);
+    return !isNaN(date.getTime());
+  }, { message: "Gültiges Startdatum erforderlich" }),
+  endDate: z.string().refine((val) => {
+    const date = new Date(val);
+    return !isNaN(date.getTime());
+  }, { message: "Gültiges Enddatum erforderlich" }),
+  isCurrent: z.boolean().optional(),
+});
+
 export const insertTeacherSchema = createInsertSchema(teachers).omit({
   id: true,
   createdAt: true,
@@ -180,6 +229,8 @@ export const insertTeacherSchema = createInsertSchema(teachers).omit({
 export const insertStudentSchema = createInsertSchema(students).omit({
   id: true,
   createdAt: true,
+}).extend({
+  schoolYearId: z.string().uuid().nullable().optional(),
 });
 
 export const insertClassSchema = createInsertSchema(classes).omit({
@@ -188,6 +239,7 @@ export const insertClassSchema = createInsertSchema(classes).omit({
 }).extend({
   classTeacher1Id: z.string().uuid().nullable().optional(),
   classTeacher2Id: z.string().uuid().nullable().optional(),
+  schoolYearId: z.string().uuid().nullable().optional(),
   targetHoursSemester1: z.string()
     .nullable()
     .optional()
@@ -227,6 +279,7 @@ export const insertAssignmentSchema = createInsertSchema(assignments).omit({
 }).extend({
   semester: z.enum(["1", "2"], { invalid_type_error: "Semester muss '1' oder '2' sein" }),
   hoursPerWeek: z.number().min(0.5, "Mindestens 0,5 Stunden pro Woche").max(10, "Maximal 10 Stunden pro Woche"),
+  schoolYearId: z.string().uuid().nullable().optional(),
 });
 
 export const insertPlanstellenScenarioSchema = createInsertSchema(planstellenScenarios).omit({
@@ -240,6 +293,8 @@ export const insertPlanstelleSchema = createInsertSchema(planstellen).omit({
 });
 
 // Types
+export type SchoolYear = typeof schoolYears.$inferSelect;
+export type InsertSchoolYear = z.infer<typeof insertSchoolYearSchema>;
 export type Teacher = typeof teachers.$inferSelect;
 export type InsertTeacher = z.infer<typeof insertTeacherSchema>;
 export type Student = typeof students.$inferSelect;
