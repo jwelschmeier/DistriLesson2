@@ -253,18 +253,37 @@ export default function Stundenplaene() {
     return requirements.sort((a, b) => a.subject.shortName.localeCompare(b.subject.shortName));
   }, [selectedClass, classAssignments, subjects]);
 
-  // Calculate teacher workload (assigned hours per teacher)
-  const teacherWorkload = useMemo(() => {
+  // Calculate teacher workload per semester (assigned hours per teacher per semester)
+  const teacherWorkloadBySemester = useMemo(() => {
     if (!extendedAssignments) return new Map();
     
-    const workloadMap = new Map<string, number>();
+    const workloadMap = new Map<string, { "1": number; "2": number; total: number }>();
+    
     extendedAssignments.forEach(assignment => {
-      const current = workloadMap.get(assignment.teacherId) || 0;
-      workloadMap.set(assignment.teacherId, current + assignment.hoursPerWeek);
+      const teacherId = assignment.teacherId;
+      const current = workloadMap.get(teacherId) || { "1": 0, "2": 0, total: 0 };
+      
+      if (assignment.semester === "1") {
+        current["1"] += assignment.hoursPerWeek;
+      } else if (assignment.semester === "2") {
+        current["2"] += assignment.hoursPerWeek;
+      }
+      current.total = current["1"] + current["2"];
+      
+      workloadMap.set(teacherId, current);
     });
     
     return workloadMap;
   }, [extendedAssignments]);
+
+  // Legacy teacherWorkload for backward compatibility (total hours)
+  const teacherWorkload = useMemo(() => {
+    const legacyMap = new Map<string, number>();
+    teacherWorkloadBySemester.forEach((workload, teacherId) => {
+      legacyMap.set(teacherId, workload.total);
+    });
+    return legacyMap;
+  }, [teacherWorkloadBySemester]);
 
   // Get qualified teachers for a specific subject
   const getQualifiedTeachers = useCallback((subjectId: string) => {
@@ -289,13 +308,24 @@ export default function Stundenplaene() {
     });
   }, [teachers, subjects, subjectMap]);
 
-  // Calculate available hours for a teacher (excluding current assignment when editing)
-  const getAvailableHours = useCallback((teacherId: string, excludeHours?: number) => {
+  // Calculate available hours for a teacher in a specific semester (excluding current assignment when editing)
+  const getAvailableHours = useCallback((teacherId: string, excludeHours?: number, semester?: "1" | "2") => {
     const teacher = teacherMap.get(teacherId);
     if (!teacher) return 0;
     
     const maxHours = parseFloat(teacher.maxHours);
-    let assignedHours = teacherWorkload.get(teacherId) || 0;
+    const workload = teacherWorkloadBySemester.get(teacherId) || { "1": 0, "2": 0, total: 0 };
+    
+    // If semester is specified, check availability for that semester only
+    // Otherwise use total (legacy behavior)
+    let assignedHours: number;
+    if (semester) {
+      assignedHours = workload[semester];
+    } else {
+      // For legacy compatibility, use the lesser of the two semesters
+      // This ensures teachers can be assigned more hours in either semester
+      assignedHours = Math.min(workload["1"], workload["2"]);
+    }
     
     // When editing an existing assignment, don't count its current hours against availability
     if (excludeHours !== undefined) {
@@ -303,7 +333,7 @@ export default function Stundenplaene() {
     }
     
     return Math.max(0, maxHours - assignedHours);
-  }, [teacherMap, teacherWorkload]);
+  }, [teacherMap, teacherWorkloadBySemester]);
 
   // Helper functions for editable table
   const updateEditedAssignment = (assignmentId: string, field: keyof Assignment, value: any) => {
@@ -533,14 +563,15 @@ export default function Stundenplaene() {
                 <>
                   {/* Teacher Summary Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card data-testid="card-teacher-total-hours">
+                    <Card data-testid="card-teacher-max-hours">
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-muted-foreground text-sm font-medium">Gesamtstunden</p>
-                            <p className="text-3xl font-bold text-foreground" data-testid="text-teacher-total-hours">
-                              {teacherSummary.totalHours}
+                            <p className="text-muted-foreground text-sm font-medium">Max pro Halbjahr</p>
+                            <p className="text-3xl font-bold text-foreground" data-testid="text-teacher-max-hours">
+                              {selectedTeacher?.maxHours || 0}
                             </p>
+                            <p className="text-xs text-muted-foreground">Wochenstunden</p>
                           </div>
                           <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                             <Clock className="text-blue-600 text-xl" />
@@ -557,6 +588,11 @@ export default function Stundenplaene() {
                             <p className="text-3xl font-bold text-foreground" data-testid="text-teacher-s1-hours">
                               {teacherSummary.s1Hours}
                             </p>
+                            {selectedTeacher && (
+                              <p className="text-xs text-muted-foreground">
+                                {Math.max(0, parseFloat(selectedTeacher.maxHours) - teacherSummary.s1Hours)} verfügbar
+                              </p>
+                            )}
                           </div>
                           <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                             <BookOpen className="text-green-600 text-xl" />
@@ -573,6 +609,11 @@ export default function Stundenplaene() {
                             <p className="text-3xl font-bold text-foreground" data-testid="text-teacher-s2-hours">
                               {teacherSummary.s2Hours}
                             </p>
+                            {selectedTeacher && (
+                              <p className="text-xs text-muted-foreground">
+                                {Math.max(0, parseFloat(selectedTeacher.maxHours) - teacherSummary.s2Hours)} verfügbar
+                              </p>
+                            )}
                           </div>
                           <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                             <BookOpen className="text-orange-600 text-xl" />
@@ -948,9 +989,11 @@ export default function Stundenplaene() {
                                           // Only exclude current assignment's hours for the originally assigned teacher
                                           const isCurrentTeacher = teacher.id === assignment.teacherId;
                                           const originalHours = assignment.hoursPerWeek;
+                                          const currentSemester = getEffectiveValue(assignment, 'semester') as "1" | "2";
                                           const availableHours = getAvailableHours(
                                             teacher.id, 
-                                            isCurrentTeacher ? originalHours : undefined
+                                            isCurrentTeacher ? originalHours : undefined,
+                                            currentSemester
                                           );
                                           return (
                                             <SelectItem key={teacher.id} value={teacher.id}>
