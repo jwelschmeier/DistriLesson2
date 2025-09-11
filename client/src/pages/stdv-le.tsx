@@ -40,6 +40,7 @@ interface ConflictCheck {
 export default function StdvLe() {
   const [selectedTeacher, setSelectedTeacher] = useState<string>("all");
   const [selectedClass, setSelectedClass] = useState<string>("all");
+  const [selectedSemester, setSelectedSemester] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
   const { toast } = useToast();
@@ -160,8 +161,8 @@ export default function StdvLe() {
     }
 
     // Check teacher workload
-    const currentHours = teacher.currentHours + assignment.hoursPerWeek;
-    if (currentHours > teacher.maxHours) {
+    const currentHours = parseFloat(teacher.currentHours) + assignment.hoursPerWeek;
+    if (currentHours > parseFloat(teacher.maxHours)) {
       return {
         hasConflict: true,
         message: `${teacher.firstName} ${teacher.lastName} würde mit ${currentHours}h überbelastet (Max: ${teacher.maxHours}h)`,
@@ -169,7 +170,7 @@ export default function StdvLe() {
       };
     }
 
-    if (currentHours > teacher.maxHours * 0.9) {
+    if (currentHours > parseFloat(teacher.maxHours) * 0.9) {
       return {
         hasConflict: true,
         message: `${teacher.firstName} ${teacher.lastName} würde stark ausgelastet (${currentHours}/${teacher.maxHours}h)`,
@@ -236,7 +237,8 @@ export default function StdvLe() {
   const filteredAssignments = enrichedAssignments.filter(assignment => {
     const matchesTeacher = selectedTeacher === "all" || assignment.teacherId === selectedTeacher;
     const matchesClass = selectedClass === "all" || assignment.classId === selectedClass;
-    return matchesTeacher && matchesClass;
+    const matchesSemester = selectedSemester === "all" || assignment.semester === selectedSemester;
+    return matchesTeacher && matchesClass && matchesSemester;
   });
 
   const totalAssignments = assignments?.length || 0;
@@ -250,11 +252,11 @@ export default function StdvLe() {
       return { type: "error", message: "Keine Qualifikation" };
     }
     
-    if (assignment.teacher.currentHours > assignment.teacher.maxHours) {
+    if (parseFloat(assignment.teacher.currentHours) > parseFloat(assignment.teacher.maxHours)) {
       return { type: "error", message: "Überbelastung" };
     }
     
-    if (assignment.teacher.currentHours > assignment.teacher.maxHours * 0.9) {
+    if (parseFloat(assignment.teacher.currentHours) > parseFloat(assignment.teacher.maxHours) * 0.9) {
       return { type: "warning", message: "Hohe Belastung" };
     }
     
@@ -489,6 +491,19 @@ export default function StdvLe() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="w-48">
+                  <label className="block text-sm font-medium text-foreground mb-2">Nach Halbjahr filtern</label>
+                  <Select value={selectedSemester} onValueChange={setSelectedSemester}>
+                    <SelectTrigger data-testid="select-filter-semester">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Alle Halbjahre</SelectItem>
+                      <SelectItem value="1">1. Halbjahr</SelectItem>
+                      <SelectItem value="2">2. Halbjahr</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -503,7 +518,7 @@ export default function StdvLe() {
                 <div className="text-center py-8">Lade Zuweisungen...</div>
               ) : filteredAssignments.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  {selectedTeacher !== "all" || selectedClass !== "all"
+                  {selectedTeacher !== "all" || selectedClass !== "all" || selectedSemester !== "all"
                     ? "Keine Zuweisungen gefunden, die den Filterkriterien entsprechen."
                     : "Keine Unterrichtszuweisungen vorhanden. Bitte erstellen Sie Zuweisungen oder verwenden Sie die Optimierung."
                   }
