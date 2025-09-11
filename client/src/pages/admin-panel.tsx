@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { isUnauthorizedError, redirectToLogin } from "@/lib/authUtils";
+import { Sidebar } from "@/components/layout/sidebar";
 import { Trash2, Mail, Copy, Calendar, Users } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -178,13 +179,17 @@ export default function AdminPanel() {
   const isExpired = (expiresAt: string) => new Date(expiresAt) < new Date();
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
-      <div className="flex items-center gap-3 mb-6">
-        <Users className="h-8 w-8 text-blue-600" />
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Administrator Panel
-        </h1>
-      </div>
+    <div className="flex h-screen bg-background">
+      <Sidebar />
+      
+      <main className="flex-1 overflow-auto">
+        <div className="container mx-auto p-6 space-y-8">
+          <div className="flex items-center gap-3 mb-6">
+            <Users className="h-8 w-8 text-blue-600" />
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              Administrator Panel
+            </h1>
+          </div>
 
       {/* Create Invitation */}
       <Card>
@@ -214,7 +219,7 @@ export default function AdminPanel() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="role">Rolle</Label>
-                <Select value={role} onValueChange={(value: "user" | "admin") => setRole(value)}>
+                <Select value={role} onValueChange={(value) => setRole(value as "user" | "admin")}>
                   <SelectTrigger data-testid="select-invitation-role">
                     <SelectValue />
                   </SelectTrigger>
@@ -324,6 +329,8 @@ export default function AdminPanel() {
           )}
         </CardContent>
       </Card>
+        </div>
+      </main>
     </div>
   );
 }
