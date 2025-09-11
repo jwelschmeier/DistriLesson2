@@ -668,8 +668,18 @@ export default function Klassenverwaltung() {
                             </div>
 
                             {(() => {
-                              const correctHours = calculateCorrectHours(classData.subjectHours, classData.grade);
-                              const rawTotal = Object.values(classData.subjectHours).reduce((sum, hours) => sum + hours, 0);
+                              // Convert semester-based subjectHours to total hours for calculation
+                              const totalSubjectHours: Record<string, number> = {};
+                              for (const [subject, semesterHours] of Object.entries(classData.subjectHours || {})) {
+                                if (typeof semesterHours === 'object' && semesterHours !== null) {
+                                  totalSubjectHours[subject] = (Number(semesterHours['1']) || 0) + (Number(semesterHours['2']) || 0);
+                                } else {
+                                  totalSubjectHours[subject] = Number(semesterHours) || 0;
+                                }
+                              }
+                              
+                              const correctHours = calculateCorrectHours(totalSubjectHours, classData.grade);
+                              const rawTotal = Object.values(totalSubjectHours).reduce((sum, hours) => sum + hours, 0);
                               const parallelGroupsInfo = Object.entries(correctHours.parallelGroupHours).map(([group, hours]) => `${group}: ${hours}h`).join(', ');
                               
                               return (
