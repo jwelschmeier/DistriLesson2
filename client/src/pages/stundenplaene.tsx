@@ -317,14 +317,14 @@ export default function Stundenplaene() {
     const workload = teacherWorkloadBySemester.get(teacherId) || { "1": 0, "2": 0, total: 0 };
     
     // If semester is specified, check availability for that semester only
-    // Otherwise use total (legacy behavior)
+    // Otherwise use the maximum of both semesters to prevent over-allocation
     let assignedHours: number;
     if (semester) {
       assignedHours = workload[semester];
     } else {
-      // For legacy compatibility, use the lesser of the two semesters
-      // This ensures teachers can be assigned more hours in either semester
-      assignedHours = Math.min(workload["1"], workload["2"]);
+      // For legacy compatibility, use the maximum of the two semesters
+      // This prevents over-allocation when semester is not specified
+      assignedHours = Math.max(workload["1"], workload["2"]);
     }
     
     // When editing an existing assignment, don't count its current hours against availability
