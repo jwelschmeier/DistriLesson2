@@ -9,10 +9,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Plus, Edit, Trash2, BookOpen } from "lucide-react";
+import { Plus, Edit, Trash2, BookOpen, Filter } from "lucide-react";
 import { insertSubjectSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -34,10 +37,19 @@ const subjectFormSchema = insertSubjectSchema.extend({
 
 type SubjectFormData = z.infer<typeof subjectFormSchema>;
 
+// Category configuration with colors
+const CATEGORIES = {
+  'Hauptfach': { label: 'Hauptfach', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
+  'Nebenfach': { label: 'Nebenfach', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200' },
+  'AG': { label: 'AG', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' },
+  'Sonderbereich': { label: 'Sonderbereich', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' },
+} as const;
+
 export default function Faecherverwaltung() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   const { data: subjects = [], isLoading } = useQuery<Subject[]>({
     queryKey: ["/api/subjects"],
@@ -140,6 +152,20 @@ export default function Faecherverwaltung() {
   }
 
   const categories = Array.from(new Set(subjects.map(s => s.category)));
+  const filteredSubjects = selectedCategory === 'all' ? subjects : subjects.filter(s => s.category === selectedCategory);
+
+  const getCategoryBadge = (category: string) => {
+    const categoryConfig = CATEGORIES[category as keyof typeof CATEGORIES];
+    return categoryConfig ? (
+      <Badge className={categoryConfig.color} data-testid={`badge-category-${category.toLowerCase()}`}>
+        {categoryConfig.label}
+      </Badge>
+    ) : (
+      <Badge variant="outline" data-testid={`badge-category-${category.toLowerCase()}`}>
+        {category}
+      </Badge>
+    );
+  };
 
   return (
     <div className="flex h-screen bg-background">
@@ -210,13 +236,19 @@ export default function Faecherverwaltung() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Kategorie</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="z.B. Kernfach, Nebenfach" 
-                          {...field} 
-                          data-testid="input-subject-category"
-                        />
-                      </FormControl>
+                      <Select onValueChange={field.onChange} value={field.value} data-testid="select-subject-category">
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Kategorie auswählen" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Hauptfach">Hauptfach</SelectItem>
+                          <SelectItem value="Nebenfach">Nebenfach</SelectItem>
+                          <SelectItem value="AG">AG</SelectItem>
+                          <SelectItem value="Sonderbereich">Sonderbereich</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -247,10 +279,28 @@ export default function Faecherverwaltung() {
       <div className="grid gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
-              Alle Fächer ({subjects.length})
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                Fächer ({filteredSubjects.length} von {subjects.length})
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                <Select value={selectedCategory} onValueChange={setSelectedCategory} data-testid="select-category-filter">
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Filter nach Kategorie" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle Kategorien</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {CATEGORIES[category as keyof typeof CATEGORIES]?.label || category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -264,7 +314,7 @@ export default function Faecherverwaltung() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {subjects.map((subject) => (
+                  {filteredSubjects.map((subject) => (
                     <TableRow key={subject.id} data-testid={`row-subject-${subject.id}`}>
                       <TableCell className="font-medium" data-testid={`text-subject-name-${subject.id}`}>
                         {subject.name}
@@ -273,7 +323,7 @@ export default function Faecherverwaltung() {
                         {subject.shortName}
                       </TableCell>
                       <TableCell data-testid={`text-subject-category-${subject.id}`}>
-                        {subject.category}
+                        {getCategoryBadge(subject.category)}
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
@@ -298,10 +348,10 @@ export default function Faecherverwaltung() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {subjects.length === 0 && (
+                  {filteredSubjects.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center py-8 text-gray-500">
-                        Keine Fächer gefunden. Erstellen Sie Ihr erstes Fach.
+                        {selectedCategory === 'all' ? 'Keine Fächer gefunden. Erstellen Sie Ihr erstes Fach.' : `Keine Fächer in der Kategorie "${CATEGORIES[selectedCategory as keyof typeof CATEGORIES]?.label || selectedCategory}" gefunden.`}
                       </TableCell>
                     </TableRow>
                   )}
@@ -311,31 +361,43 @@ export default function Faecherverwaltung() {
           </CardContent>
         </Card>
 
-        {categories.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Fächer nach Kategorien</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {categories.map((category) => (
-                  <div key={category} className="p-4 border rounded-lg">
-                    <h3 className="font-semibold mb-2">{category}</h3>
-                    <div className="space-y-1">
-                      {subjects
-                        .filter((s) => s.category === category)
-                        .map((subject) => (
-                          <div key={subject.id} className="text-sm text-gray-600 dark:text-gray-400">
-                            {subject.shortName} - {subject.name}
-                          </div>
-                        ))}
+        <Card>
+          <CardHeader>
+            <CardTitle>Übersicht nach Kategorien</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {Object.entries(CATEGORIES).map(([key, config]) => {
+                const categorySubjects = subjects.filter(s => s.category === key);
+                return (
+                  <div key={key} className="p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer" 
+                       onClick={() => setSelectedCategory(key)}>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <Badge className={config.color}>{config.label}</Badge>
+                      </div>
+                      <span className="text-2xl font-bold text-gray-700 dark:text-gray-300">
+                        {categorySubjects.length}
+                      </span>
+                    </div>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {categorySubjects.slice(0, 5).map((subject) => (
+                        <div key={subject.id} className="text-sm text-gray-600 dark:text-gray-400">
+                          {subject.shortName} - {subject.name.substring(0, 30)}{subject.name.length > 30 ? '...' : ''}
+                        </div>
+                      ))}
+                      {categorySubjects.length > 5 && (
+                        <div className="text-xs text-gray-500 italic">
+                          +{categorySubjects.length - 5} weitere...
+                        </div>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
         </div>
         </div>
       </main>
