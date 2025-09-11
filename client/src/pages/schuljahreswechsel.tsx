@@ -714,6 +714,234 @@ export default function Schuljahreswechsel() {
               </CardContent>
             </Card>
           )}
+
+          {currentStep === "preview" && previewResult && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Vorschau: Übergang zu {nextSchoolYearName}
+                  </CardTitle>
+                  <CardDescription>
+                    Überprüfen Sie die geplanten Änderungen vor der Ausführung
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Statistics Summary */}
+                  <div className="grid gap-4 md:grid-cols-4">
+                    <div className="text-center p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-600">{previewResult.preview.statistics.classesCreated}</div>
+                      <div className="text-xs text-muted-foreground">Neue Klassen</div>
+                    </div>
+                    <div className="text-center p-3 bg-green-50 dark:bg-green-950/30 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600">{previewResult.preview.statistics.assignmentsMigrated}</div>
+                      <div className="text-xs text-muted-foreground">Migrierte Zuweisungen</div>
+                    </div>
+                    <div className="text-center p-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg">
+                      <div className="text-2xl font-bold text-orange-600">{previewResult.preview.statistics.studentsArchived}</div>
+                      <div className="text-xs text-muted-foreground">Archivierte Schüler</div>
+                    </div>
+                    <div className="text-center p-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg">
+                      <div className="text-2xl font-bold text-purple-600">{previewResult.preview.statistics.studentsMigrated}</div>
+                      <div className="text-xs text-muted-foreground">Migrierte Schüler</div>
+                    </div>
+                  </div>
+                  
+                  {/* New Classes */}
+                  <div>
+                    <h4 className="font-semibold mb-3">Neue Klassen</h4>
+                    <div className="space-y-2">
+                      {previewResult.preview.newClasses.map((cls, index) => (
+                        <div key={index} className="flex justify-between items-center p-2 border rounded">
+                          <span className="font-medium">{cls.name}</span>
+                          <div className="text-sm text-muted-foreground">
+                            Klasse {cls.grade} • {cls.expectedStudentCount} Schüler
+                            {cls.sourceClass && ` • von ${cls.sourceClass}`}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Archived Classes */}
+                  {previewResult.preview.archivedClasses.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-3">Archivierte Klassen (Abschluss)</h4>
+                      <div className="space-y-2">
+                        {previewResult.preview.archivedClasses.map((cls, index) => (
+                          <div key={index} className="flex justify-between items-center p-2 border rounded bg-orange-50 dark:bg-orange-950/30">
+                            <span className="font-medium">{cls.name}</span>
+                            <div className="text-sm text-muted-foreground">
+                              {cls.studentCount} Schüler graduiert
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Assignment Migrations */}
+                  {previewResult.preview.migratedAssignments.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-3">Zuweisungs-Migration</h4>
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {previewResult.preview.migratedAssignments.map((assignment, index) => (
+                          <div key={index} className={`flex justify-between items-center p-2 border rounded ${
+                            assignment.status === 'auto' ? 'bg-green-50 dark:bg-green-950/30' :
+                            assignment.status === 'manual_check' ? 'bg-yellow-50 dark:bg-yellow-950/30' :
+                            'bg-gray-50 dark:bg-gray-950/30'
+                          }`}>
+                            <div>
+                              <span className="font-medium">{assignment.teacherName}</span>
+                              <span className="text-sm text-muted-foreground ml-2">{assignment.subject}</span>
+                            </div>
+                            <div className="text-sm text-right">
+                              <div>{assignment.fromClass} → {assignment.toClass}</div>
+                              <Badge variant="outline" className="text-xs">
+                                {assignment.status === 'auto' ? 'Automatisch' :
+                                 assignment.status === 'manual_check' ? 'Manuell prüfen' :
+                                 'Übersprungen'}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>Wichtiger Hinweis:</strong> Nach der Ausführung können diese Änderungen nicht mehr rückgängig gemacht werden.
+                      Stellen Sie sicher, dass alle Informationen korrekt sind.
+                    </AlertDescription>
+                  </Alert>
+                  
+                  <div className="flex gap-3">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setCurrentStep("preparation")}
+                      data-testid="button-back-preparation"
+                    >
+                      Zurück zur Vorbereitung
+                    </Button>
+                    <Button 
+                      onClick={() => executeMutation.mutate()}
+                      disabled={executeMutation.isPending}
+                      className="bg-red-600 hover:bg-red-700"
+                      data-testid="button-execute-transition"
+                    >
+                      {executeMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Schuljahreswechsel wird ausgeführt...
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-4 w-4 mr-2" />
+                          Schuljahreswechsel jetzt ausführen
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+          
+          {currentStep === "completed" && transitionResult && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    Schuljahreswechsel abgeschlossen
+                  </CardTitle>
+                  <CardDescription>
+                    Der Übergang zu {nextSchoolYearName} wurde erfolgreich durchgeführt
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {transitionResult.success ? (
+                    <>
+                      <div className="grid gap-4 md:grid-cols-4">
+                        <div className="text-center p-3 bg-green-50 dark:bg-green-950/30 rounded-lg">
+                          <div className="text-2xl font-bold text-green-600">{transitionResult.statistics.classesCreated}</div>
+                          <div className="text-xs text-muted-foreground">Klassen erstellt</div>
+                        </div>
+                        <div className="text-center p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                          <div className="text-2xl font-bold text-blue-600">{transitionResult.statistics.assignmentsMigrated}</div>
+                          <div className="text-xs text-muted-foreground">Zuweisungen migriert</div>
+                        </div>
+                        <div className="text-center p-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg">
+                          <div className="text-2xl font-bold text-orange-600">{transitionResult.statistics.studentsArchived}</div>
+                          <div className="text-xs text-muted-foreground">Schüler archiviert</div>
+                        </div>
+                        <div className="text-center p-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg">
+                          <div className="text-2xl font-bold text-purple-600">{transitionResult.statistics.studentsMigrated}</div>
+                          <div className="text-xs text-muted-foreground">Schüler migriert</div>
+                        </div>
+                      </div>
+                      
+                      {transitionResult.warnings && transitionResult.warnings.length > 0 && (
+                        <Alert>
+                          <AlertTriangle className="h-4 w-4" />
+                          <AlertDescription>
+                            <strong>Warnungen beim Übergang:</strong>
+                            <ul className="mt-2 list-disc list-inside space-y-1">
+                              {transitionResult.warnings.map((warning, index) => (
+                                <li key={index} className="text-sm">{warning}</li>
+                              ))}
+                            </ul>
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                      
+                      <Alert className="border-green-200 bg-green-50 dark:bg-green-950/30">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <AlertDescription>
+                          <strong>Schuljahreswechsel erfolgreich abgeschlossen!</strong><br />
+                          Das System ist jetzt für das Schuljahr {nextSchoolYearName} konfiguriert.
+                          Sie können mit der Verwaltung des neuen Schuljahres beginnen.
+                        </AlertDescription>
+                      </Alert>
+                    </>
+                  ) : (
+                    <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>Schuljahreswechsel fehlgeschlagen!</strong>
+                        {transitionResult.errors && (
+                          <ul className="mt-2 list-disc list-inside space-y-1">
+                            {transitionResult.errors.map((error, index) => (
+                              <li key={index} className="text-sm">{error}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  <div className="flex gap-3">
+                    <Button 
+                      onClick={() => {
+                        setCurrentStep("overview");
+                        setValidationResult(null);
+                        setPreviewResult(null);
+                        setTransitionResult(null);
+                      }}
+                      className="w-full"
+                      data-testid="button-return-overview"
+                    >
+                      Zurück zur Übersicht
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
         </div>
       </main>
     </div>
