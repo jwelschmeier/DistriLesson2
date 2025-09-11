@@ -1131,6 +1131,161 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // School Year Transition routes (Admin only)
+  app.get('/api/school-years/validate-transition/:fromSchoolYearId', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      // Validate path parameter
+      const fromSchoolYearIdSchema = z.string().uuid("Ungültige Schuljahr-ID");
+      const fromSchoolYearId = fromSchoolYearIdSchema.parse(req.params.fromSchoolYearId);
+      
+      const validation = await storage.validateSchoolYearTransition(fromSchoolYearId);
+      res.json(validation);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(422).json({ 
+          error: "Ungültige Parameter", 
+          details: error.errors 
+        });
+      }
+      console.error("Error validating school year transition:", error);
+      if (error instanceof Error && error.message.includes("nicht gefunden")) {
+        return res.status(404).json({ error: "Schuljahr nicht gefunden" });
+      }
+      res.status(500).json({ error: "Fehler bei der Validierung des Schuljahreswechsels" });
+    }
+  });
+
+  app.post('/api/school-years/preview-transition', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      // Complete Zod validation for request body
+      const previewRequestSchema = z.object({
+        fromSchoolYearId: z.string().uuid("Ungültige Schuljahr-ID für Ausgangsjahr"),
+        toSchoolYearName: z.string().min(1, "Zielschuljahr-Name ist erforderlich").max(50, "Name zu lang"),
+        options: z.object({
+          preserveClassTeachers: z.boolean().optional().default(true),
+          includeGraduating: z.boolean().optional().default(true)
+        }).optional().default({})
+      });
+      
+      const { fromSchoolYearId, toSchoolYearName, options } = previewRequestSchema.parse(req.body);
+
+      const preview = await storage.previewSchoolYearTransition(fromSchoolYearId, toSchoolYearName);
+      res.json(preview);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(422).json({ 
+          error: "Ungültige Eingabedaten", 
+          details: error.errors 
+        });
+      }
+      console.error("Error creating school year transition preview:", error);
+      if (error instanceof Error && error.message.includes("nicht gefunden")) {
+        return res.status(404).json({ error: "Schuljahr nicht gefunden" });
+      }
+      if (error instanceof Error && error.message.includes("bereits")) {
+        return res.status(409).json({ error: "Schuljahr existiert bereits" });
+      }
+      res.status(500).json({ error: "Fehler bei der Erstellung der Übergangs-Vorschau" });
+    }
+  });
+
+  app.post('/api/school-years/execute-transition', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      // Complete Zod validation for execute request
+      const executeRequestSchema = z.object({
+        fromSchoolYearId: z.string().uuid("Ungültige Schuljahr-ID für Ausgangsjahr"),
+        toSchoolYearName: z.string().min(1, "Zielschuljahr-Name ist erforderlich").max(50, "Name zu lang"),
+        params: z.object({
+          newClasses: z.array(z.object({
+            name: z.string().min(1, "Klassenname erforderlich").max(10, "Klassenname zu lang").regex(/^[0-9]+[a-zA-Z]$/, "Format: z.B. '5a', '6b'"),
+            grade: z.number().int().min(5, "Mindestklasse 5").max(10, "Höchstklasse 10"),
+            expectedStudentCount: z.number().int().min(1, "Mindestens 1 Schüler").max(35, "Maximal 35 Schüler")
+          })).min(1, "Mindestens eine neue Klasse erforderlich"),
+          migrationRules: z.object({
+            autoMigrateContinuousSubjects: z.boolean().optional().default(true),
+            handleDifferenzierung: z.boolean().optional().default(true),
+            archiveGraduatedClasses: z.boolean().optional().default(true),
+            preserveInactiveTeachers: z.boolean().optional().default(false),
+            createMissingSubjects: z.boolean().optional().default(false)
+          }).optional().default({})
+        })
+      });
+
+      const { fromSchoolYearId, toSchoolYearName, params } = executeRequestSchema.parse(req.body);
+      
+      // The defaults are already applied by Zod schema, no need for manual assignment
+      const validatedParams = params;
+
+      // First validate that the transition is ready
+      const validation = await storage.validateSchoolYearTransition(fromSchoolYearId);
+      if (!validation.valid) {
+        return res.status(422).json({ 
+          error: "Schuljahreswechsel-Validierung fehlgeschlagen", 
+          details: validation.errors,
+          warnings: validation.warnings
+        });
+      }
+
+      // Execute the transition
+      const result = await storage.executeSchoolYearTransition(
+        fromSchoolYearId, 
+        toSchoolYearName, 
+        validatedParams
+      );
+      
+      if (!result.success) {
+        return res.status(500).json({ 
+          error: "Schuljahreswechsel fehlgeschlagen", 
+          details: result.errors 
+        });
+      }
+
+      res.json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(422).json({ 
+          error: "Ungültige Eingabedaten", 
+          details: error.errors 
+        });
+      }
+      console.error("Error executing school year transition:", error);
+      if (error instanceof Error && error.message.includes("nicht gefunden")) {
+        return res.status(404).json({ error: "Schuljahr nicht gefunden" });
+      }
+      if (error instanceof Error && error.message.includes("bereits")) {
+        return res.status(409).json({ error: "Schuljahr existiert bereits" });
+      }
+      if (error instanceof Error && error.message.includes("Validierung")) {
+        return res.status(422).json({ error: "Validierungsfehler", details: error.message });
+      }
+      res.status(500).json({ error: "Fehler bei der Ausführung des Schuljahreswechsels" });
+    }
+  });
+
+  // School Years management routes
+  app.get('/api/school-years', async (req, res) => {
+    try {
+      const schoolYears = await storage.getSchoolYears();
+      res.json(schoolYears);
+    } catch (error) {
+      console.error("Error fetching school years:", error);
+      res.status(500).json({ error: "Failed to fetch school years" });
+    }
+  });
+
+  app.get('/api/school-years/current', async (req, res) => {
+    try {
+      const currentSchoolYear = await storage.getCurrentSchoolYear();
+      if (!currentSchoolYear) {
+        return res.status(404).json({ error: "Kein aktuelles Schuljahr gefunden" });
+      }
+      res.json(currentSchoolYear);
+    } catch (error) {
+      console.error("Error fetching current school year:", error);
+      res.status(500).json({ error: "Failed to fetch current school year" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
