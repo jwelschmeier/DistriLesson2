@@ -772,9 +772,6 @@ export default function Lehrerverwaltung() {
                           Lehrkraft
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                          Personalnummer
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Fächer
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -789,6 +786,10 @@ export default function Lehrerverwaltung() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Aktionen
                         </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Personalnummer
+                        </th>
+                       
                       </tr>
                     </thead>
                     <tbody className="bg-card divide-y divide-border">
@@ -810,11 +811,6 @@ export default function Lehrerverwaltung() {
                                   <div className="text-sm text-muted-foreground">{teacher.email}</div>
                                 </div>
                               </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="text-sm text-foreground font-mono">
-                                {teacher.personnelNumber || '-'}
-                              </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex flex-wrap gap-1">
@@ -871,6 +867,11 @@ export default function Lehrerverwaltung() {
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="text-sm text-foreground font-mono">
+                                {teacher.personnelNumber || '-'}
+                              </span>
                             </td>
                           </tr>
                         );
