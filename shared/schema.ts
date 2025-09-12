@@ -84,9 +84,12 @@ export const assignments = pgTable("assignments", {
   hoursPerWeek: decimal("hours_per_week", { precision: 3, scale: 1 }).notNull(),
   semester: varchar("semester", { length: 2 }).notNull().default("1"), // "1" for 1st semester, "2" for 2nd semester
   isOptimized: boolean("is_optimized").notNull().default(false),
+  teamTeachingId: varchar("team_teaching_id"), // Groups assignments that are team-taught together
   schoolYearId: varchar("school_year_id").references(() => schoolYears.id, { onDelete: "restrict" }), // nullable for backward compatibility
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  teamTeachingIndex: index("team_teaching_idx").on(table.teamTeachingId),
+}));
 
 export const planstellenScenarios = pgTable("planstellen_scenarios", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -362,6 +365,7 @@ export const insertAssignmentSchema = createInsertSchema(assignments).omit({
   hoursPerWeek: z.number().min(0.5, "Mindestens 0,5 Stunden pro Woche").max(10, "Maximal 10 Stunden pro Woche")
     .transform(num => num.toString()),
   schoolYearId: z.string().uuid().nullable().optional(),
+  teamTeachingId: z.string().uuid().nullable().optional(),
 });
 
 export const insertPlanstellenScenarioSchema = createInsertSchema(planstellenScenarios).omit({
