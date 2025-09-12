@@ -449,21 +449,21 @@ export default function Lehrerverwaltung() {
                           
                           {subjectInputMode === "checkbox" ? (
                             <div className="grid grid-cols-3 gap-2 p-3 border rounded-md">
-                              {availableSubjects.map((subject) => (
-                                <label key={subject} className="flex items-center space-x-2 cursor-pointer">
+                              {subjects.map((subject) => (
+                                <label key={subject.id} className="flex items-center space-x-2 cursor-pointer">
                                   <input
                                     type="checkbox"
-                                    checked={field.value.includes(subject)}
+                                    checked={field.value.includes(subject.name)}
                                     onChange={(e) => {
                                       if (e.target.checked) {
-                                        field.onChange([...field.value, subject]);
+                                        field.onChange([...field.value, subject.name]);
                                       } else {
-                                        field.onChange(field.value.filter(s => s !== subject));
+                                        field.onChange(field.value.filter(s => s !== subject.name));
                                       }
                                     }}
-                                    data-testid={`checkbox-subject-${subject.toLowerCase()}`}
+                                    data-testid={`checkbox-subject-${subject.id}`}
                                   />
-                                  <span className="text-sm">{subject}</span>
+                                  <span className="text-sm">{subject.name}</span>
                                 </label>
                               ))}
                             </div>
@@ -486,11 +486,14 @@ export default function Lehrerverwaltung() {
                           {field.value.length > 0 && (
                             <div className="flex flex-wrap gap-1 p-2 bg-muted/30 rounded text-xs mt-2">
                               <span className="text-muted-foreground">Gewählt ({field.value.length}):</span>
-                              {field.value.slice(0, 5).map((subject, index) => (
-                                <Badge key={index} variant={unavailableSubjects.includes(subject) ? "destructive" : "secondary"} className="text-xs">
-                                  {subject}
-                                </Badge>
-                              ))}
+                              {field.value.slice(0, 5).map((subjectName) => {
+                                const subject = subjects.find(s => s.name === subjectName);
+                                return (
+                                  <Badge key={subject?.id || subjectName} variant={unavailableSubjects.includes(subjectName) ? "destructive" : "secondary"} className="text-xs">
+                                    {subjectName}
+                                  </Badge>
+                                );
+                              })}
                               {field.value.length > 5 && (
                                 <Badge variant="outline" className="text-xs">+{field.value.length - 5}</Badge>
                               )}
