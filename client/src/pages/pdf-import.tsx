@@ -32,21 +32,55 @@ interface ImportMatch {
 }
 
 interface ImportConflict {
-  type: 'class_not_found' | 'teacher_not_found' | 'subject_not_found' | 'duplicate_assignment';
+  type: 'class_not_found' | 'teacher_not_found' | 'subject_not_found' | 'duplicate_assignment' | 'intelligent_mapping_conflict';
   message: string;
   suggestion?: string;
   data: any;
+  mappingConflict?: MappingConflict;
+}
+
+interface SubjectMapping {
+  id: string;
+  pdfSubjectName: string;
+  normalizedName: string;
+  systemSubjectId: string;
+  confidence: number;
+  usedCount: number;
+  lastUsedAt?: string;
+}
+
+interface MappingConflict {
+  id: string;
+  pdfSubjectName: string;
+  normalizedName: string;
+  possibleMatches: {
+    subject: any;
+    confidence: number;
+    reason: string;
+  }[];
+}
+
+interface IntelligentMappingResult {
+  subjectId: string | null;
+  conflict?: MappingConflict;
+  autoResolved: boolean;
+  mappingUsed?: SubjectMapping;
 }
 
 interface ImportPreview {
   matches: ImportMatch[];
   conflicts: ImportConflict[];
   lessons: ParsedLesson[];
+  intelligentMappings?: {
+    autoResolved: IntelligentMappingResult[];
+    conflicts: MappingConflict[];
+  };
   summary: {
     totalLessons: number;
     matchedClasses: number;
     matchedTeachers: number;
     matchedSubjects: number;
+    autoResolvedSubjects?: number;
     conflicts: number;
   };
 }
@@ -80,6 +114,36 @@ export default function PdfImport() {
   const { data: subjects } = useQuery({
     queryKey: ['/api/subjects'],
     enabled: !!currentSchoolYear
+  });
+
+  // Get existing subject mappings for display
+  const { data: existingMappings } = useQuery({
+    queryKey: ['/api/subject-mappings'],
+    enabled: !!currentSchoolYear
+  });
+
+  // Mutation for resolving mapping conflicts
+  const resolveMappingMutation = useMutation({
+    mutationFn: async ({ pdfSubjectName, subjectId }: { pdfSubjectName: string; subjectId: string }) => {
+      return await apiRequest("POST", "/api/subject-mappings/resolve", {
+        pdfSubjectName,
+        selectedSubjectId: subjectId
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Mapping erstellt",
+        description: "Die Fach-Zuordnung wurde gespeichert und wird künftig automatisch verwendet.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/subject-mappings'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Fehler beim Speichern",
+        description: (error as Error).message,
+        variant: "destructive"
+      });
+    }
   });
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -190,6 +254,31 @@ export default function PdfImport() {
     setResolutions(prev => ({ ...prev, [key]: value }));
   };
 
+  const handleMappingResolve = async (pdfSubjectName: string, subjectId: string) => {
+    try {
+      await resolveMappingMutation.mutateAsync({ pdfSubjectName, subjectId });
+      // Remove this conflict from the preview
+      if (preview) {
+        const updatedConflicts = preview.conflicts.filter(
+          c => !(
+            (c.type === 'subject_not_found' && c.data.subjectName === pdfSubjectName) ||
+            (c.type === 'intelligent_mapping_conflict' && c.mappingConflict?.pdfSubjectName === pdfSubjectName)
+          )
+        );
+        setPreview({
+          ...preview,
+          conflicts: updatedConflicts,
+          summary: {
+            ...preview.summary,
+            conflicts: updatedConflicts.length
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Failed to resolve mapping:', error);
+    }
+  };
+
   const getConflictsByType = (type: ImportConflict['type']) => {
     return preview?.conflicts.filter(c => c.type === type) || [];
   };
@@ -274,6 +363,12 @@ export default function PdfImport() {
                   <div className="text-2xl font-bold text-green-600">{preview.summary.matchedSubjects}</div>
                   <div className="text-sm text-muted-foreground">Fächer gefunden</div>
                 </div>
+                {preview.summary.autoResolvedSubjects !== undefined && (
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">{preview.summary.autoResolvedSubjects}</div>
+                    <div className="text-sm text-muted-foreground">Automatisch zugeordnet</div>
+                  </div>
+                )}
                 <div className="text-center">
                   <div className="text-2xl font-bold text-red-600">{preview.summary.conflicts}</div>
                   <div className="text-sm text-muted-foreground">Konflikte</div>
@@ -282,7 +377,8 @@ export default function PdfImport() {
             </CardContent>
           </Card>
 
-          {/* Conflicts Resolution */}
+
+          {/* Traditional Conflicts Resolution */}
           {preview.conflicts.length > 0 && (
             <Card>
               <CardHeader>
@@ -373,6 +469,74 @@ export default function PdfImport() {
                         </AlertDescription>
                       </Alert>
                     ))}
+                  </div>
+                )}
+
+                {getConflictsByType('intelligent_mapping_conflict').length > 0 && (
+                  <div>
+                    <h3 className="font-medium mb-2">Intelligente Fach-Zuordnung</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Diese Fächer konnten nicht automatisch zugeordnet werden. Wählen Sie die beste Option:
+                    </p>
+                    {getConflictsByType('intelligent_mapping_conflict').map((conflict, index) => {
+                      const mappingConflict = conflict.mappingConflict;
+                      if (!mappingConflict) return null;
+                      
+                      return (
+                        <div key={index} className="border rounded-lg p-4 mb-3">
+                          <div className="mb-3">
+                            <h4 className="font-medium">PDF-Fach: "{mappingConflict.pdfSubjectName}"</h4>
+                            <p className="text-sm text-muted-foreground">
+                              Normalisiert als: {mappingConflict.normalizedName}
+                            </p>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label>Mögliche Zuordnungen (nach Ähnlichkeit sortiert):</Label>
+                            <div className="space-y-2">
+                              {mappingConflict.possibleMatches.map((match, matchIndex) => (
+                                <div key={matchIndex} className="flex items-center justify-between p-2 border rounded hover:bg-muted">
+                                  <div className="flex items-center gap-3">
+                                    <div>
+                                      <div className="font-medium">{match.subject.name}</div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {match.reason} ({Math.round(match.confidence * 100)}% Ähnlichkeit)
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleMappingResolve(mappingConflict.pdfSubjectName, match.subject.id)}
+                                    disabled={resolveMappingMutation.isPending}
+                                    data-testid={`button-resolve-${mappingConflict.id}-${matchIndex}`}
+                                  >
+                                    Zuordnen
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                            
+                            <Separator />
+                            
+                            <div className="flex items-center gap-2">
+                              <Label>Oder wählen Sie manuell:</Label>
+                              <Select onValueChange={(value) => handleMappingResolve(mappingConflict.pdfSubjectName, value)}>
+                                <SelectTrigger className="w-64">
+                                  <SelectValue placeholder="Anderes Fach wählen..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {(subjects as any[])?.map((subject: any) => (
+                                    <SelectItem key={subject.id} value={subject.id}>
+                                      {subject.shortName ? `${subject.shortName} - ${subject.name}` : subject.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>

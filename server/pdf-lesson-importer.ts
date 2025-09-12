@@ -1,6 +1,7 @@
 import { PdfLessonParser, ParsedLesson, PdfParseResult } from './pdf-lesson-parser.js';
 import { IStorage } from './storage.js';
 import { Teacher, Subject, Class, Assignment, InsertAssignment } from '@shared/schema.js';
+import { IntelligentMappingService, MappingConflict } from './intelligent-mapping-service.js';
 
 export interface ImportMatch {
   className: string;
@@ -12,10 +13,11 @@ export interface ImportMatch {
 }
 
 export interface ImportConflict {
-  type: 'class_not_found' | 'teacher_not_found' | 'subject_not_found' | 'duplicate_assignment';
+  type: 'class_not_found' | 'teacher_not_found' | 'subject_not_found' | 'duplicate_assignment' | 'intelligent_mapping_conflict';
   message: string;
   suggestion?: string;
   data: any;
+  mappingConflict?: MappingConflict;
 }
 
 export interface ImportPreview {
@@ -32,10 +34,14 @@ export interface ImportPreview {
 }
 
 export class PdfLessonImporter {
+  private intelligentMapping: IntelligentMappingService;
+
   constructor(
     private storage: IStorage,
     private parser: PdfLessonParser
-  ) {}
+  ) {
+    this.intelligentMapping = new IntelligentMappingService();
+  }
 
   async previewImport(pdfBuffer: Buffer, schoolYearId: string): Promise<ImportPreview> {
     // Parse PDF
@@ -103,17 +109,34 @@ export class PdfLessonImporter {
           });
         }
 
-        // Match subject
-        const matchedSubject = subjectMap.get(lesson.subject.toLowerCase());
-        if (matchedSubject) {
-          match.subjectId = matchedSubject.id;
-        } else {
+        // Match subject using intelligent mapping
+        const mappingResult = await this.intelligentMapping.mapSubject(lesson.subject, existingSubjects);
+        if (mappingResult.autoResolved && mappingResult.subjectId) {
+          match.subjectId = mappingResult.subjectId;
+        } else if (mappingResult.conflict) {
+          // Add intelligent mapping conflict
           conflicts.push({
-            type: 'subject_not_found',
-            message: `Fach "${lesson.subject}" nicht im System gefunden`,
-            suggestion: this.suggestSimilarSubject(lesson.subject, existingSubjects),
-            data: { subjectName: lesson.subject }
+            type: 'intelligent_mapping_conflict',
+            message: `Fach "${lesson.subject}" konnte nicht eindeutig zugeordnet werden`,
+            suggestion: mappingResult.conflict.possibleMatches.length > 0 
+              ? `Mögliche Zuordnungen: ${mappingResult.conflict.possibleMatches.slice(0, 3).map(m => m.subject.name).join(', ')}`
+              : 'Keine passenden Fächer gefunden',
+            data: { subjectName: lesson.subject },
+            mappingConflict: mappingResult.conflict
           });
+        } else {
+          // Fallback to old logic
+          const matchedSubject = subjectMap.get(lesson.subject.toLowerCase());
+          if (matchedSubject) {
+            match.subjectId = matchedSubject.id;
+          } else {
+            conflicts.push({
+              type: 'subject_not_found',
+              message: `Fach "${lesson.subject}" nicht im System gefunden`,
+              suggestion: this.suggestSimilarSubject(lesson.subject, existingSubjects),
+              data: { subjectName: lesson.subject }
+            });
+          }
         }
 
         // Check for duplicate assignments

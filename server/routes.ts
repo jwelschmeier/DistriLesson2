@@ -9,6 +9,7 @@ import { calculateCorrectHours } from "@shared/parallel-subjects";
 import { LessonDistributionImporter } from "./lesson-distribution-importer";
 import { PdfLessonParser } from "./pdf-lesson-parser";
 import { PdfLessonImporter } from "./pdf-lesson-importer";
+import { intelligentMappingService } from "./intelligent-mapping-service";
 import { z } from "zod";
 
 interface MulterRequest extends Request {
@@ -1158,7 +1159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     teacherId: qualifiedTeacher.id,
                     classId: classData.id,
                     subjectId: subject.id,
-                    hoursPerWeek: semesterSubjects[baseSubject].hours,
+                    hoursPerWeek: semesterSubjects[baseSubject].hours.toString(),
                     semester: semester === 1 ? "1" : "2",
                     isOptimized: true
                   });
@@ -1234,7 +1235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       teacherId: fallbackTeacher.id,
                       classId: classData.id,
                       subjectId: subject.id,
-                      hoursPerWeek: semesterSubjects[baseSubject].hours,
+                      hoursPerWeek: semesterSubjects[baseSubject].hours.toString(),
                       semester: semester === 1 ? "1" : "2",
                       isOptimized: true
                     });
@@ -1642,6 +1643,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         error: "Fehler beim Import der PDF-Stundenverteilung",
         details: error instanceof Error ? error.message : "Unbekannter Fehler"
+      });
+    }
+  });
+
+  // Subject Mapping Management Routes
+  app.get('/api/subject-mappings', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const mappings = await intelligentMappingService.getAllMappings();
+      res.json(mappings);
+    } catch (error) {
+      console.error("Error fetching subject mappings:", error);
+      res.status(500).json({ error: "Failed to fetch subject mappings" });
+    }
+  });
+
+  app.post('/api/subject-mappings/resolve', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { pdfSubjectName, selectedSubjectId } = req.body;
+      
+      if (!pdfSubjectName || !selectedSubjectId) {
+        return res.status(400).json({ error: 'PDF subject name and selected subject ID are required' });
+      }
+      
+      const mapping = await intelligentMappingService.resolveConflict(pdfSubjectName, selectedSubjectId);
+      res.json(mapping);
+    } catch (error) {
+      console.error("Error resolving subject mapping conflict:", error);
+      res.status(500).json({ 
+        error: "Failed to resolve subject mapping conflict",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.delete('/api/subject-mappings/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await intelligentMappingService.deleteMapping(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting subject mapping:", error);
+      res.status(500).json({ 
+        error: "Failed to delete subject mapping",
+        details: error instanceof Error ? error.message : "Unknown error"
       });
     }
   });
