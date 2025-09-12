@@ -32,7 +32,7 @@ export function Sidebar() {
       {/* Header */}
       <div className="p-6 border-b border-border">
         <div className="flex items-center space-x-3">
-          <div className="w-16 h-16 rounded-lg flex items-center justify-center overflow-hidden">
+          <div className="w-24 h-24 rounded-lg flex items-center justify-center overflow-hidden">
             <img src={logoImage} alt="Logo" className="w-full h-full object-contain" />
           </div>
           <div>
