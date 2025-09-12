@@ -683,6 +683,7 @@ export default function Stundenplaene() {
                               <TableHead>Fach</TableHead>
                               <TableHead>Stunden</TableHead>
                               <TableHead>Semester</TableHead>
+                              <TableHead className="text-center">Aktionen</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -701,6 +702,43 @@ export default function Stundenplaene() {
                                   <Badge variant={assignment.semester === "1" ? "default" : "outline"}>
                                     {assignment.semester === "1" ? "1. HJ" : "2. HJ"}
                                   </Badge>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        className="h-8 w-8 p-0"
+                                        data-testid={`button-delete-assignment-${assignment.id}`}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Zuweisung löschen?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Möchten Sie die Zuweisung <strong>{assignment.subject?.shortName}</strong> 
+                                          in Klasse <strong>{assignment.class?.name}</strong> 
+                                          ({assignment.hoursPerWeek}h, {assignment.semester === "1" ? "1. HJ" : "2. HJ"}) 
+                                          wirklich löschen?
+                                          <br /><br />
+                                          Diese Stunden werden wieder für andere Kollegen verfügbar.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => deleteAssignment(assignment.id)}
+                                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                          data-testid={`confirm-delete-assignment-${assignment.id}`}
+                                        >
+                                          Löschen
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
                                 </TableCell>
                               </TableRow>
                             ))}
