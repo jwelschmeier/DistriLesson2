@@ -460,21 +460,31 @@ export default function Lehrerverwaltung() {
                           {subjectInputMode === "checkbox" ? (
                             <div className="grid grid-cols-3 gap-2 p-3 border rounded-md" data-testid="checkbox-grid">
                               {subjects.map((subject) => (
-                                <Label key={subject.id} htmlFor={`sub-${subject.id}`} className="flex items-center space-x-2 cursor-pointer">
-                                  <Checkbox 
-                                    id={`sub-${subject.id}`}
-                                    checked={field.value.includes(subject.name)}
-                                    onCheckedChange={(checked) => {
-                                      if (checked) {
-                                        field.onChange([...field.value, subject.name]);
-                                      } else {
-                                        field.onChange(field.value.filter(s => s !== subject.name));
-                                      }
-                                    }}
-                                    data-testid={`checkbox-subject-${subject.id}`}
-                                  />
+                                <div 
+                                  key={subject.id} 
+                                  className={`flex items-center space-x-2 p-2 border rounded cursor-pointer transition-colors ${
+                                    field.value.includes(subject.name) 
+                                      ? 'bg-primary text-primary-foreground border-primary' 
+                                      : 'bg-background hover:bg-muted border-border'
+                                  }`}
+                                  onClick={() => {
+                                    if (field.value.includes(subject.name)) {
+                                      field.onChange(field.value.filter(s => s !== subject.name));
+                                    } else {
+                                      field.onChange([...field.value, subject.name]);
+                                    }
+                                  }}
+                                  data-testid={`checkbox-subject-${subject.id}`}
+                                >
+                                  <div className={`w-4 h-4 border rounded-sm flex items-center justify-center text-xs font-bold ${
+                                    field.value.includes(subject.name) 
+                                      ? 'bg-background text-primary border-background' 
+                                      : 'border-muted-foreground'
+                                  }`}>
+                                    {field.value.includes(subject.name) ? '✓' : ''}
+                                  </div>
                                   <span className="text-sm">{subject.name}</span>
-                                </Label>
+                                </div>
                               ))}
                             </div>
                           ) : (
