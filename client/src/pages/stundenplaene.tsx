@@ -601,7 +601,7 @@ export default function Stundenplaene() {
               {selectedTeacher && (
                 <>
                   {/* Teacher Summary Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <Card data-testid="card-teacher-max-hours">
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between">
@@ -656,6 +656,41 @@ export default function Stundenplaene() {
                           </div>
                           <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                             <BookOpen className="text-orange-600 text-xl" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card data-testid="card-teacher-reduction-hours">
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-muted-foreground text-sm font-medium">Ermäßigungsstunden</p>
+                            {selectedTeacher?.reductionHours ? (
+                              <div className="space-y-1">
+                                <p className="text-2xl font-bold text-foreground" data-testid="text-teacher-reduction-total">
+                                  {Object.values(selectedTeacher.reductionHours as Record<string, number>)
+                                    .reduce((sum, hours) => sum + hours, 0)}
+                                </p>
+                                <div className="space-y-0.5">
+                                  {Object.entries(selectedTeacher.reductionHours as Record<string, number>)
+                                    .filter(([_, hours]) => hours > 0)
+                                    .map(([type, hours]) => (
+                                      <p key={type} className="text-xs text-muted-foreground" data-testid={`text-reduction-${type.toLowerCase()}`}>
+                                        {type}: {hours}h
+                                      </p>
+                                    ))}
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-2xl font-bold text-foreground" data-testid="text-teacher-reduction-total">
+                                0
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground">Reduzierung</p>
+                          </div>
+                          <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <GraduationCap className="text-purple-600 text-xl" />
                           </div>
                         </div>
                       </CardContent>
