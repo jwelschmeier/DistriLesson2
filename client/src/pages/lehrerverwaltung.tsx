@@ -238,7 +238,7 @@ export default function Lehrerverwaltung() {
       },
       isActive: teacher.isActive,
     });
-    setIsDialogOpen(true);
+    setIsDialogOpen(true); // Manually open dialog
   };
 
   const handleSubmit = (data: TeacherFormData) => {
@@ -304,6 +304,7 @@ export default function Lehrerverwaltung() {
                   setEditingTeacher(null);
                   setSubjectInputMode("checkbox"); // Reset to checkbox mode
                   form.reset();
+                  setIsDialogOpen(true); // Manually open dialog
                 }}>
                   <Plus className="mr-2 h-4 w-4" />
                   Lehrkraft hinzufügen
