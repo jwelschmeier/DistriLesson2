@@ -557,7 +557,7 @@ export default function Lehrerverwaltung() {
                           {field.value.length > 0 && (
                             <div className="flex flex-wrap items-center gap-1 p-2 bg-muted/30 rounded text-xs mb-2">
                               <span className="text-muted-foreground">Gewählt ({field.value.length}):</span>
-                              {field.value.slice(0, 5).map((subjectName, index) => {
+                              {field.value.map((subjectName, index) => {
                                 const subject = subjects.find(s => s.name === subjectName || s.shortName === subjectName);
                                 return (
                                   <Badge key={`${subject?.id || subjectName}-${index}`} variant="secondary" className="text-xs bg-blue-50 text-blue-800 border-blue-200">
@@ -565,9 +565,6 @@ export default function Lehrerverwaltung() {
                                   </Badge>
                                 );
                               })}
-                              {field.value.length > 5 && (
-                                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-800 border-blue-200">+{field.value.length - 5}</Badge>
-                              )}
                             </div>
                           )}
                           
@@ -1005,12 +1002,9 @@ export default function Lehrerverwaltung() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex flex-wrap gap-1">
-                                {teacher.subjects.slice(0, 3).map((subject, index) => (
+                                {teacher.subjects.map((subject, index) => (
                                   <Badge key={index} variant="secondary" className="bg-blue-50 text-blue-800 border-blue-200">{subject}</Badge>
                                 ))}
-                                {teacher.subjects.length > 3 && (
-                                  <Badge variant="secondary" className="bg-blue-50 text-blue-800 border-blue-200">+{teacher.subjects.length - 3}</Badge>
-                                )}
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
