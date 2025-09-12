@@ -12,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
@@ -455,26 +456,16 @@ export default function Lehrerverwaltung() {
                             </div>
                           </div>
                           
-                          {/* Debug Info */}
-                          <div className="text-xs text-gray-500 mb-2">
-                            Debug: Mode={subjectInputMode}, Subjects={subjects?.length || 0}, Loading={isLoadingSubjects}
-                            <br/>
-                            Condition: subjectInputMode === "checkbox" = {String(subjectInputMode === "checkbox")}
-                            <br/>
-                            Will show: {subjectInputMode === "checkbox" ? "CHECKBOXES" : "TEXTAREA"}
-                          </div>
-                          
                           <div key={`subjects-${subjectInputMode}`}>
                           {subjectInputMode === "checkbox" ? (
-                            <div className="grid grid-cols-3 gap-2 p-3 border rounded-md bg-blue-50" data-testid="checkbox-grid">
-                              <div className="col-span-3 text-red-600 font-bold">CHECKBOX MODUS AKTIV - {subjects?.length || 0} Fächer</div>
+                            <div className="grid grid-cols-3 gap-2 p-3 border rounded-md" data-testid="checkbox-grid">
                               {subjects.map((subject) => (
-                                <label key={subject.id} className="flex items-center space-x-2 cursor-pointer">
-                                  <input
-                                    type="checkbox"
+                                <Label key={subject.id} htmlFor={`sub-${subject.id}`} className="flex items-center space-x-2 cursor-pointer">
+                                  <Checkbox 
+                                    id={`sub-${subject.id}`}
                                     checked={field.value.includes(subject.name)}
-                                    onChange={(e) => {
-                                      if (e.target.checked) {
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
                                         field.onChange([...field.value, subject.name]);
                                       } else {
                                         field.onChange(field.value.filter(s => s !== subject.name));
@@ -483,7 +474,7 @@ export default function Lehrerverwaltung() {
                                     data-testid={`checkbox-subject-${subject.id}`}
                                   />
                                   <span className="text-sm">{subject.name}</span>
-                                </label>
+                                </Label>
                               ))}
                             </div>
                           ) : (
