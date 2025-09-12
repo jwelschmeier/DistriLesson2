@@ -224,13 +224,31 @@ export default function Stundenplaene() {
 
   // Calculate class summary statistics
   const classSummary = useMemo(() => {
-    const totalHours = classAssignments.reduce((sum, assignment) => sum + parseFloat(assignment.hoursPerWeek), 0);
-    const s1Hours = classAssignments
-      .filter(assignment => assignment.semester === "1")
-      .reduce((sum, assignment) => sum + parseFloat(assignment.hoursPerWeek), 0);
-    const s2Hours = classAssignments
-      .filter(assignment => assignment.semester === "2")
-      .reduce((sum, assignment) => sum + parseFloat(assignment.hoursPerWeek), 0);
+    // Group assignments by subject and teacher to avoid double-counting
+    // For German schools: show weekly hours, not semester totals
+    const subjectMap = new Map<string, { s1: number; s2: number; teacher: string; subject: string }>();
+    
+    classAssignments.forEach(assignment => {
+      const key = `${assignment.subjectId}-${assignment.teacherId}`;
+      const existing = subjectMap.get(key) || { s1: 0, s2: 0, teacher: assignment.teacherId, subject: assignment.subjectId };
+      
+      if (assignment.semester === "1") {
+        existing.s1 = parseFloat(assignment.hoursPerWeek);
+      } else if (assignment.semester === "2") {
+        existing.s2 = parseFloat(assignment.hoursPerWeek);
+      }
+      
+      subjectMap.set(key, existing);
+    });
+    
+    // Calculate hours for each semester
+    const s1Hours = Array.from(subjectMap.values()).reduce((sum, entry) => sum + entry.s1, 0);
+    const s2Hours = Array.from(subjectMap.values()).reduce((sum, entry) => sum + entry.s2, 0);
+    
+    // Total hours = maximum weekly hours across both semesters
+    // This represents the actual weekly teaching load
+    const totalHours = Math.max(s1Hours, s2Hours);
+    
     const uniqueTeachers = new Set(classAssignments.map(assignment => assignment.teacherId));
     const teacherCount = uniqueTeachers.size;
     
