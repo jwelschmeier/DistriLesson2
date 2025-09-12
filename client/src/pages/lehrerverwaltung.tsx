@@ -456,7 +456,7 @@ export default function Lehrerverwaltung() {
                           
                           {/* Debug Info */}
                           <div className="text-xs text-gray-500 mb-2">
-                            Debug: Mode={subjectInputMode}, Subjects={subjects.length}, Loading={isLoadingSubjects}
+                            Debug: Mode={subjectInputMode}, Subjects={subjects?.length || 0}, Loading={isLoadingSubjects}
                           </div>
                           
                           {subjectInputMode === "checkbox" ? (
@@ -482,7 +482,6 @@ export default function Lehrerverwaltung() {
                           ) : (
                             <FormControl>
                               <Textarea
-                                data-testid="textarea-subjects"
                                 value={field.value.join('\n')}
                                 onChange={(e) => {
                                   const subjects = Array.from(new Set(e.target.value.split('\n').map(s => s.trim()).filter(Boolean)));
