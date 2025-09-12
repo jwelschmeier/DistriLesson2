@@ -454,8 +454,13 @@ export default function Lehrerverwaltung() {
                             </div>
                           </div>
                           
+                          {/* Debug Info */}
+                          <div className="text-xs text-gray-500 mb-2">
+                            Debug: Mode={subjectInputMode}, Subjects={subjects.length}, Loading={isLoadingSubjects}
+                          </div>
+                          
                           {subjectInputMode === "checkbox" ? (
-                            <div className="grid grid-cols-3 gap-2 p-3 border rounded-md">
+                            <div className="grid grid-cols-3 gap-2 p-3 border rounded-md" data-testid="checkbox-grid">
                               {subjects.map((subject) => (
                                 <label key={subject.id} className="flex items-center space-x-2 cursor-pointer">
                                   <input
@@ -477,6 +482,7 @@ export default function Lehrerverwaltung() {
                           ) : (
                             <FormControl>
                               <Textarea
+                                data-testid="textarea-subjects"
                                 value={field.value.join('\n')}
                                 onChange={(e) => {
                                   const subjects = Array.from(new Set(e.target.value.split('\n').map(s => s.trim()).filter(Boolean)));
