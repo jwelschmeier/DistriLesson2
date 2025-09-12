@@ -299,7 +299,7 @@ export default function PdfImport() {
         case 'intelligent_mapping_conflict':
           return false; // These are already handled by handleMappingResolve
         case 'duplicate_assignment':
-          return true; // These need manual resolution - not yet implemented
+          return false; // These are automatically handled by skipping duplicates
         default:
           return true;
       }
