@@ -219,6 +219,7 @@ export default function Lehrerverwaltung() {
 
   const handleEdit = (teacher: Teacher) => {
     setEditingTeacher(teacher);
+    setSubjectInputMode("checkbox"); // Reset to checkbox mode
     form.reset({
       firstName: teacher.firstName,
       lastName: teacher.lastName,
@@ -292,10 +293,16 @@ export default function Lehrerverwaltung() {
               <h2 className="text-2xl font-semibold text-foreground">Lehrerverwaltung</h2>
               <p className="text-muted-foreground">Verwaltung der Lehrkräfte und deren Qualifikationen</p>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <Dialog open={isDialogOpen} onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (open) {
+                setSubjectInputMode("checkbox"); // Always start with checkbox mode
+              }
+            }}>
               <DialogTrigger asChild>
                 <Button data-testid="button-add-teacher" onClick={() => {
                   setEditingTeacher(null);
+                  setSubjectInputMode("checkbox"); // Reset to checkbox mode
                   form.reset();
                 }}>
                   <Plus className="mr-2 h-4 w-4" />
