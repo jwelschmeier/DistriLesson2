@@ -263,6 +263,32 @@ export default function Lehrerverwaltung() {
     }
   };
 
+  // Automatisches Speichern vor Navigation
+  const autoSaveAndNavigateToTeacher = async (teacher: Teacher) => {
+    // Nur speichern wenn wir gerade eine Lehrkraft bearbeiten und das Formular gültig ist
+    if (editingTeacher && form.formState.isValid) {
+      try {
+        const formData = form.getValues();
+        const finalData = {
+          ...formData,
+          reductionHours: {
+            ...formData.reductionHours,
+            aE: calculateAgeReduction(formData.dateOfBirth || "", formData.currentHours || 0, formData.maxHours || 25)
+          }
+        };
+        
+        // Stille Mutation ohne UI-Updates
+        await updateMutation.mutateAsync({ id: editingTeacher.id, data: finalData });
+      } catch (error) {
+        console.log("Auto-save failed:", error);
+        // Fehler ignorieren und trotzdem weiternavigieren
+      }
+    }
+    
+    // Zur neuen Lehrkraft navigieren
+    navigateToTeacher(teacher);
+  };
+
   // Navigation zwischen Lehrern im Dialog
   const navigateToTeacher = (teacher: Teacher) => {
     setEditingTeacher(teacher);
@@ -312,14 +338,14 @@ export default function Lehrerverwaltung() {
   const navigateNext = () => {
     if (canNavigateNext()) {
       const currentIndex = getCurrentTeacherIndex();
-      navigateToTeacher(filteredTeachers[currentIndex + 1]);
+      autoSaveAndNavigateToTeacher(filteredTeachers[currentIndex + 1]);
     }
   };
 
   const navigatePrevious = () => {
     if (canNavigatePrevious()) {
       const currentIndex = getCurrentTeacherIndex();
-      navigateToTeacher(filteredTeachers[currentIndex - 1]);
+      autoSaveAndNavigateToTeacher(filteredTeachers[currentIndex - 1]);
     }
   };
 
@@ -417,7 +443,7 @@ export default function Lehrerverwaltung() {
                         {/* Dropdown für direkte Navigation */}
                         <Select value={editingTeacher?.id || ""} onValueChange={(value) => {
                           const teacher = filteredTeachers.find(t => t.id === value);
-                          if (teacher) navigateToTeacher(teacher);
+                          if (teacher) autoSaveAndNavigateToTeacher(teacher);
                         }}>
                           <SelectTrigger className="w-[200px]" data-testid="select-teacher-navigation">
                             <SelectValue placeholder="Lehrkraft wählen..." />
