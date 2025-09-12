@@ -31,13 +31,9 @@ export function Sidebar() {
     <aside className="w-64 bg-card border-r border-border flex flex-col">
       {/* Header */}
       <div className="p-6 border-b border-border">
-        <div className="flex items-center space-x-3">
-          <div className="w-24 h-24 rounded-lg flex items-center justify-center overflow-hidden">
-            <img src={logoImage} alt="Logo" className="w-full h-full object-contain" />
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold text-foreground">DistriLessonPlanner</h1>
-            <p className="text-sm text-muted-foreground">App zur Unterrichtsverteilung</p>
+        <div className="flex justify-center">
+          <div className="w-full h-20 flex items-center justify-center overflow-hidden">
+            <img src={logoImage} alt="DistriLesson PLANNER" className="h-full object-contain" />
           </div>
         </div>
       </div>
