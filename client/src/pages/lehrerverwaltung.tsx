@@ -463,33 +463,44 @@ export default function Lehrerverwaltung() {
                                 Debug: field.value = [{field.value.join(', ')}] | Editing: {editingTeacher?.shortName || 'NEW'}
                                 <br/>First 3 subjects: {subjects.slice(0, 3).map(s => `${s.name} (${s.shortName || 'no short'})`).join(', ')}
                               </div>
-                              {subjects.map((subject) => (
+                              {subjects.map((subject) => {
+                                const subjectKey = subject.shortName || subject.name;
+                                const isSelected = field.value.includes(subject.name) || field.value.includes(subject.shortName || '') || field.value.includes(subjectKey);
+                                
+                                return (
                                 <div 
                                   key={subject.id} 
                                   className={`flex items-center space-x-2 p-2 border rounded cursor-pointer transition-colors ${
-                                    field.value.includes(subject.name) 
+                                    isSelected
                                       ? 'bg-primary text-primary-foreground border-primary' 
                                       : 'bg-background hover:bg-muted border-border'
                                   }`}
                                   onClick={() => {
-                                    if (field.value.includes(subject.name)) {
-                                      field.onChange(field.value.filter(s => s !== subject.name));
+                                    if (isSelected) {
+                                      // Remove alle möglichen Varianten des Fachs
+                                      field.onChange(field.value.filter(s => 
+                                        s !== subject.name && 
+                                        s !== subject.shortName && 
+                                        s !== subjectKey
+                                      ));
                                     } else {
-                                      field.onChange([...field.value, subject.name]);
+                                      // Füge das Fach hinzu (bevorzuge shortName wenn vorhanden)
+                                      field.onChange([...field.value, subjectKey]);
                                     }
                                   }}
                                   data-testid={`checkbox-subject-${subject.id}`}
                                 >
                                   <div className={`w-4 h-4 border rounded-sm flex items-center justify-center text-xs font-bold ${
-                                    field.value.includes(subject.name) 
+                                    isSelected
                                       ? 'bg-background text-primary border-background' 
                                       : 'border-muted-foreground'
                                   }`}>
-                                    {field.value.includes(subject.name) ? '✓' : ''}
+                                    {isSelected ? '✓' : ''}
                                   </div>
                                   <span className="text-sm">{subject.name}</span>
                                 </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           ) : (
                             <FormControl>
