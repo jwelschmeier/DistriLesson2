@@ -1,5 +1,4 @@
 import fs from 'fs';
-import pdfParse from 'pdf-parse';
 
 export interface ParsedLesson {
   className: string;
@@ -32,8 +31,11 @@ export class PdfLessonParser {
     };
 
     try {
-      const data = await pdfParse(pdfBuffer);
-      const text = data.text;
+      // Dynamically import pdfjs-dist to avoid startup issues
+      const pdfjs = await import('pdfjs-dist');
+      
+      // Extract text from PDF
+      const text = await this.extractTextFromPDF(pdfBuffer, pdfjs);
       
       // Split into class sections
       const classSections = this.extractClassSections(text);
@@ -45,15 +47,38 @@ export class PdfLessonParser {
             result.classes.push(classData);
           }
         } catch (error) {
-          result.errors.push(`Fehler beim Parsen der Klasse: ${error.message}`);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          result.errors.push(`Fehler beim Parsen der Klasse: ${errorMessage}`);
         }
       }
       
     } catch (error) {
-      result.errors.push(`PDF-Parse-Fehler: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      result.errors.push(`PDF-Parse-Fehler: ${errorMessage}`);
     }
 
     return result;
+  }
+
+  private async extractTextFromPDF(pdfBuffer: Buffer, pdfjs: any): Promise<string> {
+    const uint8Array = new Uint8Array(pdfBuffer);
+    const loadingTask = pdfjs.getDocument({ data: uint8Array });
+    const pdfDocument = await loadingTask.promise;
+    
+    let fullText = '';
+    
+    for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
+      const page = await pdfDocument.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      
+      const pageText = textContent.items
+        .map((item: any) => item.str)
+        .join(' ');
+      
+      fullText += pageText + '\n';
+    }
+    
+    return fullText;
   }
 
   private extractClassSections(text: string): string[] {
@@ -85,8 +110,8 @@ export class PdfLessonParser {
 
   private isClassHeader(line: string): boolean {
     return line.includes('Unterrichtsplan für Klasse') || 
-           line.match(/^\d{2}[a-zA-Z]$/) || // e.g., "05a"
-           line.match(/Klasse \d{2}[a-zA-Z]/);
+           !!(line.match(/^\d{2}[a-zA-Z]$/)) || // e.g., "05a"
+           !!(line.match(/Klasse \d{2}[a-zA-Z]/));
   }
 
   private parseClassSection(section: string): ParsedClassPlan | null {
