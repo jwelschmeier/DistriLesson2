@@ -868,7 +868,7 @@ export default function Lehrerverwaltung() {
                           <tr key={teacher.id} data-testid={`row-teacher-${teacher.id}`}>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
-                                <div className="w-8 h-8 bg-gray-100 border border-gray-200 rounded-full flex items-center justify-center">
+                                <div className="w-10 h-10 bg-gray-100 border border-gray-200 rounded-full flex items-center justify-center">
                                   <span className="text-black text-sm font-medium">
                                     {teacher.shortName}
                                   </span>
