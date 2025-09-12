@@ -163,6 +163,12 @@ export interface IStorage {
   getAssignmentsByClass(classId: string): Promise<Assignment[]>;
   getAssignmentsBySchoolYear(schoolYearId: string): Promise<Assignment[]>;
 
+  // Team Teaching Operations
+  createTeamTeaching(baseAssignmentId: string, teacherIds: string[]): Promise<Assignment[]>;
+  getTeamTeachingGroup(teamTeachingId: string): Promise<Assignment[]>;
+  removeFromTeamTeaching(assignmentId: string): Promise<Assignment>;
+  validateTeamTeachingGroup(teamTeachingId: string): Promise<{ isValid: boolean; errors: string[] }>;
+
   // Planstellen
   getPlanstellen(): Promise<Planstelle[]>;
   getPlanstelle(id: string): Promise<Planstelle | undefined>;
@@ -566,6 +572,126 @@ export class DatabaseStorage implements IStorage {
 
   async getAssignmentsBySchoolYear(schoolYearId: string): Promise<Assignment[]> {
     return await db.select().from(assignments).where(eq(assignments.schoolYearId, schoolYearId));
+  }
+
+  // Team Teaching Operations
+  async createTeamTeaching(baseAssignmentId: string, teacherIds: string[]): Promise<Assignment[]> {
+    // Get the base assignment
+    const baseAssignment = await this.getAssignment(baseAssignmentId);
+    if (!baseAssignment) {
+      throw new Error("Base assignment not found");
+    }
+
+    // Generate a new team teaching ID if none exists
+    const teamTeachingId = baseAssignment.teamTeachingId || randomUUID();
+    
+    // Update the base assignment with team teaching ID if it doesn't have one
+    if (!baseAssignment.teamTeachingId) {
+      await this.updateAssignment(baseAssignmentId, { teamTeachingId });
+    }
+
+    // Create new assignments for each additional teacher
+    const newAssignments: Assignment[] = [];
+    for (const teacherId of teacherIds) {
+      // Check if this teacher already has an assignment for this team
+      const existingAssignments = await db.select().from(assignments)
+        .where(eq(assignments.teamTeachingId, teamTeachingId));
+      
+      const teacherAlreadyInTeam = existingAssignments.some(a => a.teacherId === teacherId);
+      if (teacherAlreadyInTeam) {
+        continue; // Skip if teacher is already in this team
+      }
+
+      const newAssignment: InsertAssignment = {
+        teacherId,
+        classId: baseAssignment.classId,
+        subjectId: baseAssignment.subjectId,
+        hoursPerWeek: baseAssignment.hoursPerWeek,
+        semester: baseAssignment.semester as "1" | "2",
+        isOptimized: false,
+        teamTeachingId,
+        schoolYearId: baseAssignment.schoolYearId
+      };
+
+      const [created] = await db.insert(assignments).values(newAssignment).returning();
+      newAssignments.push(created);
+    }
+
+    // Return all assignments in the team teaching group
+    return await this.getTeamTeachingGroup(teamTeachingId);
+  }
+
+  async getTeamTeachingGroup(teamTeachingId: string): Promise<Assignment[]> {
+    return await db.select().from(assignments)
+      .where(eq(assignments.teamTeachingId, teamTeachingId))
+      .orderBy(assignments.createdAt);
+  }
+
+  async removeFromTeamTeaching(assignmentId: string): Promise<Assignment> {
+    const assignment = await this.getAssignment(assignmentId);
+    if (!assignment) {
+      throw new Error("Assignment not found");
+    }
+
+    if (!assignment.teamTeachingId) {
+      throw new Error("Assignment is not part of a team teaching group");
+    }
+
+    // Get all assignments in the team
+    const teamAssignments = await this.getTeamTeachingGroup(assignment.teamTeachingId);
+    
+    if (teamAssignments.length <= 2) {
+      // If only 2 assignments left, remove team teaching from both
+      for (const teamAssignment of teamAssignments) {
+        await this.updateAssignment(teamAssignment.id, { teamTeachingId: null });
+      }
+    } else {
+      // Just remove this assignment from the team
+      await this.updateAssignment(assignmentId, { teamTeachingId: null });
+    }
+
+    return await this.getAssignment(assignmentId) as Assignment;
+  }
+
+  async validateTeamTeachingGroup(teamTeachingId: string): Promise<{ isValid: boolean; errors: string[] }> {
+    const assignments = await this.getTeamTeachingGroup(teamTeachingId);
+    const errors: string[] = [];
+
+    if (assignments.length < 2) {
+      errors.push("Team teaching group must have at least 2 teachers");
+    }
+
+    if (assignments.length > 0) {
+      const firstAssignment = assignments[0];
+      
+      // Check that all assignments have the same class, subject, semester, and hours
+      for (const assignment of assignments.slice(1)) {
+        if (assignment.classId !== firstAssignment.classId) {
+          errors.push("All assignments in team teaching group must be for the same class");
+        }
+        if (assignment.subjectId !== firstAssignment.subjectId) {
+          errors.push("All assignments in team teaching group must be for the same subject");
+        }
+        if (assignment.semester !== firstAssignment.semester) {
+          errors.push("All assignments in team teaching group must be for the same semester");
+        }
+        if (assignment.hoursPerWeek !== firstAssignment.hoursPerWeek) {
+          errors.push("All assignments in team teaching group must have the same hours per week");
+        }
+      }
+
+      // Check for duplicate teachers
+      const teacherIds = assignments.map(a => a.teacherId);
+      const uniqueTeacherIds = new Set(teacherIds);
+      if (teacherIds.length !== uniqueTeacherIds.size) {
+        errors.push("Team teaching group cannot have duplicate teachers");
+      }
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
   }
 
   // Planstellen

@@ -664,6 +664,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Team Teaching Routes
+  // Create team teaching validation schema
+  const createTeamTeachingSchema = z.object({
+    teacherIds: z.array(z.string().uuid()).min(1, "At least one teacher ID is required")
+  });
+
+  app.post("/api/assignments/:id/team", async (req, res) => {
+    try {
+      const { teacherIds } = createTeamTeachingSchema.parse(req.body);
+      const teamAssignments = await storage.createTeamTeaching(req.params.id, teacherIds);
+      res.status(201).json(teamAssignments);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      if (error instanceof Error) {
+        if (error.message.includes("Base assignment not found")) {
+          return res.status(404).json({ error: "Assignment not found" });
+        }
+        return res.status(400).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to create team teaching" });
+    }
+  });
+
+  // Use specific routes before any potential wildcard patterns
+  app.get("/api/team-teaching/:teamTeachingId", async (req, res) => {
+    try {
+      const teamAssignments = await storage.getTeamTeachingGroup(req.params.teamTeachingId);
+      res.json(teamAssignments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch team teaching group" });
+    }
+  });
+
+  app.get("/api/team-teaching/:teamTeachingId/validate", async (req, res) => {
+    try {
+      const validation = await storage.validateTeamTeachingGroup(req.params.teamTeachingId);
+      res.json(validation);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to validate team teaching group" });
+    }
+  });
+
+  app.delete("/api/assignments/:id/team", async (req, res) => {
+    try {
+      const assignment = await storage.removeFromTeamTeaching(req.params.id);
+      res.json(assignment);
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes("Assignment not found")) {
+          return res.status(404).json({ error: "Assignment not found" });
+        }
+        if (error.message.includes("not part of a team teaching group")) {
+          return res.status(400).json({ error: "Assignment is not part of a team teaching group" });
+        }
+        return res.status(400).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to remove from team teaching" });
+    }
+  });
+
   // Helper function for planstellen calculation
   async function performPlanstellenCalculation(teachers: any[], classes: any[], subjects: any[], storage: any) {
     const results = [];
