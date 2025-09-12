@@ -461,7 +461,8 @@ export default function Lehrerverwaltung() {
                             <div className="grid grid-cols-3 gap-2 p-3 border rounded-md" data-testid="checkbox-grid">
                               <div className="col-span-3 text-xs text-gray-500 mb-2">
                                 Debug: field.value = [{field.value.join(', ')}] | Editing: {editingTeacher?.shortName || 'NEW'}
-                                <br/>First 3 subjects: {subjects.slice(0, 3).map(s => `${s.name} (${s.shortName || 'no short'})`).join(', ')}
+                                <br/>Missing: {field.value.filter(f => !subjects.some(s => s.name === f || s.shortName === f)).join(', ')}
+                                <br/>Found matching: {subjects.filter(s => field.value.includes(s.name) || field.value.includes(s.shortName || '')).map(s => `${s.name}(${s.shortName || 'no short'})`).join(', ')}
                               </div>
                               {subjects.map((subject) => {
                                 const subjectKey = subject.shortName || subject.name;
