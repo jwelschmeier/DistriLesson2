@@ -7,6 +7,8 @@ import { insertTeacherSchema, insertStudentSchema, insertClassSchema, insertSubj
 import { SchoolYearTransitionParams } from "./storage";
 import { calculateCorrectHours } from "@shared/parallel-subjects";
 import { LessonDistributionImporter } from "./lesson-distribution-importer";
+import { PdfLessonParser } from "./pdf-lesson-parser";
+import { PdfLessonImporter } from "./pdf-lesson-importer";
 import { z } from "zod";
 
 interface MulterRequest extends Request {
@@ -1576,6 +1578,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error importing lesson distribution:", error);
       res.status(500).json({ 
         error: "Fehler beim Import der Unterrichtsverteilung",
+        details: error instanceof Error ? error.message : "Unbekannter Fehler"
+      });
+    }
+  });
+
+  // PDF Import Routes
+  app.post('/api/import/lesson-distribution/pdf-preview', upload.single('file'), isAuthenticated, isAdmin, async (req: MulterRequest, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'Keine Datei hochgeladen' });
+      }
+
+      const { schoolYearId } = req.body;
+      if (!schoolYearId) {
+        return res.status(400).json({ error: 'Schuljahr-ID erforderlich' });
+      }
+
+      // Validate file type
+      if (!req.file.originalname.toLowerCase().endsWith('.pdf')) {
+        return res.status(400).json({ error: 'Nur PDF-Dateien sind erlaubt' });
+      }
+
+      const parser = new PdfLessonParser();
+      const importer = new PdfLessonImporter(storage, parser);
+      
+      const preview = await importer.previewImport(req.file.buffer, schoolYearId);
+      
+      res.json({
+        success: true,
+        preview
+      });
+    } catch (error) {
+      console.error("Error previewing PDF import:", error);
+      res.status(500).json({ 
+        error: "Fehler beim Vorschau der PDF-Stundenverteilung",
+        details: error instanceof Error ? error.message : "Unbekannter Fehler"
+      });
+    }
+  });
+
+  app.post('/api/import/lesson-distribution/pdf-apply', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { lessons, resolutions, schoolYearId } = req.body;
+      
+      if (!lessons || !schoolYearId) {
+        return res.status(400).json({ error: 'Lessons und Schuljahr-ID erforderlich' });
+      }
+
+      const parser = new PdfLessonParser();
+      const importer = new PdfLessonImporter(storage, parser);
+      
+      const result = await importer.applyImport(lessons, resolutions || {}, schoolYearId);
+      
+      res.json({
+        success: true,
+        imported: result.imported,
+        skipped: result.skipped,
+        errors: result.errors
+      });
+    } catch (error) {
+      console.error("Error applying PDF import:", error);
+      res.status(500).json({ 
+        error: "Fehler beim Import der PDF-Stundenverteilung",
         details: error instanceof Error ? error.message : "Unbekannter Fehler"
       });
     }
