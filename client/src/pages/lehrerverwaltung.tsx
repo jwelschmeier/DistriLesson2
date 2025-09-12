@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Presentation, Search, Filter, Calendar } from "lucide-react";
+import { Plus, Edit, Trash2, Presentation, Search, Filter, Calendar, ChevronLeft, ChevronRight, User } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { insertTeacherSchema, type Teacher, type InsertTeacher, type Subject } from "@shared/schema";
@@ -33,15 +33,13 @@ const teacherFormSchema = insertTeacherSchema.extend({
   currentHours: z.string().optional(), // decimal field as string
   notes: z.string().optional(),
   reductionHours: z.object({
-    sV: z.number().optional(), // Schülervertretung
-    sL: z.number().optional(), // Schulleitung  
-    SB: z.number().optional(), // Schwerbehinderung
-    LK: z.number().optional(), // Lehrerkonferenz
-    VG: z.number().optional(), // weitere Kategorie
-    FB: z.number().optional(), // Fachberater
-    aE: z.number().optional(), // Altersermäßigung (automatisch berechnet)
+    AE: z.number().optional(), // Altersermäßigung (automatisch berechnet)
     BA: z.number().optional(), // Besondere Aufgaben
+    SL: z.number().optional(), // Schulleitung  
     SO: z.number().optional(), // Sonstiges
+    LK: z.number().optional(), // Lehrerkonferenz
+    SB: z.number().optional(), // Schwerbehinderung
+    VG: z.number().optional(), // Vorgriffsstunden
   }).optional(),
 });
 
@@ -51,14 +49,13 @@ type TeacherFormData = z.infer<typeof teacherFormSchema>;
 
 // Kategorien für Ermäßigungsstunden mit Beschreibungen
 const reductionCategories = [
-  { key: "sV", label: "sV", description: "Schülervertretung" },
-  { key: "sL", label: "sL", description: "Schulleitung" },
-  { key: "SB", label: "SB", description: "Schwerbehinderung" },
-  { key: "LK", label: "LK", description: "Lehrerkonferenz" },
-  { key: "VG", label: "VG", description: "Weitere Kategorie" },
-  { key: "FB", label: "FB", description: "Fachberater" },
+  { key: "AE", label: "AE", description: "Altersermäßigung" },
   { key: "BA", label: "BA", description: "Besondere Aufgaben" },
+  { key: "SL", label: "SL", description: "Schulleitung" },
   { key: "SO", label: "SO", description: "Sonstiges" },
+  { key: "LK", label: "LK", description: "Lehrerkonferenz" },
+  { key: "SB", label: "SB", description: "Schwerbehinderung" },
+  { key: "VG", label: "VG", description: "Vorgriffsstunden" },
 ];
 
 // Automatische Altersermäßigung berechnen mit Beschäftigungsumfang
@@ -143,8 +140,8 @@ export default function Lehrerverwaltung() {
       notes: "",
       qualifications: [],
       reductionHours: {
-        sV: 0, sL: 0, SB: 0, LK: 0, VG: 0, 
-        FB: 0, aE: 0, BA: 0, SO: 0
+        AE: 0, BA: 0, SL: 0, SO: 0, LK: 0, 
+        SB: 0, VG: 0
       },
       isActive: true,
     },
@@ -266,6 +263,66 @@ export default function Lehrerverwaltung() {
     }
   };
 
+  // Navigation zwischen Lehrern im Dialog
+  const navigateToTeacher = (teacher: Teacher) => {
+    setEditingTeacher(teacher);
+    
+    // Form mit den Daten des neuen Lehrers füllen
+    form.reset({
+      firstName: teacher.firstName,
+      lastName: teacher.lastName,
+      shortName: teacher.shortName,
+      email: teacher.email,
+      subjects: teacher.subjects,
+      qualifications: teacher.qualifications || [],
+      personnelNumber: teacher.personnelNumber || "",
+      dateOfBirth: teacher.dateOfBirth || "",
+      maxHours: teacher.maxHours?.toString() || "25",
+      currentHours: teacher.currentHours?.toString() || "0",
+      notes: teacher.notes || "",
+      isActive: teacher.isActive,
+      reductionHours: {
+        AE: teacher.reductionHours?.AE || 0,
+        BA: teacher.reductionHours?.BA || 0,
+        SL: teacher.reductionHours?.SL || 0,
+        SO: teacher.reductionHours?.SO || 0,
+        LK: teacher.reductionHours?.LK || 0,
+        SB: teacher.reductionHours?.SB || 0,
+        VG: teacher.reductionHours?.VG || 0,
+      }
+    });
+  };
+
+  // Navigation Buttons
+  const getCurrentTeacherIndex = () => {
+    if (!editingTeacher || !filteredTeachers) return -1;
+    return filteredTeachers.findIndex(t => t.id === editingTeacher.id);
+  };
+
+  const canNavigateNext = () => {
+    const currentIndex = getCurrentTeacherIndex();
+    return currentIndex !== -1 && currentIndex < filteredTeachers.length - 1;
+  };
+
+  const canNavigatePrevious = () => {
+    const currentIndex = getCurrentTeacherIndex();
+    return currentIndex > 0;
+  };
+
+  const navigateNext = () => {
+    if (canNavigateNext()) {
+      const currentIndex = getCurrentTeacherIndex();
+      navigateToTeacher(filteredTeachers[currentIndex + 1]);
+    }
+  };
+
+  const navigatePrevious = () => {
+    if (canNavigatePrevious()) {
+      const currentIndex = getCurrentTeacherIndex();
+      navigateToTeacher(filteredTeachers[currentIndex - 1]);
+    }
+  };
+
   const filteredTeachers = teachers?.filter(teacher => {
     const matchesSearch = 
       teacher.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -313,9 +370,69 @@ export default function Lehrerverwaltung() {
               </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>
-                    {editingTeacher ? "Lehrkraft bearbeiten" : "Neue Lehrkraft"}
-                  </DialogTitle>
+                  <div className="flex items-center justify-between">
+                    <DialogTitle className="flex items-center gap-2">
+                      {editingTeacher ? (
+                        <>
+                          <User className="h-5 w-5" />
+                          <span>Lehrkraft bearbeiten</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-5 w-5" />
+                          <span>Neue Lehrkraft</span>
+                        </>
+                      )}
+                    </DialogTitle>
+                    
+                    {/* Navigation nur beim Bearbeiten anzeigen */}
+                    {editingTeacher && filteredTeachers.length > 1 && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">
+                          {getCurrentTeacherIndex() + 1} von {filteredTeachers.length}
+                        </span>
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={navigatePrevious}
+                            disabled={!canNavigatePrevious()}
+                            data-testid="button-previous-teacher"
+                            title="Vorherige Lehrkraft"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={navigateNext}
+                            disabled={!canNavigateNext()}
+                            data-testid="button-next-teacher"
+                            title="Nächste Lehrkraft"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        
+                        {/* Dropdown für direkte Navigation */}
+                        <Select value={editingTeacher?.id || ""} onValueChange={(value) => {
+                          const teacher = filteredTeachers.find(t => t.id === value);
+                          if (teacher) navigateToTeacher(teacher);
+                        }}>
+                          <SelectTrigger className="w-[200px]" data-testid="select-teacher-navigation">
+                            <SelectValue placeholder="Lehrkraft wählen..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {filteredTeachers.map((teacher) => (
+                              <SelectItem key={teacher.id} value={teacher.id}>
+                                {teacher.lastName}, {teacher.firstName} ({teacher.shortName})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
                 </DialogHeader>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
