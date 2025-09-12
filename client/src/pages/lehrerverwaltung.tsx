@@ -195,6 +195,21 @@ export default function Lehrerverwaltung() {
     },
   });
 
+  // Separate Mutation für automatisches Speichern beim Navigieren
+  const autoSaveMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<TeacherFormData> }) => {
+      const response = await apiRequest("PUT", `/api/teachers/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      // Nur Cache invalidieren, Dialog nicht schließen
+      queryClient.invalidateQueries({ queryKey: ["/api/teachers"] });
+    },
+    onError: (error) => {
+      console.error("Auto-save error:", error);
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest("DELETE", `/api/teachers/${id}`);
@@ -277,8 +292,8 @@ export default function Lehrerverwaltung() {
           }
         };
         
-        // Stille Mutation ohne UI-Updates
-        await updateMutation.mutateAsync({ id: editingTeacher.id, data: finalData });
+        // Verwende die spezielle autoSaveMutation, die das Dialog nicht schließt
+        await autoSaveMutation.mutateAsync({ id: editingTeacher.id, data: finalData });
       } catch (error) {
         console.log("Auto-save failed:", error);
         // Fehler ignorieren und trotzdem weiternavigieren
