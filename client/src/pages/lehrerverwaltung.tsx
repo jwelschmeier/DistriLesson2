@@ -578,7 +578,7 @@ export default function Lehrerverwaltung() {
                       <div className="flex items-end">
                         <div className="text-sm text-muted-foreground">
                           <p>Altersermäßigung (automatisch):</p>
-                          <Badge variant="secondary" className="mt-1 bg-blue-50 text-blue-800 border-blue-200">
+                          <Badge variant="light" className="mt-1">
                             {calculateAgeReduction(
                               form.watch("dateOfBirth") || "", 
                               form.watch("currentHours") || 0, 
@@ -611,7 +611,7 @@ export default function Lehrerverwaltung() {
                               {field.value.map((subjectName, index) => {
                                 const subject = subjects.find(s => s.name === subjectName || s.shortName === subjectName);
                                 return (
-                                  <Badge key={`${subject?.id || subjectName}-${index}`} variant="secondary" className="text-xs bg-blue-50 text-blue-800 border-blue-200">
+                                  <Badge key={`${subject?.id || subjectName}-${index}`} variant="light" className="text-xs">
                                     {subjectName}
                                   </Badge>
                                 );
@@ -1053,7 +1053,7 @@ export default function Lehrerverwaltung() {
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex flex-wrap gap-1">
                                 {teacher.subjects.map((subject, index) => (
-                                  <Badge key={index} variant="secondary" className="bg-blue-50 text-blue-800 border-blue-200">{subject}</Badge>
+                                  <Badge key={index} variant="light">{subject}</Badge>
                                 ))}
                               </div>
                             </td>
@@ -1069,7 +1069,7 @@ export default function Lehrerverwaltung() {
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <Badge variant={teacher.isActive ? "default" : "destructive"}>
+                              <Badge variant={teacher.isActive ? "light" : "destructive"}>
                                 {teacher.isActive ? "Aktiv" : "Inaktiv"}
                               </Badge>
                             </td>

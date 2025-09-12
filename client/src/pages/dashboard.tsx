@@ -307,7 +307,7 @@ export default function Dashboard() {
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex flex-wrap gap-1">
                                 {teacher.subjects.slice(0, 2).map((subject, index) => (
-                                  <Badge key={index} variant="secondary">{subject}</Badge>
+                                  <Badge key={index} variant="light">{subject}</Badge>
                                 ))}
                               </div>
                             </td>
@@ -324,8 +324,7 @@ export default function Dashboard() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <Badge 
-                                variant={workloadPercentage > 100 ? "destructive" : 
-                                         workloadPercentage < 80 ? "secondary" : "default"}
+                                variant={workloadPercentage > 100 ? "destructive" : "light"}
                               >
                                 {getWorkloadStatus(teacher.currentHours, teacher.maxHours)}
                               </Badge>

@@ -346,7 +346,7 @@ export default function PdfImport() {
             <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
               <FileText className="h-4 w-4" />
               <span className="text-sm font-medium">{file.name}</span>
-              <Badge variant="secondary">{(file.size / 1024 / 1024).toFixed(2)} MB</Badge>
+              <Badge variant="light">{(file.size / 1024 / 1024).toFixed(2)} MB</Badge>
             </div>
           )}
 
@@ -599,7 +599,7 @@ export default function PdfImport() {
                             <div className="flex items-center gap-2">
                               {lesson.subject}
                               {lesson.isSupplementary && (
-                                <Badge variant="secondary" className="text-xs">Förder</Badge>
+                                <Badge variant="light" className="text-xs">Förder</Badge>
                               )}
                             </div>
                           </TableCell>
@@ -613,7 +613,7 @@ export default function PdfImport() {
                                 Konflikt
                               </Badge>
                             ) : (
-                              <Badge variant="default" className="flex items-center gap-1">
+                              <Badge variant="light" className="flex items-center gap-1">
                                 <Check className="h-3 w-3" />
                                 Bereit
                               </Badge>

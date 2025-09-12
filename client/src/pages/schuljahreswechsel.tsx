@@ -304,7 +304,7 @@ export default function Schuljahreswechsel() {
                 }
               </p>
             </div>
-            <Badge variant="outline" className="text-sm" data-testid="badge-current-year">
+            <Badge variant="light" className="text-sm" data-testid="badge-current-year">
               {currentSchoolYear ? `Aktuell: ${currentSchoolYear.name}` : "Lädt..."}
             </Badge>
           </div>

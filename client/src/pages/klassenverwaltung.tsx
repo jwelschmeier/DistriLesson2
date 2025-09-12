@@ -536,7 +536,7 @@ export default function Klassenverwaltung() {
                       <CardHeader className="pb-3">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-lg">{classData.name}</CardTitle>
-                          <Badge variant="outline">Klasse {classData.grade}</Badge>
+                          <Badge variant="light">Klasse {classData.grade}</Badge>
                         </div>
                       </CardHeader>
                       <CardContent>
