@@ -527,7 +527,7 @@ export default function Lehrerverwaltung() {
                       <div className="flex items-end">
                         <div className="text-sm text-muted-foreground">
                           <p>Altersermäßigung (automatisch):</p>
-                          <Badge variant="secondary" className="mt-1">
+                          <Badge variant="secondary" className="mt-1 bg-blue-50 text-blue-800 border-blue-200">
                             {calculateAgeReduction(
                               form.watch("dateOfBirth") || "", 
                               form.watch("currentHours") || 0, 
@@ -560,13 +560,13 @@ export default function Lehrerverwaltung() {
                               {field.value.slice(0, 5).map((subjectName, index) => {
                                 const subject = subjects.find(s => s.name === subjectName || s.shortName === subjectName);
                                 return (
-                                  <Badge key={`${subject?.id || subjectName}-${index}`} variant="secondary" className="text-xs">
+                                  <Badge key={`${subject?.id || subjectName}-${index}`} variant="secondary" className="text-xs bg-green-50 text-green-800 border-green-200">
                                     {subjectName}
                                   </Badge>
                                 );
                               })}
                               {field.value.length > 5 && (
-                                <Badge variant="outline" className="text-xs">+{field.value.length - 5}</Badge>
+                                <Badge variant="outline" className="text-xs bg-gray-50 text-gray-800 border-gray-300">+{field.value.length - 5}</Badge>
                               )}
                             </div>
                           )}
