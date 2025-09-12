@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { BarChart3, Upload, Calculator, Users, Presentation, School, Clock, Sparkles, BookOpen, Calendar, Grid, Settings, RefreshCw } from "lucide-react";
-import logoImage from "@assets/image_1757668524994.png";
+import logoImage from "@assets/logo_1757710536542.png";
 
 const navigationItems = [
   { href: "/", label: "Dashboard", icon: BarChart3 },
