@@ -92,26 +92,20 @@ export class PdfLessonParser {
 
   private extractClassSections(text: string): string[] {
     const sections: string[] = [];
-    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     
-    let currentSection = '';
-    let inClass = false;
+    // Split text by class headers using regex
+    const classPattern = /Unterrichtsplan für Klasse (\d{2}[a-zA-Z])/g;
+    const matches = Array.from(text.matchAll(classPattern));
     
-    for (const line of lines) {
-      if (this.isClassHeader(line)) {
-        if (currentSection && inClass) {
-          sections.push(currentSection);
-        }
-        currentSection = line + '\n';
-        inClass = true;
-      } else if (inClass) {
-        currentSection += line + '\n';
-      }
-    }
-    
-    // Add the last section
-    if (currentSection && inClass) {
-      sections.push(currentSection);
+    for (let i = 0; i < matches.length; i++) {
+      const currentMatch = matches[i];
+      const nextMatch = matches[i + 1];
+      
+      const startIndex = currentMatch.index!;
+      const endIndex = nextMatch ? nextMatch.index! : text.length;
+      
+      const sectionText = text.substring(startIndex, endIndex);
+      sections.push(sectionText);
     }
     
     return sections;
@@ -124,40 +118,57 @@ export class PdfLessonParser {
   }
 
   private parseClassSection(section: string): ParsedClassPlan | null {
-    const lines = section.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    // Extract class name from the section
+    const classMatch = section.match(/Unterrichtsplan für Klasse (\d{2}[a-zA-Z])/);
+    if (!classMatch) return null;
     
-    // Extract class name
-    const className = this.extractClassName(lines[0]);
-    if (!className) return null;
-
+    const className = classMatch[1];
     const lessons: ParsedLesson[] = [];
     const teachers: string[] = [];
-    let currentSemester = 1;
 
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i];
+    // Split into semester sections
+    const semesterSections = section.split(/(?=[12]\.\s*Halbjahr)/);
+    
+    for (const semesterSection of semesterSections) {
+      let currentSemester = 1;
       
-      // Check for semester headers
-      if (line.includes('1. Halbjahr')) {
-        currentSemester = 1;
-        continue;
-      } else if (line.includes('2. Halbjahr')) {
+      // Determine semester
+      if (semesterSection.includes('2. Halbjahr')) {
         currentSemester = 2;
-        continue;
+      } else if (semesterSection.includes('1. Halbjahr')) {
+        currentSemester = 1;
+      } else {
+        continue; // Skip sections without semester info
       }
       
-      // Check for teacher list
-      if (line.startsWith('Lehrkräfte:')) {
-        const teacherList = line.replace('Lehrkräfte:', '').trim();
-        teachers.push(...teacherList.split(',').map(t => t.trim()));
-        continue;
-      }
+      // Find all subject lines in this semester section
+      const subjectPattern = /([^()]+?)\s*\(([0-9,\.]+)\s*Stunde[ns]?\)\s*bei\s+([A-Z]{2,4})/g;
+      let match;
       
-      // Parse lesson line
-      const lesson = this.parseLessonLine(line, className, currentSemester);
-      if (lesson) {
-        lessons.push(lesson);
+      while ((match = subjectPattern.exec(semesterSection)) !== null) {
+        const subject = match[1].trim();
+        const hours = parseFloat(match[2].replace(',', '.'));
+        const teacher = match[3].trim();
+        
+        const isSupplementary = subject.toLowerCase().includes('förder') || 
+                               subject.toLowerCase().includes('sol') ||
+                               subject.toLowerCase().includes('ag');
+
+        lessons.push({
+          className,
+          semester: currentSemester,
+          subject: this.normalizeSubjectName(subject),
+          hours,
+          teacherShortName: teacher,
+          isSupplementary
+        });
       }
+    }
+
+    // Extract teacher list
+    const teacherMatch = section.match(/Lehrkräfte:\s*(.+?)$/m);
+    if (teacherMatch) {
+      teachers.push(...teacherMatch[1].split(',').map(t => t.trim()));
     }
 
     return {
@@ -180,7 +191,10 @@ export class PdfLessonParser {
   }
 
   private parseLessonLine(line: string, className: string, semester: number): ParsedLesson | null {
-    // Patterns to match:
+    // Clean up line: normalize whitespace and trim
+    const cleanLine = line.replace(/\s+/g, ' ').trim();
+    
+    // Patterns to match (adjusted for cleaned text):
     // "Deutsch (4 Stunden) bei NOL"
     // "Deutsch Förder 1. Hj. (1 Stunde) bei NOL"
     // "SOL 1. Hj. (1 Stunde) bei KAU"
@@ -188,14 +202,14 @@ export class PdfLessonParser {
     const patterns = [
       // Standard pattern: Subject (hours) bei Teacher
       /^(.+?)\s*\(([0-9,\.]+)\s*Stunde[ns]?\)\s*bei\s+([A-Z]{2,4})$/,
+      // Semester-specific pattern: Subject 1./2. Hj. (hours) bei Teacher  
+      /^(.+?)\s+[12]\.\s*Hj\.\s*\(([0-9,\.]+)\s*Stunde[ns]?\)\s*bei\s+([A-Z]{2,4})$/,
       // Förder pattern: Subject Förder ... (hours) bei Teacher
-      /^(.+?)\s+Förder.+?\(([0-9,\.]+)\s*Stunde[ns]?\)\s*bei\s+([A-Z]{2,4})$/,
-      // Semester-specific pattern: Subject 1./2. Hj. (hours) bei Teacher
-      /^(.+?)\s+[12]\.\s*Hj\.\s*\(([0-9,\.]+)\s*Stunde[ns]?\)\s*bei\s+([A-Z]{2,4})$/
+      /^(.+?)\s+Förder.+?\(([0-9,\.]+)\s*Stunde[ns]?\)\s*bei\s+([A-Z]{2,4})$/
     ];
 
     for (const pattern of patterns) {
-      const match = line.match(pattern);
+      const match = cleanLine.match(pattern);
       if (match) {
         const subject = match[1].trim();
         const hours = parseFloat(match[2].replace(',', '.'));
