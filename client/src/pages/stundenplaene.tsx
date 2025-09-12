@@ -1274,8 +1274,8 @@ export default function Stundenplaene() {
                                     <SelectTrigger className="w-full">
                                       <SelectValue>
                                         <div className="flex items-center space-x-2">
-                                          <div className="w-6 h-6 bg-secondary rounded-full flex items-center justify-center">
-                                            <span className="text-secondary-foreground text-xs font-medium">
+                                          <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                                            <span className="text-black dark:text-white text-xs font-medium">
                                               {assignment.teacher?.shortName || '??'}
                                             </span>
                                           </div>
