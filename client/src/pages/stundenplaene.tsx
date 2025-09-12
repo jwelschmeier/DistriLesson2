@@ -127,6 +127,60 @@ export default function Stundenplaene() {
     },
   });
 
+  // Team Teaching Mutations
+  const createTeamTeachingMutation = useMutation({
+    mutationFn: async ({ assignmentId, teacherIds }: { assignmentId: string; teacherIds: string[] }) => {
+      const response = await apiRequest("POST", `/api/assignments/${assignmentId}/team`, { teacherIds });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      toast({
+        title: "Erfolg",
+        description: "Teamteaching wurde erfolgreich erstellt.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Fehler",
+        description: "Teamteaching konnte nicht erstellt werden.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const removeFromTeamTeachingMutation = useMutation({
+    mutationFn: async (assignmentId: string) => {
+      const response = await apiRequest("DELETE", `/api/assignments/${assignmentId}/team`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      toast({
+        title: "Erfolg",
+        description: "Lehrkraft wurde aus dem Team entfernt.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Fehler",
+        description: "Lehrkraft konnte nicht aus dem Team entfernt werden.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // State for team teaching dialog
+  const [teamTeachingDialog, setTeamTeachingDialog] = useState<{
+    isOpen: boolean;
+    assignmentId: string | null;
+    availableTeachers: Teacher[];
+  }>({
+    isOpen: false,
+    assignmentId: null,
+    availableTeachers: [],
+  });
+
   // Handle URL query parameters for deep linking
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -222,10 +276,10 @@ export default function Stundenplaene() {
     return { totalHours, s1Hours, s2Hours };
   }, [teacherAssignments]);
 
-  // Calculate class summary statistics
+  // Calculate class summary statistics with team teaching support
   const classSummary = useMemo(() => {
-    // Handle duplicates by grouping assignments by subject+teacher+semester and taking maximum hours
-    // This prevents artificial inflation from duplicate database entries
+    // Group assignments to prevent double-counting of team teaching hours
+    // Each team teaching group should only count hours once toward class totals
     const uniqueAssignments = new Map<string, { subject: string; teacher: string; hours: number; semester: string }>();
     
     classAssignments.forEach(assignment => {
@@ -234,12 +288,18 @@ export default function Stundenplaene() {
       // Skip 0-hour assignments as they're often placeholders
       if (hours <= 0) return;
       
-      const key = `${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
-      const existing = uniqueAssignments.get(key);
+      // For team teaching, use teamTeachingId as the grouping key to count hours only once per team
+      // For regular assignments, use the individual assignment details
+      const groupKey = assignment.teamTeachingId 
+        ? `team-${assignment.teamTeachingId}-${assignment.subjectId}-${assignment.semester}`
+        : `individual-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
+      
+      const existing = uniqueAssignments.get(groupKey);
       
       // Keep the assignment with maximum hours (handles duplicates)
+      // For team teaching, this ensures we only count the hours once per team
       if (!existing || hours > existing.hours) {
-        uniqueAssignments.set(key, {
+        uniqueAssignments.set(groupKey, {
           subject: assignment.subjectId,
           teacher: assignment.teacherId,
           hours: hours,
@@ -248,7 +308,7 @@ export default function Stundenplaene() {
       }
     });
     
-    // Calculate semester hours from unique assignments
+    // Calculate semester hours from grouped assignments
     const s1Hours = Array.from(uniqueAssignments.values())
       .filter(a => a.semester === "1")
       .reduce((sum, a) => sum + a.hours, 0);
@@ -280,14 +340,36 @@ export default function Stundenplaene() {
       const subject = subjects.find(s => s.shortName === subjectShortName);
       if (!subject) continue;
       
-      // Calculate assigned hours for this subject
+      // Calculate assigned hours for this subject with team teaching support
+      // Group assignments to prevent double-counting of team teaching hours
+      const subjectAssignments = classAssignments.filter(a => a.subjectId === subject.id);
+      const uniqueSubjectAssignments = new Map<string, { hours: number; semester: string }>();
+      
+      subjectAssignments.forEach(assignment => {
+        const hours = parseFloat(assignment.hoursPerWeek);
+        if (hours <= 0) return;
+        
+        // Use same grouping logic as classSummary to prevent double-counting team hours
+        const groupKey = assignment.teamTeachingId 
+          ? `team-${assignment.teamTeachingId}-${assignment.subjectId}-${assignment.semester}`
+          : `individual-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
+        
+        const existing = uniqueSubjectAssignments.get(groupKey);
+        if (!existing || hours > existing.hours) {
+          uniqueSubjectAssignments.set(groupKey, {
+            hours: hours,
+            semester: assignment.semester
+          });
+        }
+      });
+      
       const assignedHours = {
-        "1": classAssignments
-          .filter(a => a.subjectId === subject.id && a.semester === "1")
-          .reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0),
-        "2": classAssignments
-          .filter(a => a.subjectId === subject.id && a.semester === "2")
-          .reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0)
+        "1": Array.from(uniqueSubjectAssignments.values())
+          .filter(a => a.semester === "1")
+          .reduce((sum, a) => sum + a.hours, 0),
+        "2": Array.from(uniqueSubjectAssignments.values())
+          .filter(a => a.semester === "2")
+          .reduce((sum, a) => sum + a.hours, 0)
       };
       
       requirements.push({
@@ -385,6 +467,46 @@ export default function Stundenplaene() {
     
     return Math.max(0, maxHours - assignedHours);
   }, [teacherMap, teacherWorkloadBySemester]);
+
+  // Team Teaching Helper Functions
+  const getTeamTeachingGroups = useMemo(() => {
+    if (!assignments) return new Map();
+    
+    const groups = new Map<string, Assignment[]>();
+    assignments.filter(a => a.teamTeachingId).forEach(assignment => {
+      const teamId = assignment.teamTeachingId!;
+      if (!groups.has(teamId)) {
+        groups.set(teamId, []);
+      }
+      groups.get(teamId)!.push(assignment);
+    });
+    
+    return groups;
+  }, [assignments]);
+
+  const isTeamTeaching = useCallback((assignment: Assignment): boolean => {
+    return !!assignment.teamTeachingId;
+  }, []);
+
+  const getTeamMates = useCallback((assignment: Assignment): Assignment[] => {
+    if (!assignment.teamTeachingId) return [];
+    const group = getTeamTeachingGroups.get(assignment.teamTeachingId);
+    return group ? group.filter((a: Assignment) => a.id !== assignment.id) : [];
+  }, [getTeamTeachingGroups]);
+
+  const getTeamTeachersDisplay = useCallback((assignment: Assignment): string => {
+    if (!assignment.teamTeachingId) return '';
+    const group = getTeamTeachingGroups.get(assignment.teamTeachingId);
+    if (!group || group.length <= 1) return '';
+    
+    const teacherNames = group
+      .map((a: Assignment) => teacherMap.get(a.teacherId)?.shortName)
+      .filter(Boolean)
+      .sort()
+      .join(' & ');
+    
+    return teacherNames;
+  }, [getTeamTeachingGroups, teacherMap]);
 
   // Helper functions for editable table
   const updateEditedAssignment = (assignmentId: string, field: keyof Assignment, value: any) => {
@@ -1156,11 +1278,19 @@ export default function Stundenplaene() {
                                               {assignment.teacher?.shortName || '??'}
                                             </span>
                                           </div>
-                                          <span className="text-sm">
-                                            {assignment.teacher ? 
-                                              `${assignment.teacher.firstName} ${assignment.teacher.lastName}` : 
-                                              'Unbekannt'}
-                                          </span>
+                                          <div className="flex flex-col">
+                                            <span className="text-sm">
+                                              {assignment.teacher ? 
+                                                `${assignment.teacher.firstName} ${assignment.teacher.lastName}` : 
+                                                'Unbekannt'}
+                                            </span>
+                                            {isTeamTeaching(assignment) && (
+                                              <Badge variant="secondary" className="text-xs mt-1 w-fit">
+                                                <Users className="h-3 w-3 mr-1" />
+                                                Team: {getTeamTeachersDisplay(assignment)}
+                                              </Badge>
+                                            )}
+                                          </div>
                                         </div>
                                       </SelectValue>
                                     </SelectTrigger>
@@ -1331,6 +1461,38 @@ export default function Stundenplaene() {
                                         </Button>
                                       </>
                                     )}
+                                    {/* Team Teaching Buttons */}
+                                    {!isTeamTeaching(assignment) ? (
+                                      <Button
+                                        onClick={() => {
+                                          const currentSubjectId = getEffectiveValue(assignment, 'subjectId') as string;
+                                          const qualifiedTeachers = getQualifiedTeachers(currentSubjectId)
+                                            .filter(t => t.id !== assignment.teacherId);
+                                          setTeamTeachingDialog({
+                                            isOpen: true,
+                                            assignmentId: assignment.id,
+                                            availableTeachers: qualifiedTeachers,
+                                          });
+                                        }}
+                                        variant="outline"
+                                        size="sm"
+                                        title="Co-Teacher hinzufügen"
+                                        data-testid={`button-add-team-${assignment.id}`}
+                                      >
+                                        <Users className="h-3 w-3" />
+                                      </Button>
+                                    ) : (
+                                      <Button
+                                        onClick={() => removeFromTeamTeachingMutation.mutate(assignment.id)}
+                                        variant="outline"
+                                        size="sm"
+                                        title="Aus Team entfernen"
+                                        data-testid={`button-remove-team-${assignment.id}`}
+                                      >
+                                        <Users className="h-3 w-3" />
+                                        ✕
+                                      </Button>
+                                    )}
                                     <AlertDialog>
                                       <AlertDialogTrigger asChild>
                                         <Button
@@ -1387,6 +1549,66 @@ export default function Stundenplaene() {
             </TabsContent>
           </Tabs>
         </div>
+
+        {/* Team Teaching Dialog */}
+        <Dialog 
+          open={teamTeachingDialog.isOpen} 
+          onOpenChange={(open) => setTeamTeachingDialog(prev => ({ ...prev, isOpen: open }))}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Co-Teacher hinzufügen</DialogTitle>
+              <DialogDescription>
+                Wählen Sie einen qualifizierten Lehrer als Co-Teacher für diese Stunde aus.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="max-h-60 overflow-y-auto">
+                {teamTeachingDialog.availableTeachers.map((teacher) => (
+                  <div 
+                    key={teacher.id} 
+                    className="flex items-center justify-between p-3 border rounded hover:bg-muted/50"
+                  >
+                    <div>
+                      <div className="font-medium">
+                        {teacher.firstName} {teacher.lastName} ({teacher.shortName})
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {getAvailableHours(teacher.id, 0, selectedSemester)}h verfügbar
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        if (teamTeachingDialog.assignmentId) {
+                          createTeamTeachingMutation.mutate({
+                            assignmentId: teamTeachingDialog.assignmentId,
+                            coTeacherId: teacher.id,
+                          });
+                        }
+                      }}
+                      disabled={createTeamTeachingMutation.isPending}
+                      size="sm"
+                      data-testid={`button-select-coteacher-${teacher.id}`}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Hinzufügen
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => setTeamTeachingDialog(prev => ({ ...prev, isOpen: false }))}
+              >
+                Abbrechen
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
