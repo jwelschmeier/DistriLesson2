@@ -283,7 +283,30 @@ export default function PdfImport() {
     return preview?.conflicts.filter(c => c.type === type) || [];
   };
 
-  const canApply = preview && preview.conflicts.length === 0;
+  const canApply = preview && (() => {
+    // Check if we have any conflicts left
+    if (preview.conflicts.length === 0) return true;
+    
+    // Check if all remaining conflicts have resolutions
+    const unresolvedConflicts = preview.conflicts.filter(conflict => {
+      switch (conflict.type) {
+        case 'class_not_found':
+          return !resolutions[`class_${conflict.data.className}`];
+        case 'teacher_not_found':
+          return !resolutions[`teacher_${conflict.data.teacherShortName}`];
+        case 'subject_not_found':
+          return !resolutions[`subject_${conflict.data.subjectName}`];
+        case 'intelligent_mapping_conflict':
+          return false; // These are already handled by handleMappingResolve
+        case 'duplicate_assignment':
+          return true; // These need manual resolution - not yet implemented
+        default:
+          return true;
+      }
+    });
+    
+    return unresolvedConflicts.length === 0;
+  })();
 
   return (
     <div className="container mx-auto p-6 space-y-6">
