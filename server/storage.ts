@@ -9,6 +9,7 @@ import {
   schoolYears,
   users,
   invitations,
+  subjectMappings,
   type Teacher, 
   type InsertTeacher,
   type Student,
@@ -29,7 +30,9 @@ import {
   type UpsertUser,
   type InsertUser,
   type Invitation,
-  type InsertInvitation
+  type InsertInvitation,
+  type SubjectMapping,
+  type InsertSubjectMapping
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql, desc } from "drizzle-orm";
@@ -198,6 +201,15 @@ export interface IStorage {
   getInvitationByEmail(email: string): Promise<Invitation | undefined>;
   markInvitationUsed(id: string, usedBy: string): Promise<void>;
   deleteInvitation(id: string): Promise<void>;
+
+  // Subject Mappings for PDF Import Intelligence
+  getSubjectMappings(): Promise<SubjectMapping[]>;
+  getSubjectMapping(id: string): Promise<SubjectMapping | undefined>;
+  findSubjectMappingByName(normalizedName: string): Promise<SubjectMapping | undefined>;
+  createSubjectMapping(mapping: InsertSubjectMapping): Promise<SubjectMapping>;
+  updateSubjectMapping(id: string, mapping: Partial<InsertSubjectMapping>): Promise<SubjectMapping>;
+  deleteSubjectMapping(id: string): Promise<void>;
+  incrementMappingUsage(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -885,7 +897,7 @@ export class DatabaseStorage implements IStorage {
               newAssignment: {
                 teacherId: assignment.teacherId,
                 subjectId: assignment.subjectId,
-                hoursPerWeek: targetHours,
+                hoursPerWeek: targetHours.toString(),
                 semester: assignment.semester as "1" | "2"
               }
             });
@@ -1068,7 +1080,7 @@ export class DatabaseStorage implements IStorage {
                   teacherId: assignment.teacherId,
                   classId: newClassId,
                   subjectId: assignment.subjectId,
-                  hoursPerWeek: targetHours,
+                  hoursPerWeek: targetHours.toString(),
                   semester: assignment.semester as "1" | "2",
                   schoolYearId: newSchoolYear.id
                 });
@@ -1228,6 +1240,63 @@ export class DatabaseStorage implements IStorage {
         category: "differentiation"
       }
     };
+  }
+
+  // Subject Mappings for PDF Import Intelligence
+  async getSubjectMappings(): Promise<SubjectMapping[]> {
+    return await db.select().from(subjectMappings).orderBy(desc(subjectMappings.usedCount));
+  }
+
+  async getSubjectMapping(id: string): Promise<SubjectMapping | undefined> {
+    const [mapping] = await db.select().from(subjectMappings).where(eq(subjectMappings.id, id));
+    return mapping || undefined;
+  }
+
+  async findSubjectMappingByName(normalizedName: string): Promise<SubjectMapping | undefined> {
+    const [mapping] = await db
+      .select()
+      .from(subjectMappings)
+      .where(eq(subjectMappings.normalizedName, normalizedName.toLowerCase()));
+    return mapping || undefined;
+  }
+
+  async createSubjectMapping(mapping: InsertSubjectMapping): Promise<SubjectMapping> {
+    const [newMapping] = await db
+      .insert(subjectMappings)
+      .values({
+        ...mapping,
+        normalizedName: mapping.normalizedName.toLowerCase()
+      })
+      .returning();
+    return newMapping;
+  }
+
+  async updateSubjectMapping(id: string, mapping: Partial<InsertSubjectMapping>): Promise<SubjectMapping> {
+    const updateData = { ...mapping };
+    if (updateData.normalizedName) {
+      updateData.normalizedName = updateData.normalizedName.toLowerCase();
+    }
+    
+    const [updatedMapping] = await db
+      .update(subjectMappings)
+      .set(updateData)
+      .where(eq(subjectMappings.id, id))
+      .returning();
+    return updatedMapping;
+  }
+
+  async deleteSubjectMapping(id: string): Promise<void> {
+    await db.delete(subjectMappings).where(eq(subjectMappings.id, id));
+  }
+
+  async incrementMappingUsage(id: string): Promise<void> {
+    await db
+      .update(subjectMappings)
+      .set({
+        usedCount: sql`${subjectMappings.usedCount} + 1`,
+        lastUsedAt: new Date()
+      })
+      .where(eq(subjectMappings.id, id));
   }
 }
 

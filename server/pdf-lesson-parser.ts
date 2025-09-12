@@ -233,34 +233,32 @@ export class PdfLessonParser {
     return null;
   }
 
-  private normalizeSubjectName(subject: string): string {
-    // Clean up subject names
+  // Static method to normalize subject names for consistent matching
+  static normalizeSubjectName(subject: string): string {
+    // Clean up subject names - remove semester and Förder suffixes
     let normalized = subject
       .replace(/\s+Förder.*$/i, '') // Remove "Förder 1. Hj." etc.
       .replace(/\s+[12]\.\s*Hj\..*$/i, '') // Remove "1. Hj." etc.
-      .trim();
+      .trim()
+      .toLowerCase(); // Normalize to lowercase for matching
 
-    // Map common subject variations
-    const subjectMappings: { [key: string]: string } = {
-      'Deutsch': 'Deutsch',
-      'Englisch': 'Englisch',
-      'Mathematik': 'Mathematik',
-      'Politik': 'Politik',
-      'Erdkunde': 'Erdkunde',
-      'Geschichte': 'Geschichte',
-      'Biologie': 'Biologie',
-      'Physik': 'Physik',
-      'Chemie': 'Chemie',
-      'Kunst': 'Kunst',
-      'Musik': 'Musik',
-      'Sport': 'Sport',
-      'Informatik': 'Informatik',
-      'SOL': 'Soziales Lernen',
-      'kath. Religion': 'Katholische Religionslehre',
-      'Evangelische Religon': 'Evangelische Religionslehre', // Note: "Religon" in source
-      'Praktische Philosophie': 'Praktische Philosophie'
+    // Handle common variations and typos
+    const normalizations: { [key: string]: string } = {
+      'evangelische religon': 'evangelische religion', // Fix common typo
+      'kath. religion': 'katholische religion',
+      'kath religion': 'katholische religion',
+      'ev. religion': 'evangelische religion',
+      'ev religion': 'evangelische religion',
+      'sol': 'soziales lernen',
+      'pp': 'praktische philosophie',
+      'haus- wirtschaft': 'hauswirtschaft',
+      'hauswirtschaft': 'hauswirtschaft'
     };
 
-    return subjectMappings[normalized] || normalized;
+    return normalizations[normalized] || normalized;
+  }
+
+  private normalizeSubjectName(subject: string): string {
+    return PdfLessonParser.normalizeSubjectName(subject);
   }
 }

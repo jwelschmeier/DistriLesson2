@@ -359,7 +359,8 @@ export const insertAssignmentSchema = createInsertSchema(assignments).omit({
   createdAt: true,
 }).extend({
   semester: z.enum(["1", "2"], { invalid_type_error: "Semester muss '1' oder '2' sein" }),
-  hoursPerWeek: z.number().min(0.5, "Mindestens 0,5 Stunden pro Woche").max(10, "Maximal 10 Stunden pro Woche"),
+  hoursPerWeek: z.number().min(0.5, "Mindestens 0,5 Stunden pro Woche").max(10, "Maximal 10 Stunden pro Woche")
+    .transform(num => num.toString()),
   schoolYearId: z.string().uuid().nullable().optional(),
 });
 
@@ -411,7 +412,8 @@ export const insertSubjectMappingSchema = createInsertSchema(subjectMappings).om
   pdfSubjectName: z.string().min(1, "PDF-Fachname ist erforderlich"),
   normalizedName: z.string().min(1, "Normalisierter Name ist erforderlich"),
   systemSubjectId: z.string().uuid("Gültige System-Fach-ID erforderlich"),
-  confidence: z.number().min(0).max(1).optional(),
+  confidence: z.number().min(0).max(1).optional()
+    .transform(num => num !== undefined ? num.toString() : undefined),
   usedCount: z.number().int().min(0).optional(),
 });
 

@@ -122,7 +122,7 @@ export class PdfLessonImporter {
             a.classId === match.classId && 
             a.teacherId === match.teacherId && 
             a.subjectId === match.subjectId && 
-            a.semester === lesson.semester
+            a.semester === lesson.semester.toString() as "1" | "2"
           );
           
           if (existingAssignment) {
@@ -202,15 +202,15 @@ export class PdfLessonImporter {
           subjectId,
           classId,
           schoolYearId,
-          semester: lesson.semester,
-          hoursPerWeek: lesson.hours
+          semester: lesson.semester.toString() as "1" | "2",
+          hoursPerWeek: lesson.hours.toString()
         };
 
         await this.storage.createAssignment(assignment);
         imported++;
 
-      } catch (error) {
-        errors.push(`Fehler beim Import von ${lesson.subject}: ${error.message}`);
+      } catch (error: any) {
+        errors.push(`Fehler beim Import von ${lesson.subject}: ${error?.message || 'Unbekannter Fehler'}`);
         skipped++;
       }
     }
