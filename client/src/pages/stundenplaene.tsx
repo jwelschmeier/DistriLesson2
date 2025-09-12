@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs as SemesterTabs, TabsContent as SemesterTabsContent, TabsList as SemesterTabsList, TabsTrigger as SemesterTabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -28,6 +29,7 @@ export default function Stundenplaene() {
   const [activeTab, setActiveTab] = useState<string>("teacher");
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>("");
   const [selectedClassId, setSelectedClassId] = useState<string>("");
+  const [selectedSemester, setSelectedSemester] = useState<'all' | '1' | '2'>('all');
   
   // State for editable table
   const [editedAssignments, setEditedAssignments] = useState<Record<string, Partial<Assignment>>>({});
@@ -184,14 +186,28 @@ export default function Stundenplaene() {
   // Filter assignments for selected teacher
   const teacherAssignments = useMemo(() => {
     if (!selectedTeacherId) return [];
-    return extendedAssignments.filter(assignment => assignment.teacherId === selectedTeacherId);
-  }, [extendedAssignments, selectedTeacherId]);
+    let filtered = extendedAssignments.filter(assignment => assignment.teacherId === selectedTeacherId);
+    
+    // Apply semester filter
+    if (selectedSemester !== 'all') {
+      filtered = filtered.filter(assignment => assignment.semester === selectedSemester);
+    }
+    
+    return filtered;
+  }, [extendedAssignments, selectedTeacherId, selectedSemester]);
 
   // Filter assignments for selected class
   const classAssignments = useMemo(() => {
     if (!selectedClassId) return [];
-    return extendedAssignments.filter(assignment => assignment.classId === selectedClassId);
-  }, [extendedAssignments, selectedClassId]);
+    let filtered = extendedAssignments.filter(assignment => assignment.classId === selectedClassId);
+    
+    // Apply semester filter
+    if (selectedSemester !== 'all') {
+      filtered = filtered.filter(assignment => assignment.semester === selectedSemester);
+    }
+    
+    return filtered;
+  }, [extendedAssignments, selectedClassId, selectedSemester]);
 
   // Calculate teacher summary statistics
   const teacherSummary = useMemo(() => {
@@ -536,28 +552,51 @@ export default function Stundenplaene() {
 
             {/* Teacher Tab Content */}
             <TabsContent value="teacher" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Presentation className="mr-2 text-primary" />
-                    Lehrer auswählen
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId} data-testid="select-teacher">
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Wählen Sie eine Lehrkraft aus..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {teachers?.map((teacher) => (
-                        <SelectItem key={teacher.id} value={teacher.id}>
-                          {teacher.firstName} {teacher.lastName} ({teacher.shortName})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </CardContent>
-              </Card>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Presentation className="mr-2 text-primary" />
+                      Lehrer auswählen
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId} data-testid="select-teacher">
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Wählen Sie eine Lehrkraft aus..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {teachers?.map((teacher) => (
+                          <SelectItem key={teacher.id} value={teacher.id}>
+                            {teacher.firstName} {teacher.lastName} ({teacher.shortName})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Calendar className="mr-2 text-primary" />
+                      Halbjahr filtern
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Select value={selectedSemester} onValueChange={(value: 'all' | '1' | '2') => setSelectedSemester(value)} data-testid="select-semester-filter">
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Beide Halbjahre</SelectItem>
+                        <SelectItem value="1">1. Halbjahr</SelectItem>
+                        <SelectItem value="2">2. Halbjahr</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </CardContent>
+                </Card>
+              </div>
 
               {selectedTeacher && (
                 <>
@@ -676,28 +715,51 @@ export default function Stundenplaene() {
 
             {/* Class Tab Content */}
             <TabsContent value="class" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <School className="mr-2 text-primary" />
-                    Klasse auswählen
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Select value={selectedClassId} onValueChange={setSelectedClassId} data-testid="select-class">
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Wählen Sie eine Klasse aus..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {classes?.map((cls) => (
-                        <SelectItem key={cls.id} value={cls.id}>
-                          {cls.name} (Stufe {cls.grade})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </CardContent>
-              </Card>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <School className="mr-2 text-primary" />
+                      Klasse auswählen
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Select value={selectedClassId} onValueChange={setSelectedClassId} data-testid="select-class">
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Wählen Sie eine Klasse aus..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {classes?.map((cls) => (
+                          <SelectItem key={cls.id} value={cls.id}>
+                            {cls.name} (Stufe {cls.grade})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Calendar className="mr-2 text-primary" />
+                      Halbjahr filtern
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Select value={selectedSemester} onValueChange={(value: 'all' | '1' | '2') => setSelectedSemester(value)} data-testid="select-semester-filter-class">
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Beide Halbjahre</SelectItem>
+                        <SelectItem value="1">1. Halbjahr</SelectItem>
+                        <SelectItem value="2">2. Halbjahr</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </CardContent>
+                </Card>
+              </div>
 
               {selectedClass && (
                 <>
