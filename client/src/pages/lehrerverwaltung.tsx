@@ -112,7 +112,6 @@ export default function Lehrerverwaltung() {
   const [filterSubject, setFilterSubject] = useState("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
-  const [subjectInputMode, setSubjectInputMode] = useState<"checkbox" | "text">("checkbox");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -432,32 +431,10 @@ export default function Lehrerverwaltung() {
                     <FormField
                       control={form.control}
                       name="subjects"
-                      render={({ field }) => {
-                        const unavailableSubjects = field.value.filter(s => !availableSubjects.includes(s));
-                        const hasUnavailableSubjects = unavailableSubjects.length > 0;
-                        
-                        return (
-                          <FormItem>
-                          <div className="flex items-center justify-between mb-3">
-                            <FormLabel>Fächer</FormLabel>
-                            <div className="flex items-center space-x-3">
-                              <Label htmlFor="subject-mode-toggle" className="text-sm font-medium">
-                                Auswahl
-                              </Label>
-                              <Switch
-                                id="subject-mode-toggle"
-                                checked={subjectInputMode === "text"}
-                                onCheckedChange={(checked) => setSubjectInputMode(checked ? "text" : "checkbox")}
-                                data-testid="switch-subject-mode"
-                              />
-                              <Label htmlFor="subject-mode-toggle" className="text-sm font-medium">
-                                Freieingabe
-                              </Label>
-                            </div>
-                          </div>
-                          
-                          <div key={`subjects-${subjectInputMode}`}>
-                          {subjectInputMode === "checkbox" ? (
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Fächer</FormLabel>
+                          <FormControl>
                             <div className="grid grid-cols-3 gap-2 p-3 border rounded-md" data-testid="checkbox-grid">
                               {subjects.map((subject) => {
                                 const subjectKey = subject.shortName || subject.name;
@@ -498,30 +475,16 @@ export default function Lehrerverwaltung() {
                                 );
                               })}
                             </div>
-                          ) : (
-                            <FormControl>
-                              <Textarea
-                                value={field.value.join('\n')}
-                                onChange={(e) => {
-                                  const subjects = Array.from(new Set(e.target.value.split('\n').map(s => s.trim()).filter(Boolean)));
-                                  field.onChange(subjects);
-                                }}
-                                placeholder="Ein Fach pro Zeile eingeben...&#10;z.B. Mathematik&#10;Deutsch&#10;Englisch"
-                                rows={6}
-                                data-testid="textarea-subjects"
-                              />
-                            </FormControl>
-                          )}
-                          </div>
+                          </FormControl>
                           
                           {/* Subject Summary */}
                           {field.value.length > 0 && (
                             <div className="flex flex-wrap gap-1 p-2 bg-muted/30 rounded text-xs mt-2">
                               <span className="text-muted-foreground">Gewählt ({field.value.length}):</span>
                               {field.value.slice(0, 5).map((subjectName) => {
-                                const subject = subjects.find(s => s.name === subjectName);
+                                const subject = subjects.find(s => s.name === subjectName || s.shortName === subjectName);
                                 return (
-                                  <Badge key={subject?.id || subjectName} variant={unavailableSubjects.includes(subjectName) ? "destructive" : "secondary"} className="text-xs">
+                                  <Badge key={subject?.id || subjectName} variant="secondary" className="text-xs">
                                     {subjectName}
                                   </Badge>
                                 );
@@ -532,26 +495,9 @@ export default function Lehrerverwaltung() {
                             </div>
                           )}
                           
-                          {/* Warning for unavailable subjects in checkbox mode */}
-                          {hasUnavailableSubjects && subjectInputMode === 'checkbox' && (
-                            <div className="text-sm text-orange-600 bg-orange-50 p-2 rounded mt-2">
-                              ⚠️ {unavailableSubjects.length} benutzerdefinierte(s) Fach/Fächer nicht in Auswahl verfügbar. 
-                              <Button 
-                                type="button" 
-                                variant="link" 
-                                size="sm" 
-                                className="p-0 h-auto text-orange-600 underline ml-1"
-                                onClick={() => setSubjectInputMode('text')}
-                              >
-                                Zur Freieingabe wechseln
-                              </Button>
-                            </div>
-                          )}
-                          
                           <FormMessage />
-                          </FormItem>
-                        );
-                      }}
+                        </FormItem>
+                      )}
                     />
 
                     <div className="grid grid-cols-2 gap-4">
