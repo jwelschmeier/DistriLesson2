@@ -881,15 +881,8 @@ export default function Lehrerverwaltung() {
                                 </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex flex-wrap gap-1">
-                                {teacher.subjects.slice(0, 3).map((subject, index) => (
-                                  <Badge key={index} variant="outline">{subject}</Badge>
-                                ))}
-                                {teacher.subjects.length > 3 && (
-                                  <Badge variant="outline">+{teacher.subjects.length - 3}</Badge>
-                                )}
-                              </div>
+                            <td className="px-6 py-4 text-sm text-foreground">
+                              {teacher.subjects.join(', ')}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                               {teacher.currentHours} / {teacher.maxHours}
