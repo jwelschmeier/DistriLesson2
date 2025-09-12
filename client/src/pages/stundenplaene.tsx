@@ -225,10 +225,16 @@ export default function Stundenplaene() {
   // Calculate class summary statistics
   const classSummary = useMemo(() => {
     const totalHours = classAssignments.reduce((sum, assignment) => sum + parseFloat(assignment.hoursPerWeek), 0);
+    const s1Hours = classAssignments
+      .filter(assignment => assignment.semester === "1")
+      .reduce((sum, assignment) => sum + parseFloat(assignment.hoursPerWeek), 0);
+    const s2Hours = classAssignments
+      .filter(assignment => assignment.semester === "2")
+      .reduce((sum, assignment) => sum + parseFloat(assignment.hoursPerWeek), 0);
     const uniqueTeachers = new Set(classAssignments.map(assignment => assignment.teacherId));
     const teacherCount = uniqueTeachers.size;
     
-    return { totalHours, teacherCount };
+    return { totalHours, s1Hours, s2Hours, teacherCount };
   }, [classAssignments]);
 
   const selectedTeacher = selectedTeacherId ? teacherMap.get(selectedTeacherId) : null;
@@ -841,11 +847,27 @@ export default function Stundenplaene() {
                     <Card data-testid="card-class-total-hours">
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-foreground/70 text-sm font-semibold">Gesamtstunden</p>
-                            <p className="text-3xl font-bold text-foreground" data-testid="text-class-total-hours">
-                              {classSummary.totalHours}
-                            </p>
+                          <div className="flex-1">
+                            <p className="text-foreground/70 text-sm font-semibold mb-2">Gesamtstunden</p>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-lg font-bold text-foreground" data-testid="text-class-total-hours">
+                                  Gesamt: {classSummary.totalHours}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-foreground/70">1. HJ:</span>
+                                <span className="font-medium text-foreground" data-testid="text-class-s1-hours">
+                                  {classSummary.s1Hours}h
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-foreground/70">2. HJ:</span>
+                                <span className="font-medium text-foreground" data-testid="text-class-s2-hours">
+                                  {classSummary.s2Hours}h
+                                </span>
+                              </div>
+                            </div>
                           </div>
                           <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
                             <Clock className="text-purple-600 text-xl" />
