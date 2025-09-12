@@ -121,6 +121,21 @@ export const planstellen = pgTable("planstellen", {
   calculatedAt: timestamp("calculated_at").defaultNow(),
 });
 
+// PDF Import Subject Mappings table
+export const subjectMappings = pgTable("subject_mappings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  pdfSubjectName: text("pdf_subject_name").notNull(), // Original name from PDF (e.g., "Deutsch Förder 1. Hj.")
+  normalizedName: text("normalized_name").notNull(), // Normalized version for matching (e.g., "deutsch förder")
+  systemSubjectId: varchar("system_subject_id").references(() => subjects.id, { onDelete: "cascade" }).notNull(),
+  confidence: decimal("confidence", { precision: 3, scale: 2 }).notNull().default('1.0'), // 0.0 to 1.0 confidence score
+  usedCount: integer("used_count").notNull().default(0), // How often this mapping was applied
+  createdAt: timestamp("created_at").defaultNow(),
+  lastUsedAt: timestamp("last_used_at"),
+}, (table) => ({
+  // Index for fast lookups during import
+  normalizedNameIdx: index("idx_subject_mappings_normalized").on(table.normalizedName),
+}));
+
 // Authentication tables
 
 // Session storage table (required for Replit Auth)
@@ -211,6 +226,14 @@ export const planstellenScenariosRelations = relations(planstellenScenarios, ({ 
 export const subjectsRelations = relations(subjects, ({ many }) => ({
   assignments: many(assignments),
   planstellen: many(planstellen),
+  subjectMappings: many(subjectMappings),
+}));
+
+export const subjectMappingsRelations = relations(subjectMappings, ({ one }) => ({
+  systemSubject: one(subjects, {
+    fields: [subjectMappings.systemSubjectId],
+    references: [subjects.id],
+  }),
 }));
 
 export const assignmentsRelations = relations(assignments, ({ one }) => ({
@@ -379,6 +402,19 @@ export const insertInvitationSchema = createInsertSchema(invitations).omit({
   }),
 });
 
+// Subject Mapping insert schema
+export const insertSubjectMappingSchema = createInsertSchema(subjectMappings).omit({
+  id: true,
+  createdAt: true,
+  lastUsedAt: true,
+}).extend({
+  pdfSubjectName: z.string().min(1, "PDF-Fachname ist erforderlich"),
+  normalizedName: z.string().min(1, "Normalisierter Name ist erforderlich"),
+  systemSubjectId: z.string().uuid("Gültige System-Fach-ID erforderlich"),
+  confidence: z.number().min(0).max(1).optional(),
+  usedCount: z.number().int().min(0).optional(),
+});
+
 // Types
 export type SchoolYear = typeof schoolYears.$inferSelect;
 export type InsertSchoolYear = z.infer<typeof insertSchoolYearSchema>;
@@ -396,6 +432,10 @@ export type PlanstellenScenario = typeof planstellenScenarios.$inferSelect;
 export type InsertPlanstellenScenario = z.infer<typeof insertPlanstellenScenarioSchema>;
 export type Planstelle = typeof planstellen.$inferSelect;
 export type InsertPlanstelle = z.infer<typeof insertPlanstelleSchema>;
+
+// Subject Mapping types
+export type SubjectMapping = typeof subjectMappings.$inferSelect;
+export type InsertSubjectMapping = z.infer<typeof insertSubjectMappingSchema>;
 
 // Authentication types
 export type User = typeof users.$inferSelect;
