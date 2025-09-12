@@ -1,7 +1,8 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { GraduationCap, BarChart3, Upload, Calculator, Users, Presentation, School, Clock, Sparkles, BookOpen, Calendar, Grid, Settings, RefreshCw } from "lucide-react";
+import { BarChart3, Upload, Calculator, Users, Presentation, School, Clock, Sparkles, BookOpen, Calendar, Grid, Settings, RefreshCw } from "lucide-react";
+import logoImage from "@assets/image_1757668524994.png";
 
 const navigationItems = [
   { href: "/", label: "Dashboard", icon: BarChart3 },
@@ -31,8 +32,8 @@ export function Sidebar() {
       {/* Header */}
       <div className="p-6 border-b border-border">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-            <GraduationCap className="text-primary-foreground text-lg" />
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden">
+            <img src={logoImage} alt="Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <h1 className="text-lg font-semibold text-foreground">DistriLessonPlanner</h1>
