@@ -433,6 +433,25 @@ export default function Lehrerverwaltung() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Fächer</FormLabel>
+                          
+                          {/* Subject Summary */}
+                          {field.value.length > 0 && (
+                            <div className="flex flex-wrap gap-1 p-2 bg-muted/30 rounded text-xs mb-2">
+                              <span className="text-muted-foreground">Gewählt ({field.value.length}):</span>
+                              {field.value.slice(0, 5).map((subjectName) => {
+                                const subject = subjects.find(s => s.name === subjectName || s.shortName === subjectName);
+                                return (
+                                  <Badge key={subject?.id || subjectName} variant="secondary" className="text-xs">
+                                    {subjectName}
+                                  </Badge>
+                                );
+                              })}
+                              {field.value.length > 5 && (
+                                <Badge variant="outline" className="text-xs">+{field.value.length - 5}</Badge>
+                              )}
+                            </div>
+                          )}
+                          
                           <FormControl>
                             <div className="grid grid-cols-3 gap-2 p-3 border rounded-md" data-testid="checkbox-grid">
                               {subjects.map((subject) => {
@@ -475,24 +494,6 @@ export default function Lehrerverwaltung() {
                               })}
                             </div>
                           </FormControl>
-                          
-                          {/* Subject Summary */}
-                          {field.value.length > 0 && (
-                            <div className="flex flex-wrap gap-1 p-2 bg-muted/30 rounded text-xs mt-2">
-                              <span className="text-muted-foreground">Gewählt ({field.value.length}):</span>
-                              {field.value.slice(0, 5).map((subjectName) => {
-                                const subject = subjects.find(s => s.name === subjectName || s.shortName === subjectName);
-                                return (
-                                  <Badge key={subject?.id || subjectName} variant="secondary" className="text-xs">
-                                    {subjectName}
-                                  </Badge>
-                                );
-                              })}
-                              {field.value.length > 5 && (
-                                <Badge variant="outline" className="text-xs">+{field.value.length - 5}</Badge>
-                              )}
-                            </div>
-                          )}
                           
                           <FormMessage />
                         </FormItem>
