@@ -458,6 +458,10 @@ export default function Lehrerverwaltung() {
                           {/* Debug Info */}
                           <div className="text-xs text-gray-500 mb-2">
                             Debug: Mode={subjectInputMode}, Subjects={subjects?.length || 0}, Loading={isLoadingSubjects}
+                            <br/>
+                            Condition: subjectInputMode === "checkbox" = {String(subjectInputMode === "checkbox")}
+                            <br/>
+                            Will show: {subjectInputMode === "checkbox" ? "CHECKBOXES" : "TEXTAREA"}
                           </div>
                           
                           {subjectInputMode === "checkbox" ? (
