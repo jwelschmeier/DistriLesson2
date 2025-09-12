@@ -164,7 +164,7 @@ export default function Faecherverwaltung() {
         {categoryConfig.label}
       </Badge>
     ) : (
-      <Badge variant="outline" data-testid={`badge-category-${category.toLowerCase()}`}>
+      <Badge variant="light" data-testid={`badge-category-${category.toLowerCase()}`}>
         {category}
       </Badge>
     );

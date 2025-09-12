@@ -799,7 +799,7 @@ export default function Schuljahreswechsel() {
                             </div>
                             <div className="text-sm text-right">
                               <div>{assignment.fromClass} → {assignment.toClass}</div>
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="light" className="text-xs">
                                 {assignment.status === 'auto' ? 'Automatisch' :
                                  assignment.status === 'manual_check' ? 'Manuell prüfen' :
                                  'Übersprungen'}

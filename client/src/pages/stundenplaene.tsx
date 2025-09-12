@@ -1335,7 +1335,7 @@ export default function Stundenplaene() {
                                   >
                                     <SelectTrigger className="w-full">
                                       <SelectValue>
-                                        <Badge variant="secondary">
+                                        <Badge variant="light">
                                           {assignment.subject?.shortName || assignment.subject?.name || 'Unbekannt'}
                                         </Badge>
                                       </SelectValue>
