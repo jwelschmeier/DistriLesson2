@@ -886,13 +886,13 @@ export default function Stundenplaene() {
                                   {assignment.class?.name || 'Unbekannt'}
                                 </TableCell>
                                 <TableCell>
-                                  <Badge variant="secondary">
+                                  <Badge variant="light">
                                     {assignment.subject?.shortName || assignment.subject?.name || 'Unbekannt'}
                                   </Badge>
                                 </TableCell>
                                 <TableCell>{assignment.hoursPerWeek}</TableCell>
                                 <TableCell>
-                                  <Badge variant={assignment.semester === "1" ? "default" : "outline"}>
+                                  <Badge variant="light">
                                     {assignment.semester === "1" ? "1. HJ" : "2. HJ"}
                                   </Badge>
                                 </TableCell>
@@ -1085,7 +1085,7 @@ export default function Stundenplaene() {
                           {subjectRequirements.map((req) => (
                             <div key={req.subject.id} className="border rounded-lg p-3">
                               <div className="flex items-center justify-between mb-2">
-                                <Badge variant="outline">{req.subject.shortName}</Badge>
+                                <Badge variant="light">{req.subject.shortName}</Badge>
                                 <span className="text-xs text-muted-foreground">{req.subject.name}</span>
                               </div>
                               <div className="space-y-1 text-sm">
@@ -1286,7 +1286,7 @@ export default function Stundenplaene() {
                                                 'Unbekannt'}
                                             </span>
                                             {isTeamTeaching(assignment) && (
-                                              <Badge variant="secondary" className="text-xs mt-1 w-fit">
+                                              <Badge variant="light" className="text-xs mt-1 w-fit">
                                                 <Users className="h-3 w-3 mr-1" />
                                                 Team: {getTeamTeachersDisplay(assignment)}
                                               </Badge>
@@ -1429,7 +1429,7 @@ export default function Stundenplaene() {
                                   >
                                     <SelectTrigger className="w-24">
                                       <SelectValue>
-                                        <Badge variant={assignment.semester === "1" ? "default" : "outline"}>
+                                        <Badge variant="light">
                                           {assignment.semester === "1" ? "1. HJ" : "2. HJ"}
                                         </Badge>
                                       </SelectValue>
