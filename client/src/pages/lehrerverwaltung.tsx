@@ -464,6 +464,7 @@ export default function Lehrerverwaltung() {
                             Will show: {subjectInputMode === "checkbox" ? "CHECKBOXES" : "TEXTAREA"}
                           </div>
                           
+                          <div key={`subjects-${subjectInputMode}`}>
                           {subjectInputMode === "checkbox" ? (
                             <div className="grid grid-cols-3 gap-2 p-3 border rounded-md bg-blue-50" data-testid="checkbox-grid">
                               <div className="col-span-3 text-red-600 font-bold">CHECKBOX MODUS AKTIV - {subjects?.length || 0} Fächer</div>
@@ -499,6 +500,7 @@ export default function Lehrerverwaltung() {
                               />
                             </FormControl>
                           )}
+                          </div>
                           
                           {/* Subject Summary */}
                           {field.value.length > 0 && (
