@@ -636,16 +636,16 @@ export default function MasterStundenplan() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline" className="bg-accent/20 text-foreground border-primary/30">{assignment.class?.name}</Badge>
+                              <Badge variant="light">{assignment.class?.name}</Badge>
                             </TableCell>
                             <TableCell>
-                              <Badge variant="default" className="bg-primary/10 text-primary border-primary/50">{assignment.subject?.shortName}</Badge>
+                              <Badge variant="light">{assignment.subject?.shortName}</Badge>
                             </TableCell>
                             <TableCell className="text-center">
                               <span className="font-medium">{assignment.hoursPerWeek}</span>
                             </TableCell>
                             <TableCell className="text-center">
-                              <Badge variant={assignment.semester === "1" ? "default" : "secondary"}>
+                              <Badge variant="light">
                                 {assignment.semester === "1" ? "1. Semester" : "2. Semester"}
                               </Badge>
                             </TableCell>
@@ -656,7 +656,7 @@ export default function MasterStundenplan() {
                                   Überlastet
                                 </Badge>
                               ) : (
-                                <Badge variant="secondary" className="flex items-center w-fit mx-auto">
+                                <Badge variant="light" className="flex items-center w-fit mx-auto">
                                   <CheckCircle className="h-3 w-3 mr-1" />
                                   Normal
                                 </Badge>
@@ -777,7 +777,7 @@ export default function MasterStundenplan() {
                                             className="flex items-center justify-between p-2 bg-muted/50 rounded text-xs"
                                           >
                                             <div className="flex items-center space-x-2">
-                                              <Badge variant="outline" className="text-xs px-1">
+                                              <Badge variant="light" className="text-xs px-1">
                                                 {assignment.class?.name}
                                               </Badge>
                                               <span className="font-medium">
@@ -807,7 +807,7 @@ export default function MasterStundenplan() {
                                             className="flex items-center justify-between p-2 bg-muted/50 rounded text-xs"
                                           >
                                             <div className="flex items-center space-x-2">
-                                              <Badge variant="outline" className="text-xs px-1">
+                                              <Badge variant="light" className="text-xs px-1">
                                                 {assignment.class?.name}
                                               </Badge>
                                               <span className="font-medium">
@@ -865,7 +865,7 @@ export default function MasterStundenplan() {
                         <Calendar className="mr-2 text-primary" />
                         1. Semester
                       </span>
-                      <Badge variant="default" className="text-sm">
+                      <Badge variant="light" className="text-sm">
                         {filteredAssignments.filter(a => a.semester === "1").length} Zuweisungen
                       </Badge>
                     </CardTitle>
@@ -896,7 +896,7 @@ export default function MasterStundenplan() {
                             <div key={cls.id} className="border rounded-lg p-3 bg-card">
                               <div className="flex items-center justify-between mb-3">
                                 <h4 className="font-semibold text-sm">{cls.name}</h4>
-                                <Badge variant="outline" className="text-xs">
+                                <Badge variant="light" className="text-xs">
                                   {classAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0)} Stunden
                                 </Badge>
                               </div>
@@ -911,7 +911,7 @@ export default function MasterStundenplan() {
                                       data-testid={`semester1-assignment-${assignment.id}`}
                                     >
                                       <div className="flex items-center space-x-2">
-                                        <Badge variant="secondary" className="text-xs px-1">
+                                        <Badge variant="light" className="text-xs px-1">
                                           {assignment.subject?.shortName}
                                         </Badge>
                                         <span className="font-medium text-muted-foreground">
@@ -954,7 +954,7 @@ export default function MasterStundenplan() {
                         <Calendar className="mr-2 text-secondary-foreground" />
                         2. Semester
                       </span>
-                      <Badge variant="secondary" className="text-sm">
+                      <Badge variant="light" className="text-sm">
                         {filteredAssignments.filter(a => a.semester === "2").length} Zuweisungen
                       </Badge>
                     </CardTitle>
@@ -985,7 +985,7 @@ export default function MasterStundenplan() {
                             <div key={cls.id} className="border rounded-lg p-3 bg-card">
                               <div className="flex items-center justify-between mb-3">
                                 <h4 className="font-semibold text-sm">{cls.name}</h4>
-                                <Badge variant="outline" className="text-xs">
+                                <Badge variant="light" className="text-xs">
                                   {classAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0)} Stunden
                                 </Badge>
                               </div>
@@ -1000,7 +1000,7 @@ export default function MasterStundenplan() {
                                       data-testid={`semester2-assignment-${assignment.id}`}
                                     >
                                       <div className="flex items-center space-x-2">
-                                        <Badge variant="secondary" className="text-xs px-1">
+                                        <Badge variant="light" className="text-xs px-1">
                                           {assignment.subject?.shortName}
                                         </Badge>
                                         <span className="font-medium text-muted-foreground">
