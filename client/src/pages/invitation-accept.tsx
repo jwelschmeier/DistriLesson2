@@ -143,7 +143,7 @@ export default function InvitationAccept() {
                     </p>
                     <div className="mt-1">
                       <Badge 
-                        variant={invitationData.role === "admin" ? "default" : "secondary"}
+                        variant="light"
                         data-testid="badge-invitation-role"
                       >
                         {invitationData.role === "admin" ? "Administrator" : "Benutzer"}

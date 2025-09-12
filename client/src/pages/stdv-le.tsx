@@ -680,7 +680,7 @@ export default function StdvLe() {
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <Badge variant="outline">
+                              <Badge variant="light">
                                 {assignment.class?.name || "Unbekannt"}
                               </Badge>
                             </td>
@@ -688,10 +688,7 @@ export default function StdvLe() {
                               {assignment.subject?.name || "Unbekannt"}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <Badge 
-                                variant={assignment.semester === "1" ? "default" : "secondary"}
-                                className={assignment.semester === "1" ? "bg-orange-100 text-orange-700" : "bg-cyan-100 text-cyan-700"}
-                              >
+                              <Badge variant="light">
                                 {assignment.semester === "1" ? "1. HJ" : "2. HJ"}
                               </Badge>
                             </td>
@@ -713,7 +710,7 @@ export default function StdvLe() {
                                   <Badge 
                                     variant={
                                       conflictStatus.type === "error" ? "destructive" :
-                                      conflictStatus.type === "warning" ? "secondary" : "default"
+                                      conflictStatus.type === "warning" ? "light" : "light"
                                     }
                                   >
                                     {conflictStatus.message}
@@ -722,7 +719,7 @@ export default function StdvLe() {
                               )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <Badge variant={assignment.isOptimized ? "default" : "outline"}>
+                              <Badge variant="light">
                                 {assignment.isOptimized ? "Automatisch" : "Manuell"}
                               </Badge>
                             </td>

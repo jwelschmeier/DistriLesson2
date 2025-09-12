@@ -279,17 +279,17 @@ export default function AdminPanel() {
                         {invitation.email}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={invitation.role === "admin" ? "default" : "secondary"}>
+                        <Badge variant="light">
                           {invitation.role === "admin" ? "Administrator" : "Benutzer"}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         {invitation.used ? (
-                          <Badge variant="secondary">Verwendet</Badge>
+                          <Badge variant="light">Verwendet</Badge>
                         ) : isExpired(invitation.expiresAt) ? (
                           <Badge variant="destructive">Abgelaufen</Badge>
                         ) : (
-                          <Badge variant="default">Aktiv</Badge>
+                          <Badge variant="light">Aktiv</Badge>
                         )}
                       </TableCell>
                       <TableCell>

@@ -224,8 +224,8 @@ export default function Lehrerplanstellen() {
                             <div className="flex items-center">
                               {getStatusIcon(subject.status)}
                               <Badge 
-                                variant={subject.status === "good" ? "default" : 
-                                        subject.status === "warning" ? "secondary" : "destructive"}
+                                variant={subject.status === "good" ? "light" : 
+                                        subject.status === "warning" ? "light" : "destructive"}
                                 className="ml-2"
                               >
                                 {getStatusBadge(subject.status)}
@@ -301,7 +301,7 @@ export default function Lehrerplanstellen() {
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex flex-wrap gap-1">
                                 {teacher.subjects.map((subject, index) => (
-                                  <Badge key={index} variant="outline">{subject}</Badge>
+                                  <Badge key={index} variant="light">{subject}</Badge>
                                 ))}
                               </div>
                             </td>
@@ -319,15 +319,15 @@ export default function Lehrerplanstellen() {
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex flex-wrap gap-1">
                                 {teacher.qualifications.slice(0, 2).map((qual, index) => (
-                                  <Badge key={index} variant="secondary">{qual}</Badge>
+                                  <Badge key={index} variant="light">{qual}</Badge>
                                 ))}
                                 {teacher.qualifications.length > 2 && (
-                                  <Badge variant="secondary">+{teacher.qualifications.length - 2}</Badge>
+                                  <Badge variant="light">+{teacher.qualifications.length - 2}</Badge>
                                 )}
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <Badge variant={teacher.isActive ? "default" : "destructive"}>
+                              <Badge variant={teacher.isActive ? "light" : "destructive"}>
                                 {teacher.isActive ? "Aktiv" : "Inaktiv"}
                               </Badge>
                             </td>
