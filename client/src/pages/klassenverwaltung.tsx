@@ -291,14 +291,13 @@ export default function Klassenverwaltung() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Klassenlehrer 1</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value || ""}>
+                              <Select onValueChange={field.onChange} value={field.value || undefined}>
                                 <FormControl>
                                   <SelectTrigger data-testid="select-class-teacher-1">
                                     <SelectValue placeholder="Auswählen..." />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="">Kein Klassenlehrer</SelectItem>
                                   {teachers?.map(teacher => (
                                     <SelectItem key={teacher.id} value={teacher.id}>
                                       {teacher.shortName} - {teacher.firstName} {teacher.lastName}
@@ -317,14 +316,13 @@ export default function Klassenverwaltung() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Klassenlehrer 2</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value || ""}>
+                              <Select onValueChange={field.onChange} value={field.value || undefined}>
                                 <FormControl>
                                   <SelectTrigger data-testid="select-class-teacher-2">
                                     <SelectValue placeholder="Auswählen..." />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="">Kein 2. Klassenlehrer</SelectItem>
                                   {teachers?.filter(t => t.id !== classForm.watch("classTeacher1Id")).map(teacher => (
                                     <SelectItem key={teacher.id} value={teacher.id}>
                                       {teacher.shortName} - {teacher.firstName} {teacher.lastName}
