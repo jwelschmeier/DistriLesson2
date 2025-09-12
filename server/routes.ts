@@ -576,7 +576,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const subjectIdMap = new Map(subjects.map(s => [s.shortName, s.id]));
       const classIdMap = new Map(classes.map(c => [c.name, c.id]));
       
-      for (const [key, entry] of assignmentMap.entries()) {
+      for (const [key, entry] of Array.from(assignmentMap.entries())) {
         if (entry.semester1 && !entry.semester2) {
           const [teacherShort, subjectShort, className] = key.split('-');
           const teacherId = teacherIdMap.get(teacherShort);
