@@ -1047,7 +1047,6 @@ export default function Lehrerverwaltung() {
                                   <div className="text-sm font-medium text-foreground">
                                     {teacher.firstName} {teacher.lastName}
                                   </div>
-                                  <div className="text-sm text-muted-foreground">{teacher.email}</div>
                                 </div>
                               </div>
                             </td>
