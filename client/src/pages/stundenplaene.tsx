@@ -11,6 +11,7 @@ import { Tabs as SemesterTabs, TabsContent as SemesterTabsContent, TabsList as S
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Calendar, Clock, Users, BookOpen, Presentation, School, GraduationCap, Save, Trash2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -1575,7 +1576,7 @@ export default function Stundenplaene() {
                         {teacher.firstName} {teacher.lastName} ({teacher.shortName})
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {getAvailableHours(teacher.id, 0, selectedSemester)}h verfügbar
+                        {getAvailableHours(teacher.id, 0, selectedSemester === 'all' ? undefined : selectedSemester)}h verfügbar
                       </div>
                     </div>
                     <Button
@@ -1583,7 +1584,7 @@ export default function Stundenplaene() {
                         if (teamTeachingDialog.assignmentId) {
                           createTeamTeachingMutation.mutate({
                             assignmentId: teamTeachingDialog.assignmentId,
-                            coTeacherId: teacher.id,
+                            teacherIds: [teacher.id],
                           });
                         }
                       }}
