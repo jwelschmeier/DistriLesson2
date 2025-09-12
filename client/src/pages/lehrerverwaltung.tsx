@@ -458,7 +458,19 @@ export default function Lehrerverwaltung() {
                                 <SelectValue placeholder="Fächer auswählen..." />
                               </SelectTrigger>
                               <SelectContent className="max-h-[300px]">
-                                {subjects.map((subject) => {
+                                {subjects
+                                  .sort((a, b) => {
+                                    // AG-Fächer ans Ende
+                                    const aIsAG = a.name.startsWith('AG ');
+                                    const bIsAG = b.name.startsWith('AG ');
+                                    
+                                    if (aIsAG && !bIsAG) return 1;  // a nach hinten
+                                    if (!aIsAG && bIsAG) return -1; // b nach hinten
+                                    
+                                    // Beide AG oder beide normal - alphabetisch sortieren
+                                    return a.name.localeCompare(b.name);
+                                  })
+                                  .map((subject) => {
                                   const subjectKey = subject.shortName || subject.name;
                                   const isSelected = field.value.includes(subject.name) || field.value.includes(subject.shortName || '') || field.value.includes(subjectKey);
                                   
