@@ -224,32 +224,43 @@ export default function Stundenplaene() {
 
   // Calculate class summary statistics
   const classSummary = useMemo(() => {
-    // Group assignments by subject and teacher to avoid double-counting
-    // For German schools: show weekly hours, not semester totals
-    const subjectMap = new Map<string, { s1: number; s2: number; teacher: string; subject: string }>();
+    // Handle duplicates by grouping assignments by subject+teacher+semester and taking maximum hours
+    // This prevents artificial inflation from duplicate database entries
+    const uniqueAssignments = new Map<string, { subject: string; teacher: string; hours: number; semester: string }>();
     
     classAssignments.forEach(assignment => {
-      const key = `${assignment.subjectId}-${assignment.teacherId}`;
-      const existing = subjectMap.get(key) || { s1: 0, s2: 0, teacher: assignment.teacherId, subject: assignment.subjectId };
+      const hours = parseFloat(assignment.hoursPerWeek);
       
-      if (assignment.semester === "1") {
-        existing.s1 = parseFloat(assignment.hoursPerWeek);
-      } else if (assignment.semester === "2") {
-        existing.s2 = parseFloat(assignment.hoursPerWeek);
+      // Skip 0-hour assignments as they're often placeholders
+      if (hours <= 0) return;
+      
+      const key = `${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
+      const existing = uniqueAssignments.get(key);
+      
+      // Keep the assignment with maximum hours (handles duplicates)
+      if (!existing || hours > existing.hours) {
+        uniqueAssignments.set(key, {
+          subject: assignment.subjectId,
+          teacher: assignment.teacherId,
+          hours: hours,
+          semester: assignment.semester
+        });
       }
-      
-      subjectMap.set(key, existing);
     });
     
-    // Calculate hours for each semester
-    const s1Hours = Array.from(subjectMap.values()).reduce((sum, entry) => sum + entry.s1, 0);
-    const s2Hours = Array.from(subjectMap.values()).reduce((sum, entry) => sum + entry.s2, 0);
+    // Calculate semester hours from unique assignments
+    const s1Hours = Array.from(uniqueAssignments.values())
+      .filter(a => a.semester === "1")
+      .reduce((sum, a) => sum + a.hours, 0);
+      
+    const s2Hours = Array.from(uniqueAssignments.values())
+      .filter(a => a.semester === "2")
+      .reduce((sum, a) => sum + a.hours, 0);
     
-    // Total hours = maximum weekly hours across both semesters
-    // This represents the actual weekly teaching load
+    // Total hours represents the weekly teaching load
     const totalHours = Math.max(s1Hours, s2Hours);
     
-    const uniqueTeachers = new Set(classAssignments.map(assignment => assignment.teacherId));
+    const uniqueTeachers = new Set(Array.from(uniqueAssignments.values()).map(a => a.teacher));
     const teacherCount = uniqueTeachers.size;
     
     return { totalHours, s1Hours, s2Hours, teacherCount };
