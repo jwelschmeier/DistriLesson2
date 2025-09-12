@@ -453,46 +453,52 @@ export default function Lehrerverwaltung() {
                           )}
                           
                           <FormControl>
-                            <div className="grid grid-cols-3 gap-2 p-3 border rounded-md" data-testid="checkbox-grid">
-                              {subjects.map((subject) => {
-                                const subjectKey = subject.shortName || subject.name;
-                                const isSelected = field.value.includes(subject.name) || field.value.includes(subject.shortName || '') || field.value.includes(subjectKey);
-                                
-                                return (
-                                <div 
-                                  key={subject.id} 
-                                  className={`flex items-center space-x-2 p-2 border rounded cursor-pointer transition-colors ${
-                                    isSelected
-                                      ? 'bg-primary text-primary-foreground border-primary' 
-                                      : 'bg-background hover:bg-muted border-border'
-                                  }`}
-                                  onClick={() => {
-                                    if (isSelected) {
-                                      // Remove alle möglichen Varianten des Fachs
-                                      field.onChange(field.value.filter(s => 
-                                        s !== subject.name && 
-                                        s !== subject.shortName && 
-                                        s !== subjectKey
-                                      ));
-                                    } else {
-                                      // Füge das Fach hinzu (bevorzuge shortName wenn vorhanden)
-                                      field.onChange([...field.value, subjectKey]);
-                                    }
-                                  }}
-                                  data-testid={`checkbox-subject-${subject.id}`}
-                                >
-                                  <div className={`w-4 h-4 border rounded-sm flex items-center justify-center text-xs font-bold ${
-                                    isSelected
-                                      ? 'bg-background text-primary border-background' 
-                                      : 'border-muted-foreground'
-                                  }`}>
-                                    {isSelected ? '✓' : ''}
-                                  </div>
-                                  <span className="text-sm">{subject.name}</span>
-                                </div>
-                                );
-                              })}
-                            </div>
+                            <Select>
+                              <SelectTrigger className="w-full" data-testid="select-subjects">
+                                <SelectValue placeholder="Fächer auswählen..." />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-[300px]">
+                                {subjects.map((subject) => {
+                                  const subjectKey = subject.shortName || subject.name;
+                                  const isSelected = field.value.includes(subject.name) || field.value.includes(subject.shortName || '') || field.value.includes(subjectKey);
+                                  
+                                  return (
+                                    <SelectItem 
+                                      key={subject.id} 
+                                      value={subject.id}
+                                      className="cursor-pointer"
+                                      onSelect={(e) => {
+                                        e.preventDefault(); // Prevent dropdown from closing
+                                        
+                                        if (isSelected) {
+                                          // Remove alle möglichen Varianten des Fachs
+                                          field.onChange(field.value.filter(s => 
+                                            s !== subject.name && 
+                                            s !== subject.shortName && 
+                                            s !== subjectKey
+                                          ));
+                                        } else {
+                                          // Füge das Fach hinzu (bevorzuge shortName wenn vorhanden)
+                                          field.onChange([...field.value, subjectKey]);
+                                        }
+                                      }}
+                                      data-testid={`select-option-${subject.id}`}
+                                    >
+                                      <div className="flex items-center space-x-2">
+                                        <div className={`w-4 h-4 border rounded-sm flex items-center justify-center text-xs font-bold ${
+                                          isSelected
+                                            ? 'bg-primary text-primary-foreground border-primary' 
+                                            : 'border-muted-foreground'
+                                        }`}>
+                                          {isSelected ? '✓' : ''}
+                                        </div>
+                                        <span>{subject.name}</span>
+                                      </div>
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
                           </FormControl>
                           
                           <FormMessage />
