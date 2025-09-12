@@ -419,9 +419,14 @@ export default function Lehrerverwaltung() {
                         </span>
                         <div className="flex gap-1">
                           <Button 
+                            type="button"
                             variant="outline" 
                             size="sm"
-                            onClick={navigatePrevious}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              navigatePrevious();
+                            }}
                             disabled={!canNavigatePrevious()}
                             data-testid="button-previous-teacher"
                             title="Vorherige Lehrkraft"
@@ -429,9 +434,14 @@ export default function Lehrerverwaltung() {
                             <ChevronLeft className="h-4 w-4" />
                           </Button>
                           <Button 
+                            type="button"
                             variant="outline" 
                             size="sm"
-                            onClick={navigateNext}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              navigateNext();
+                            }}
                             disabled={!canNavigateNext()}
                             data-testid="button-next-teacher"
                             title="Nächste Lehrkraft"
