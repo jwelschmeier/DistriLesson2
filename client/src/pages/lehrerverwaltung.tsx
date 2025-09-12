@@ -465,59 +465,55 @@ export default function Lehrerverwaltung() {
                                   {field.value.length === 0 ? "Fächer auswählen..." : `${field.value.length} Fächer ausgewählt`}
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-[400px] p-0" align="start">
-                                <Command>
-                                  <CommandInput placeholder="Fächer suchen..." />
-                                  <CommandEmpty>Keine Fächer gefunden.</CommandEmpty>
-                                  <CommandList className="max-h-[300px] overflow-y-auto">
-                                    <CommandGroup>
-                                      {subjects
-                                        .sort((a, b) => {
-                                          // AG-Fächer ans Ende (alle Varianten: "AG xyz", "xyz AG", "xyz-AG", "xyz10AG")
-                                          const aIsAG = a.name.startsWith('AG ') || a.name.endsWith(' AG') || a.name.endsWith('-AG') || a.name.includes('AG');
-                                          const bIsAG = b.name.startsWith('AG ') || b.name.endsWith(' AG') || b.name.endsWith('-AG') || b.name.includes('AG');
-                                          
-                                          if (aIsAG && !bIsAG) return 1;  // a nach hinten
-                                          if (!aIsAG && bIsAG) return -1; // b nach hinten
-                                          
-                                          // Beide AG oder beide normal - alphabetisch sortieren
-                                          return a.name.localeCompare(b.name);
-                                        })
-                                        .map((subject) => {
-                                          const subjectKey = subject.shortName || subject.name;
-                                          const isSelected = field.value.includes(subject.name) || field.value.includes(subject.shortName || '') || field.value.includes(subjectKey);
-                                          
-                                          return (
-                                            <CommandItem
-                                              key={subject.id}
-                                              value={subject.name}
-                                              onSelect={() => {
-                                                if (isSelected) {
-                                                  // Remove alle möglichen Varianten des Fachs
-                                                  field.onChange(field.value.filter(s => 
-                                                    s !== subject.name && 
-                                                    s !== subject.shortName && 
-                                                    s !== subjectKey
-                                                  ));
-                                                } else {
-                                                  // Füge das Fach hinzu (bevorzuge shortName wenn vorhanden)
-                                                  field.onChange([...field.value, subjectKey]);
-                                                }
-                                              }}
-                                              className="cursor-pointer"
-                                              data-testid={`select-option-${subject.id}`}
-                                            >
-                                              <Checkbox
-                                                checked={isSelected}
-                                                className="mr-2"
-                                              />
-                                              <span>{subject.name}</span>
-                                            </CommandItem>
-                                          );
-                                        })}
-                                    </CommandGroup>
-                                  </CommandList>
-                                </Command>
+                              <PopoverContent className="w-[400px] p-3" align="start">
+                                <div className="space-y-2">
+                                  <div className="text-sm font-medium">Fächer auswählen:</div>
+                                  <div className="max-h-[300px] overflow-y-scroll overscroll-contain space-y-1 border rounded-md p-2">
+                                    {subjects
+                                      .sort((a, b) => {
+                                        // AG-Fächer ans Ende (alle Varianten: "AG xyz", "xyz AG", "xyz-AG", "xyz10AG")
+                                        const aIsAG = a.name.startsWith('AG ') || a.name.endsWith(' AG') || a.name.endsWith('-AG') || a.name.includes('AG');
+                                        const bIsAG = b.name.startsWith('AG ') || b.name.endsWith(' AG') || b.name.endsWith('-AG') || b.name.includes('AG');
+                                        
+                                        if (aIsAG && !bIsAG) return 1;  // a nach hinten
+                                        if (!aIsAG && bIsAG) return -1; // b nach hinten
+                                        
+                                        // Beide AG oder beide normal - alphabetisch sortieren
+                                        return a.name.localeCompare(b.name);
+                                      })
+                                      .map((subject) => {
+                                        const subjectKey = subject.shortName || subject.name;
+                                        const isSelected = field.value.includes(subject.name) || field.value.includes(subject.shortName || '') || field.value.includes(subjectKey);
+                                        
+                                        return (
+                                          <div
+                                            key={subject.id}
+                                            className="flex items-center space-x-2 p-2 hover:bg-muted rounded cursor-pointer"
+                                            onClick={() => {
+                                              if (isSelected) {
+                                                // Remove alle möglichen Varianten des Fachs
+                                                field.onChange(field.value.filter(s => 
+                                                  s !== subject.name && 
+                                                  s !== subject.shortName && 
+                                                  s !== subjectKey
+                                                ));
+                                              } else {
+                                                // Füge das Fach hinzu (bevorzuge shortName wenn vorhanden)
+                                                field.onChange([...field.value, subjectKey]);
+                                              }
+                                            }}
+                                            data-testid={`select-option-${subject.id}`}
+                                          >
+                                            <Checkbox
+                                              checked={isSelected}
+                                              className="pointer-events-none"
+                                            />
+                                            <span className="text-sm">{subject.name}</span>
+                                          </div>
+                                        );
+                                      })}
+                                  </div>
+                                </div>
                               </PopoverContent>
                             </Popover>
                           </FormControl>
