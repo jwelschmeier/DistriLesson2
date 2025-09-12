@@ -884,10 +884,10 @@ export default function Lehrerverwaltung() {
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex flex-wrap gap-1">
                                 {teacher.subjects.slice(0, 3).map((subject, index) => (
-                                  <Badge key={index} variant="outline">{subject}</Badge>
+                                  <Badge key={index} variant="secondary" className="bg-gray-100 text-black border-gray-200">{subject}</Badge>
                                 ))}
                                 {teacher.subjects.length > 3 && (
-                                  <Badge variant="outline">+{teacher.subjects.length - 3}</Badge>
+                                  <Badge variant="secondary" className="bg-gray-100 text-black border-gray-200">+{teacher.subjects.length - 3}</Badge>
                                 )}
                               </div>
                             </td>
