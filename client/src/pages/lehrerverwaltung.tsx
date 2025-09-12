@@ -295,7 +295,7 @@ export default function Lehrerverwaltung() {
               <h2 className="text-2xl font-semibold text-foreground">Lehrerverwaltung</h2>
               <p className="text-muted-foreground">Verwaltung der Lehrkräfte und deren Qualifikationen</p>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            <Dialog modal={false} open={isDialogOpen} onOpenChange={(open) => {
               setIsDialogOpen(open);
               if (open) {
               }
