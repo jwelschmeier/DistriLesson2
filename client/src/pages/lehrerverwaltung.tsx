@@ -460,9 +460,9 @@ export default function Lehrerverwaltung() {
                               <SelectContent className="max-h-[300px]">
                                 {subjects
                                   .sort((a, b) => {
-                                    // AG-Fächer ans Ende (sowohl "AG xyz", "xyz AG" als auch "xyz-AG")
-                                    const aIsAG = a.name.startsWith('AG ') || a.name.endsWith(' AG') || a.name.endsWith('-AG');
-                                    const bIsAG = b.name.startsWith('AG ') || b.name.endsWith(' AG') || b.name.endsWith('-AG');
+                                    // AG-Fächer ans Ende (alle Varianten: "AG xyz", "xyz AG", "xyz-AG", "xyz10AG")
+                                    const aIsAG = a.name.startsWith('AG ') || a.name.endsWith(' AG') || a.name.endsWith('-AG') || a.name.includes('AG');
+                                    const bIsAG = b.name.startsWith('AG ') || b.name.endsWith(' AG') || b.name.endsWith('-AG') || b.name.includes('AG');
                                     
                                     if (aIsAG && !bIsAG) return 1;  // a nach hinten
                                     if (!aIsAG && bIsAG) return -1; // b nach hinten
