@@ -465,7 +465,8 @@ export default function Lehrerverwaltung() {
                           </div>
                           
                           {subjectInputMode === "checkbox" ? (
-                            <div className="grid grid-cols-3 gap-2 p-3 border rounded-md" data-testid="checkbox-grid">
+                            <div className="grid grid-cols-3 gap-2 p-3 border rounded-md bg-blue-50" data-testid="checkbox-grid">
+                              <div className="col-span-3 text-red-600 font-bold">CHECKBOX MODUS AKTIV - {subjects?.length || 0} Fächer</div>
                               {subjects.map((subject) => (
                                 <label key={subject.id} className="flex items-center space-x-2 cursor-pointer">
                                   <input
