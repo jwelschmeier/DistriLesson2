@@ -31,8 +31,8 @@ export class PdfLessonParser {
     };
 
     try {
-      // Dynamically import pdfjs-dist to avoid startup issues
-      const pdfjs = await import('pdfjs-dist');
+      // Dynamically import pdfjs-dist legacy build for Node.js compatibility
+      const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
       
       // Extract text from PDF
       const text = await this.extractTextFromPDF(pdfBuffer, pdfjs);
