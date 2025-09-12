@@ -459,6 +459,9 @@ export default function Lehrerverwaltung() {
                           <div key={`subjects-${subjectInputMode}`}>
                           {subjectInputMode === "checkbox" ? (
                             <div className="grid grid-cols-3 gap-2 p-3 border rounded-md" data-testid="checkbox-grid">
+                              <div className="col-span-3 text-xs text-gray-500 mb-2">
+                                Debug: field.value = [{field.value.join(', ')}] | Editing: {editingTeacher?.shortName || 'NEW'}
+                              </div>
                               {subjects.map((subject) => (
                                 <div 
                                   key={subject.id} 
