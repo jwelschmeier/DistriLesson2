@@ -543,14 +543,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/assignments/bulk", async (req, res) => {
     try {
       const { assignmentIds } = req.body;
+      console.log("DEBUG: Bulk delete request body:", req.body);
+      console.log("DEBUG: Assignment IDs to delete:", assignmentIds);
       
       if (!assignmentIds || !Array.isArray(assignmentIds) || assignmentIds.length === 0) {
+        console.log("DEBUG: Invalid assignmentIds:", assignmentIds);
         return res.status(400).json({ error: "assignmentIds must be a non-empty array" });
       }
       
-      // Delete all assignments
-      await Promise.all(assignmentIds.map(id => storage.deleteAssignment(id)));
+      console.log(`DEBUG: Starting deletion of ${assignmentIds.length} assignments`);
       
+      // Delete all assignments
+      for (const id of assignmentIds) {
+        console.log(`DEBUG: Deleting assignment with ID: ${id}`);
+        await storage.deleteAssignment(id);
+        console.log(`DEBUG: Successfully deleted assignment: ${id}`);
+      }
+      
+      console.log("DEBUG: All assignments deleted successfully");
       res.status(204).send();
     } catch (error) {
       console.error("Error in bulk delete assignments:", error);
