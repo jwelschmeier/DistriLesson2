@@ -37,97 +37,119 @@ export default function Planstellberechnung() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // State für alle Planstellen-Eingabefelder basierend auf dem Excel-Layout
+  // State für alle Planstellen-Eingabefelder - 1:1 Excel-Struktur aus hochgeladener Datei
   const [planstellenData, setPlanstellenData] = useState<PlanstellenInput>({
     schulname: '',
     schuljahr: '2024/2025',
     
-    // Grundschuldaten (erste gelbe Sektion)
-    ausgleichsstunden: 0,
-    fachlehrbr: 0,
-    paedagogik: 0,
-    religionslehrkraefteFortbildung: 0,
-    auslandLehrkraefte: 0,
-    rueckgabeVerguetungsstunde: 0,
-    bestellung: 0,
-    fachUndDienstMedienUndDV: 0,
-    fachberaterSchulaufsicht: 0,
-    weitereSportUndAusstellungsraeume: 0,
-    praxissemesterInSchule: 0,
-    zusaetzlicheAusfallvertretung: 0,
-    entlastungLehrertaetigkeit: 0,
-    entlastungLVOCO: 0,
-    ermaessigungenweitere: 0,
+    // 1. Grundstellen (F3-F10, echte Excel-Bezeichnungen)
+    schuelerzahlStand: 710, // F3: "Schülerzahl Stand 31.08.24"
+    schuelerLehrerrelation: 20.19, // F4: "Schüler/Lehrerrelation an der Realschule: (ab 06/18)"
+    abzugLehramtsanwaerter: -0.5, // F8: "bedarfsdeckender Unterricht - Abzug Lehramtsanwärter"
+    rundung: -0.21, // F9: "Rundung"
     
-    // Abzugsarten (zweite gelbe Sektion)
-    abzugsarten: 0,
-    praktischePaedagogikLehrkraefte: 0,
-    praxissemesterdurchfuehrung: 0,
-    unterscheidendeBetreuung: 0,
+    // Ausgleichsbedarf (F12-F26, echte Excel-Bezeichnungen)
+    fachleiter: 0.21, // F12: "Fachleiter"
+    personalrat: 1.64, // F13: "Personalrat"  
+    schulleitungsentlastungFortbildung: 0.04, // F14: "Schulleitungsentlastung - Fortbildung"
+    ausbauLeitungszeit: 0.15, // F15: "Ausbau Leitungszeit"
+    rueckgabeVorgriffstunde: 0.04, // F16: "Rückgabe Vorgriffstunde"
+    digitalisierungsbeauftragter: 0.04, // F17: "Digitalisierungsbeauftragter"
+    fortbildungQualifMedienDS: 0.07, // F18: "Fortb. und Qualif. / Medien und DS"
+    fachberaterSchulaufsicht: 0.07, // F19: "Fachberater Schulaufsicht"
+    wechselndeAusgleichsbedarfe: 0.5, // F20: "Wechs. Merh - und Ausgleichsbedarfe"
+    praxissemesterInSchule: 0.29, // F21: "Praxissemester in Schule"
+    zusaetzlicheAusfallvertretung: 0.25, // F22: "Zusätzliche Ausfallvertretung"
+    entlastungLehrertaetigkeit: 0.04, // F23: "Entlastung Lehrertätigkeit"
+    entlastungLVOCO: 0.04, // F24: "Entlastung LVO&CO"
+    ermaessigungenweitere: 0.3, // F25: "Ermäßigungen weitere"
+    nullWert: 0, // F26: "0"
     
-    // Weitere Sektionen
-    verfuegbarePlanstellenSollstaerkestunden: "LehrersollGEHS19",
-    berechnungsbedarfLehramt: 0,
-    ergaenzungsstundenLehramt: 0,
-    schwerpunktbildungLehramt: 0,
-    berufsbildungLehramt: 0,
-    ergaenzungsstundenLehramt2: 0,
-    schwerpunktbildungLehramt2: 0,
+    // Weitere Bereiche (F30-F32, aus Excel-Struktur)
+    bestellungsverfahren: 0, // F30: aus Excel-Struktur
+    praktischePaedagogikLehrkraefte: 0, // F31: aus Excel-Struktur
+    praxissemesterdurchfuehrung: 0.91, // F32: aus Excel-Struktur
     
-    // Weitere komplexe Felder
-    entlassungenGrad: 0,
-    stellenreserveLehrerinnen: 0,
+    // Weitere Abschnitte (F36, F38, etc.)
+    entlassungenGradVerkuerzung: 0, // F36: "Entlassungen/Grad. (Verkürzung)"
+    stellenreserveLehrerinnen: 0.36, // F38: "Stellenreserve LehrerInnen"
+    
+    // CRITICAL: Initialize all "Weitere Bereiche" fields required for weitereBereiche calculation
+    praktischePhilosophieIslamkunde: 0, // Required for weitereBereiche calculation
+    paedagogischeUebermittagsbetreuung: 0, // Required for weitereBereiche calculation
+    integrationDurchBildung: 0, // Required for weitereBereiche calculation
+    gegenUnterrichtsausfallIndFoerderung: 0, // Required for weitereBereiche calculation
+    teilzeitBlockmodellAnsparphase: 0, // Required for weitereBereiche calculation
+    
+    // Sonstige Felder (falls in Excel vorhanden, aber nicht in ersten 50 Zeilen gefunden)
     ausfeldLehrkraefte: 0,
     innerSonderregAustech: 0,
     ergaenzendUeberAufbaumoeglichkeit: 0,
     stellenreserveLehrerinnenHS: 0,
-    fertigkeitsfeld: 17.0,
+    fertigkeitsfeld: 0,
     stundenreserve: 0,
-    differenzNachSchulsausstattungsrecherche: 0,
-    stellenwerteUnterrichtsstunden: 0,
-    alternGrundstaffelungVerschiedeneUnterrichtsstunden: 0,
-    differenzNachWechsel: 0,
-    stellenwerteNachObenVerrechnung: 0,
     
-    deputat: 25
+    // Standard-Deputat für Berechnung (Excel verwendet 28 für Stundenumrechnung)
+    deputat: 28
   });
 
-  // Berechnete Felder basierend auf Excel-Formeln
+  // Berechnete Felder basierend auf echten Excel-Formeln - EXACT BACKEND SYNC
   const berechneteWerte = {
-    // =SUMME(F3:F18+F10) - Grundbedarf
-    grundbedarf: planstellenData.ausgleichsstunden + 
-                planstellenData.fachlehrbr + 
-                planstellenData.paedagogik + 
-                planstellenData.religionslehrkraefteFortbildung + 
-                planstellenData.auslandLehrkraefte + 
-                planstellenData.rueckgabeVerguetungsstunde + 
-                planstellenData.bestellung + 
-                planstellenData.fachUndDienstMedienUndDV + 
-                planstellenData.fachberaterSchulaufsicht + 
-                planstellenData.weitereSportUndAusstellungsraeume + 
-                planstellenData.praxissemesterInSchule + 
-                planstellenData.zusaetzlicheAusfallvertretung + 
-                planstellenData.entlastungLehrertaetigkeit + 
-                planstellenData.entlastungLVOCO + 
-                planstellenData.ermaessigungenweitere + 
-                planstellenData.fachberaterSchulaufsicht, // F10 doppelt gezählt wie in Excel
+    // F5: =F3/F4 - Quotient (35.16592372)
+    quotient: planstellenData.schuelerzahlStand / planstellenData.schuelerLehrerrelation,
     
-    // =SUMME(F21:F26) - Berufsbildung a. L (Lehramt)
-    berufsbildungSumme: planstellenData.abzugsarten + 
-                       planstellenData.praktischePaedagogikLehrkraefte + 
-                       planstellenData.praxissemesterdurchfuehrung + 
-                       planstellenData.unterscheidendeBetreuung + 
-                       planstellenData.berufsbildungLehramt + 
-                       planstellenData.ergaenzungsstundenLehramt2,
+    // F6: =TRUNC(F5,2) - Quotient abgeschnitten (35.16)
+    quotientAbgeschnitten: Math.trunc((planstellenData.schuelerzahlStand / planstellenData.schuelerLehrerrelation) * 100) / 100,
+    
+    // F7: =IF(F5-INT(F5)<0.5,INT(F5),INT(F5)+0.5) - Abgerundet (35)
+    abgerundet: (() => {
+      const quotient = planstellenData.schuelerzahlStand / planstellenData.schuelerLehrerrelation;
+      const intPart = Math.floor(quotient);
+      return (quotient - intPart < 0.5) ? intPart : intPart + 0.5;
+    })(),
+    
+    // F10: =SUM(F6,F8:F9) - Summe Grundbedarf
+    summeGrundbedarf: (() => {
+      const quotientAbgeschnitten = Math.trunc((planstellenData.schuelerzahlStand / planstellenData.schuelerLehrerrelation) * 100) / 100;
+      return quotientAbgeschnitten + planstellenData.abzugLehramtsanwaerter + planstellenData.rundung;
+    })(),
+    
+    // F27: =SUM(F12:F25) - Summe Ausgleichsbedarf
+    summeAusgleichsbedarf: planstellenData.fachleiter + 
+                          planstellenData.personalrat + 
+                          planstellenData.schulleitungsentlastungFortbildung + 
+                          planstellenData.ausbauLeitungszeit + 
+                          planstellenData.rueckgabeVorgriffstunde + 
+                          planstellenData.digitalisierungsbeauftragter + 
+                          planstellenData.fortbildungQualifMedienDS + 
+                          planstellenData.fachberaterSchulaufsicht + 
+                          planstellenData.wechselndeAusgleichsbedarfe + 
+                          planstellenData.praxissemesterInSchule + 
+                          planstellenData.zusaetzlicheAusfallvertretung + 
+                          planstellenData.entlastungLehrertaetigkeit + 
+                          planstellenData.entlastungLVOCO + 
+                          planstellenData.ermaessigungenweitere,
+    
+    // =SUMME weitere Bereiche - Weitere Planstellen (FIXED: NaN-safe calculation)
+    weitereBereiche: (planstellenData.praktischePhilosophieIslamkunde ?? 0) +
+                    (planstellenData.paedagogischeUebermittagsbetreuung ?? 0) + 
+                    (planstellenData.integrationDurchBildung ?? 0) +
+                    (planstellenData.gegenUnterrichtsausfallIndFoerderung ?? 0) +
+                    (planstellenData.teilzeitBlockmodellAnsparphase ?? 0) +
+                    (planstellenData.bestellungsverfahren ?? 0) + 
+                    (planstellenData.praktischePaedagogikLehrkraefte ?? 0) + 
+                    (planstellenData.praxissemesterdurchfuehrung ?? 0) + 
+                    (planstellenData.entlassungenGradVerkuerzung ?? 0) + 
+                    (planstellenData.stellenreserveLehrerinnen ?? 0),
                        
-    // =SUMME(F3:F40) - Summe Personalbestellung
-    personalbestellungSumme: 0 // Wird später berechnet mit allen Feldern F3 bis F40
+    // Gesamtsumme aller Planstellen
+    gesamtPlanstellen: 0 // Wird unten berechnet
   };
 
-  // Weitere berechnete Werte
-  berechneteWerte.personalbestellungSumme = berechneteWerte.grundbedarf + berechneteWerte.berufsbildungSumme +
-    planstellenData.schwerpunktbildungLehramt + planstellenData.berechnungsbedarfLehramt + 
-    planstellenData.entlassungenGrad + planstellenData.stellenreserveLehrerinnen;
+  // Gesamtberechnung - alle Bereiche zusammen (CORRECTED CALCULATION)
+  berechneteWerte.gesamtPlanstellen = berechneteWerte.summeGrundbedarf + 
+                                     berechneteWerte.summeAusgleichsbedarf + 
+                                     berechneteWerte.weitereBereiche;
 
   // Lade existierende Planstellen
   const { data: planstellen } = useQuery<PlanstelleData[]>({
@@ -232,8 +254,7 @@ export default function Planstellberechnung() {
         ) : (
           <Input
             type="number"
-            step="0.1"
-            min="0"
+            step="0.01"
             value={planstellenData[field] as number || 0}
             onChange={(e) => setPlanstellenData(prev => ({ ...prev, [field]: parseFloat(e.target.value) || 0 }))}
             className="h-8 border-0 bg-transparent"
@@ -319,75 +340,96 @@ export default function Planstellberechnung() {
                         <th className="px-4 py-2 text-left font-semibold">Wert</th>
                       </tr>
                       
-                      {/* Grundschuldaten (gelbe Sektion) */}
-                      {createInputField("Ausgleichsstunden", "ausgleichsstunden")}
-                      {createInputField("Fachlehrbr", "fachlehrbr")}
-                      {createInputField("Pädagogik", "paedagogik")}
-                      {createInputField("Religionslehrkräfte/- Fortbildung", "religionslehrkraefteFortbildung")}
-                      {createInputField("Ausland Lehrkräfte", "auslandLehrkraefte")}
-                      {createInputField("Rückgabe Vergütungsstunde", "rueckgabeVerguetungsstunde")}
-                      {createInputField("Bestellung", "bestellung")}
-                      {createInputField("Fach- und Dienst-/Medien und DV", "fachUndDienstMedienUndDV")}
-                      {createInputField("Fachberater Schulaufsicht", "fachberaterSchulaufsicht")}
-                      {createInputField("Weitere Sport- und Ausstellungsräume", "weitereSportUndAusstellungsraeume")}
-                      {createInputField("Praxissemester in Schule", "praxissemesterInSchule")}
-                      {createInputField("Zusätzliche Ausfallvertretung", "zusaetzlicheAusfallvertretung")}
-                      {createInputField("Entlastung Lehrertätigkeit", "entlastungLehrertaetigkeit")}
-                      {createInputField("Entlastung LVO&CO", "entlastungLVOCO")}
-                      {createInputField("Ermäßigungen weitere", "ermaessigungenweitere")}
+                      {/* 1. GRUNDSTELLEN (F3-F10, echte Excel-Bezeichnungen) */}
+                      <tr className="bg-blue-100 border-b border-gray-300">
+                        <td colSpan={2} className="px-4 py-2 font-bold text-center border-gray-400">
+                          1. GRUNDSTELLEN
+                        </td>
+                      </tr>
+                      {createInputField("Schülerzahl Stand 31.08.24", "schuelerzahlStand", false, "bg-yellow-100")}
+                      {createInputField("Schüler/Lehrerrelation an der Realschule: (ab 06/18)", "schuelerLehrerrelation", false, "bg-yellow-100")}
                       
-                      {/* Berechnetes Feld: Grundbedarf */}
+                      {/* Berechnete Felder */}
+                      {createCalculatedField("Quotient", berechneteWerte.quotient, "F3/F4", "bg-cyan-200")}
+                      {createCalculatedField("Quotient abgeschnitten", berechneteWerte.quotientAbgeschnitten, "TRUNC(F5,2)", "bg-cyan-200")}
+                      {createCalculatedField("Abgerundet", berechneteWerte.abgerundet, "IF(F5-INT(F5)<0.5,INT(F5),INT(F5)+0.5)", "bg-cyan-200")}
+                      
+                      {createInputField("bedarfsdeckender Unterricht - Abzug Lehramtsanwärter", "abzugLehramtsanwaerter", false, "bg-yellow-100")}
+                      {createInputField("Rundung", "rundung", false, "bg-yellow-100")}
+                      
+                      {/* Summe Grundbedarf */}
+                      {createCalculatedField("Summe Grundbedarf", berechneteWerte.summeGrundbedarf, "SUM(F6,F8:F9)", "bg-green-200")}
+                      
+                      {/* AUSGLEICHSBEDARF (F12-F26, echte Excel-Bezeichnungen) */}
+                      <tr className="bg-blue-100 border-b border-gray-300">
+                        <td colSpan={2} className="px-4 py-2 font-bold text-center border-gray-400">
+                          AUSGLEICHSBEDARF
+                        </td>
+                      </tr>
+                      {createInputField("Fachleiter", "fachleiter", false, "bg-yellow-100")}
+                      {createInputField("Personalrat", "personalrat", false, "bg-yellow-100")}
+                      {createInputField("Schulleitungsentlastung - Fortbildung", "schulleitungsentlastungFortbildung", false, "bg-yellow-100")}
+                      {createInputField("Ausbau Leitungszeit", "ausbauLeitungszeit", false, "bg-yellow-100")}
+                      {createInputField("Rückgabe Vorgriffstunde", "rueckgabeVorgriffstunde", false, "bg-yellow-100")}
+                      {createInputField("Digitalisierungsbeauftragter", "digitalisierungsbeauftragter", false, "bg-yellow-100")}
+                      {createInputField("Fortb. und Qualif. / Medien und DS", "fortbildungQualifMedienDS", false, "bg-yellow-100")}
+                      {createInputField("Fachberater Schulaufsicht", "fachberaterSchulaufsicht", false, "bg-yellow-100")}
+                      {createInputField("Wechs. Merh - und Ausgleichsbedarfe", "wechselndeAusgleichsbedarfe", false, "bg-yellow-100")}
+                      {createInputField("Praxissemester in Schule", "praxissemesterInSchule", false, "bg-yellow-100")}
+                      {createInputField("Zusätzliche Ausfallvertretung", "zusaetzlicheAusfallvertretung", false, "bg-yellow-100")}
+                      {createInputField("Entlastung Lehrertätigkeit", "entlastungLehrertaetigkeit", false, "bg-yellow-100")}
+                      {createInputField("Entlastung LVO&CO", "entlastungLVOCO", false, "bg-yellow-100")}
+                      {createInputField("Ermäßigungen weitere", "ermaessigungenweitere", false, "bg-yellow-100")}
+                      {createInputField("0", "nullWert", false, "bg-gray-100")}
+                      
+                      {/* Summe Ausgleichsbedarf */}
+                      {createCalculatedField("Summe Ausgleichsbedarf", berechneteWerte.summeAusgleichsbedarf, "SUM(F12:F25)", "bg-green-200")}
+                      
+                      {/* WEITERE BEREICHE */}
+                      <tr className="bg-blue-100 border-b border-gray-300">
+                        <td colSpan={2} className="px-4 py-2 font-bold text-center border-gray-400">
+                          WEITERE BEREICHE (F30-F38 Excel-Struktur)
+                        </td>
+                      </tr>
+                      {/* Excel F30-F38 Fields with exact labels */}
+                      {createInputField("Praktische Philosophie /Islamkunde", "praktischePhilosophieIslamkunde", false, "bg-yellow-100")}
+                      {createInputField("Pädagogische Übermittagsbetreuung", "paedagogischeUebermittagsbetreuung", false, "bg-yellow-100")}
+                      {createInputField("Integration durch Bildung", "integrationDurchBildung", false, "bg-yellow-100")}
+                      {createInputField("Entlassungen/Grad. (Verkürzung)", "entlassungenGradVerkuerzung", false, "bg-yellow-100")}
+                      {createInputField("gegen U-Ausfall und für ind. Förderung", "gegenUnterrichtsausfallIndFoerderung", false, "bg-yellow-100")}
+                      {createInputField("Stellenreserve LehrerInnen", "stellenreserveLehrerinnen", false, "bg-yellow-100")}
+                      {createInputField("Teilzeit im Blockmodell (Ansparphase)", "teilzeitBlockmodellAnsparphase", false, "bg-yellow-100")}
+                      
+                      {/* Legacy fields for backward compatibility */}
+                      <tr className="bg-gray-200 border-b border-gray-300">
+                        <td colSpan={2} className="px-4 py-2 font-medium text-center text-sm border-gray-400">
+                          Legacy Felder (Abwärtskompatibilität)
+                        </td>
+                      </tr>
+                      {createInputField("Bestellungsverfahren (Legacy)", "bestellungsverfahren", false, "bg-gray-100")}
+                      {createInputField("Praktische Pädagogik Lehrkräfte (Legacy)", "praktischePaedagogikLehrkraefte", false, "bg-gray-100")}
+                      {createInputField("Praxissemesterdurchführung (Legacy)", "praxissemesterdurchfuehrung", false, "bg-gray-100")}
+                      
+                      {/* Berechnetes Feld: Weitere Bereiche (CORRECTED NAME) */}
                       {createCalculatedField(
-                        "Grundbedarf (Summen aus Grundbedarf, Ausgleichsstunden)",
-                        berechneteWerte.grundbedarf,
-                        "SUMME(F3:F18+F10)"
+                        "Weitere Bereiche Summe",
+                        berechneteWerte.weitereBereiche,
+                        "SUMME(Weitere Bereiche)"
                       )}
                       
-                      {/* Abzugsarten (gelbe Sektion) */}
-                      {createInputField("Abzugsarten", "abzugsarten")}
-                      {createInputField("Praktische Pädagogik Lehrkräfte", "praktischePaedagogikLehrkraefte")}
-                      {createInputField("Praxissemesterdurchführung", "praxissemesterdurchfuehrung")}
-                      {createInputField("Unterscheidende Betreuung", "unterscheidendeBetreuung")}
+                      {/* Zusätzliche optionale Felder aus Excel-Struktur */}
                       
-                      {/* Berechnetes Feld: Berufsbildung */}
+                      {/* Berechnetes Feld: Gesamtsumme aller Planstellen */}
                       {createCalculatedField(
-                        "Berufsbildung a. L (Lehramt)",
-                        berechneteWerte.berufsbildungSumme,
-                        "SUMME(F21:F26)"
+                        "Gesamtsumme Planstellen",
+                        berechneteWerte.gesamtPlanstellen,
+                        "Grundbedarf + Ausgleichsbedarf + Weitere Bereiche"
                       )}
                       
-                      {/* Weitere Sektionen (lila/weiße Felder) */}
-                      {createInputField(
-                        "Verfügbare Planstellen (Sollstärkestunden)",
-                        "verfuegbarePlanstellenSollstaerkestunden",
-                        true,
-                        "bg-purple-100"
-                      )}
-                      {createInputField("Berechnungsbedarf z. L (Lehramt)", "berechnungsbedarfLehramt", false, "bg-purple-100")}
-                      {createInputField("Ergänzungsstunden Lehramt", "ergaenzungsstundenLehramt", false, "bg-purple-100")}
-                      {createInputField("Schwerpunktbildung Lehramt", "schwerpunktbildungLehramt", false, "bg-purple-100")}
-                      
-                      {/* Berechnetes Feld: Summe Personalbestellung */}
-                      {createCalculatedField(
-                        "Summe Personalbestellung",
-                        berechneteWerte.personalbestellungSumme,
-                        "SUMME(F3:F40)"
-                      )}
-                      
-                      {/* Weitere komplexe Felder */}
-                      {createInputField("Entlassungen/Grad. (Verkürzung)", "entlassungenGrad", false, "bg-gray-100")}
-                      {createInputField("Stellenreserve LehrerInnen", "stellenreserveLehrerinnen", false, "bg-gray-100")}
-                      {createInputField("Ausfeld Lehrkräfte", "ausfeldLehrkraefte", false, "bg-gray-100")}
-                      {createInputField("Inner-(d. Sonderreg/austech)", "innerSonderregAustech", false, "bg-gray-100")}
-                      {createInputField("Ergänzend über Aufbaumöglichkeit", "ergaenzendUeberAufbaumoeglichkeit", false, "bg-gray-100")}
-                      {createInputField("Stellenreserve LehrerInnen(HS)", "stellenreserveLehrerinnenHS", false, "bg-gray-100")}
+                      {/* Standard-Deputat für Stundenumrechnung */}
+                      {/* Optional administrative fields */}
                       {createInputField("Fertigkeitsfeld", "fertigkeitsfeld", false, "bg-gray-100")}
                       {createInputField("Stundenreserve", "stundenreserve", false, "bg-gray-100")}
-                      {createInputField("Differenz nach Schulsausstattungsrecherche", "differenzNachSchulsausstattungsrecherche", false, "bg-gray-100")}
-                      {createInputField("Stellenwerte Unterrichtsstunden", "stellenwerteUnterrichtsstunden", false, "bg-gray-100")}
-                      {createInputField("Altern Grundstaffelung verschiedene Unterrichtsstunden", "alternGrundstaffelungVerschiedeneUnterrichtsstunden", false, "bg-gray-100")}
-                      {createInputField("Differenz nach Wechsel", "differenzNachWechsel", false, "bg-gray-100")}
-                      {createInputField("Stellenwerte nach (oben Verrechnung)", "stellenwerteNachObenVerrechnung", false, "bg-gray-100")}
                       
                       {/* Deputat */}
                       {createInputField("Deputat", "deputat", false, "bg-blue-100")}

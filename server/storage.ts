@@ -746,90 +746,95 @@ export class DatabaseStorage implements IStorage {
   async calculatePlanstellenFromInput(input: PlanstellenInput): Promise<Planstelle[]> {
     const results: Planstelle[] = [];
     
-    // Berechnete Werte basierend auf Excel-Formeln
+    // Berechnete Felder basierend auf echten Excel-Formeln
     const berechneteWerte = {
-      // =SUMME(F3:F18+F10) - Grundbedarf
-      grundbedarf: input.ausgleichsstunden + 
-                  input.fachlehrbr + 
-                  input.paedagogik + 
-                  input.religionslehrkraefteFortbildung + 
-                  input.auslandLehrkraefte + 
-                  input.rueckgabeVerguetungsstunde + 
-                  input.bestellung + 
-                  input.fachUndDienstMedienUndDV + 
-                  input.fachberaterSchulaufsicht + 
-                  input.weitereSportUndAusstellungsraeume + 
-                  input.praxissemesterInSchule + 
-                  input.zusaetzlicheAusfallvertretung + 
-                  input.entlastungLehrertaetigkeit + 
-                  input.entlastungLVOCO + 
-                  input.ermaessigungenweitere + 
-                  input.fachberaterSchulaufsicht, // F10 doppelt gezählt wie in Excel
+      // F5: =F3/F4 - Quotient (35.16592372)
+      quotient: input.schuelerzahlStand / input.schuelerLehrerrelation,
       
-      // =SUMME(F21:F26) - Berufsbildung a. L (Lehramt)
-      berufsbildungSumme: input.abzugsarten + 
-                         input.praktischePaedagogikLehrkraefte + 
-                         input.praxissemesterdurchfuehrung + 
-                         input.unterscheidendeBetreuung + 
-                         input.berufsbildungLehramt + 
-                         input.ergaenzungsstundenLehramt2,
+      // F6: =TRUNC(F5,2) - Quotient abgeschnitten (35.16)
+      quotientAbgeschnitten: Math.trunc((input.schuelerzahlStand / input.schuelerLehrerrelation) * 100) / 100,
+      
+      // F7: =IF(F5-INT(F5)<0.5,INT(F5),INT(F5)+0.5) - Abgerundet (35)
+      abgerundet: (() => {
+        const quotient = input.schuelerzahlStand / input.schuelerLehrerrelation;
+        const intPart = Math.floor(quotient);
+        return (quotient - intPart < 0.5) ? intPart : intPart + 0.5;
+      })(),
+      
+      // F10: =SUM(F6,F8:F9) - Summe Grundbedarf
+      summeGrundbedarf: (() => {
+        const quotientAbgeschnitten = Math.trunc((input.schuelerzahlStand / input.schuelerLehrerrelation) * 100) / 100;
+        return quotientAbgeschnitten + input.abzugLehramtsanwaerter + input.rundung;
+      })(),
+      
+      // F27: =SUM(F12:F25) - Summe Ausgleichsbedarf
+      summeAusgleichsbedarf: input.fachleiter + 
+                            input.personalrat + 
+                            input.schulleitungsentlastungFortbildung + 
+                            input.ausbauLeitungszeit + 
+                            input.rueckgabeVorgriffstunde + 
+                            input.digitalisierungsbeauftragter + 
+                            input.fortbildungQualifMedienDS + 
+                            input.fachberaterSchulaufsicht + 
+                            input.wechselndeAusgleichsbedarfe + 
+                            input.praxissemesterInSchule + 
+                            input.zusaetzlicheAusfallvertretung + 
+                            input.entlastungLehrertaetigkeit + 
+                            input.entlastungLVOCO + 
+                            input.ermaessigungenweitere,
                          
-      // =SUMME(F3:F40) - Summe Personalbestellung (wird berechnet)
-      personalbestellungSumme: 0
+      // =SUMME weitere Bereiche - Weitere Planstellen
+      weitereBereiche: input.bestellungsverfahren + 
+                      input.praktischePaedagogikLehrkraefte + 
+                      input.praxissemesterdurchfuehrung + 
+                      input.entlassungenGradVerkuerzung + 
+                      input.stellenreserveLehrerinnen,
+                      
+      // Gesamtsumme aller Planstellen
+      gesamtPlanstellen: 0 // wird unten berechnet
     };
 
-    // =SUMME(F3:F40) - Summe Personalbestellung berechnen
-    berechneteWerte.personalbestellungSumme = berechneteWerte.grundbedarf + berechneteWerte.berufsbildungSumme +
-      input.schwerpunktbildungLehramt + input.berechnungsbedarfLehramt + 
-      input.entlassungenGrad + input.stellenreserveLehrerinnen;
-
-    // Erstelle Planstellen für alle Eingabefelder
+    // Erstelle Planstellen für alle Eingabefelder - 1:1 Excel-Struktur
     const eingabeFelder = [
-      // Grundschuldaten (gelbe Sektion)
-      { name: 'Ausgleichsstunden', value: input.ausgleichsstunden, category: 'grundschuldaten' },
-      { name: 'Fachlehrbr', value: input.fachlehrbr, category: 'grundschuldaten' },
-      { name: 'Pädagogik', value: input.paedagogik, category: 'grundschuldaten' },
-      { name: 'Religionslehrkräfte/- Fortbildung', value: input.religionslehrkraefteFortbildung, category: 'grundschuldaten' },
-      { name: 'Ausland Lehrkräfte', value: input.auslandLehrkraefte, category: 'grundschuldaten' },
-      { name: 'Rückgabe Vergütungsstunde', value: input.rueckgabeVerguetungsstunde, category: 'grundschuldaten' },
-      { name: 'Bestellung', value: input.bestellung, category: 'grundschuldaten' },
-      { name: 'Fach- und Dienst-/Medien und DV', value: input.fachUndDienstMedienUndDV, category: 'grundschuldaten' },
-      { name: 'Fachberater Schulaufsicht', value: input.fachberaterSchulaufsicht, category: 'grundschuldaten' },
-      { name: 'Weitere Sport- und Ausstellungsräume', value: input.weitereSportUndAusstellungsraeume, category: 'grundschuldaten' },
-      { name: 'Praxissemester in Schule', value: input.praxissemesterInSchule, category: 'grundschuldaten' },
-      { name: 'Zusätzliche Ausfallvertretung', value: input.zusaetzlicheAusfallvertretung, category: 'grundschuldaten' },
-      { name: 'Entlastung Lehrertätigkeit', value: input.entlastungLehrertaetigkeit, category: 'grundschuldaten' },
-      { name: 'Entlastung LVO&CO', value: input.entlastungLVOCO, category: 'grundschuldaten' },
-      { name: 'Ermäßigungen weitere', value: input.ermaessigungenweitere, category: 'grundschuldaten' },
+      // 1. GRUNDSTELLEN (F3-F10, echte Excel-Bezeichnungen)
+      { name: 'Schülerzahl Stand 31.08.24', value: input.schuelerzahlStand, category: 'grundstellen' },
+      { name: 'Schüler/Lehrerrelation an der Realschule: (ab 06/18)', value: input.schuelerLehrerrelation, category: 'grundstellen' },
+      { name: 'bedarfsdeckender Unterricht - Abzug Lehramtsanwärter', value: input.abzugLehramtsanwaerter, category: 'grundstellen' },
+      { name: 'Rundung', value: input.rundung, category: 'grundstellen' },
       
-      // Abzugsarten (gelbe Sektion)
-      { name: 'Abzugsarten', value: input.abzugsarten, category: 'abzugsarten' },
-      { name: 'Praktische Pädagogik Lehrkräfte', value: input.praktischePaedagogikLehrkraefte, category: 'abzugsarten' },
-      { name: 'Praxissemesterdurchführung', value: input.praxissemesterdurchfuehrung, category: 'abzugsarten' },
-      { name: 'Unterscheidende Betreuung', value: input.unterscheidendeBetreuung, category: 'abzugsarten' },
+      // AUSGLEICHSBEDARF (F12-F26, echte Excel-Bezeichnungen)
+      { name: 'Fachleiter', value: input.fachleiter, category: 'ausgleichsbedarf' },
+      { name: 'Personalrat', value: input.personalrat, category: 'ausgleichsbedarf' },
+      { name: 'Schulleitungsentlastung - Fortbildung', value: input.schulleitungsentlastungFortbildung, category: 'ausgleichsbedarf' },
+      { name: 'Ausbau Leitungszeit', value: input.ausbauLeitungszeit, category: 'ausgleichsbedarf' },
+      { name: 'Rückgabe Vorgriffstunde', value: input.rueckgabeVorgriffstunde, category: 'ausgleichsbedarf' },
+      { name: 'Digitalisierungsbeauftragter', value: input.digitalisierungsbeauftragter, category: 'ausgleichsbedarf' },
+      { name: 'Fortb. und Qualif. / Medien und DS', value: input.fortbildungQualifMedienDS, category: 'ausgleichsbedarf' },
+      { name: 'Fachberater Schulaufsicht', value: input.fachberaterSchulaufsicht, category: 'ausgleichsbedarf' },
+      { name: 'Wechs. Merh - und Ausgleichsbedarfe', value: input.wechselndeAusgleichsbedarfe, category: 'ausgleichsbedarf' },
+      { name: 'Praxissemester in Schule', value: input.praxissemesterInSchule, category: 'ausgleichsbedarf' },
+      { name: 'Zusätzliche Ausfallvertretung', value: input.zusaetzlicheAusfallvertretung, category: 'ausgleichsbedarf' },
+      { name: 'Entlastung Lehrertätigkeit', value: input.entlastungLehrertaetigkeit, category: 'ausgleichsbedarf' },
+      { name: 'Entlastung LVO&CO', value: input.entlastungLVOCO, category: 'ausgleichsbedarf' },
+      { name: 'Ermäßigungen weitere', value: input.ermaessigungenweitere, category: 'ausgleichsbedarf' },
+      { name: '0', value: input.nullWert, category: 'ausgleichsbedarf' },
       
-      // Weitere Sektionen
-      { name: 'Berechnungsbedarf z. L (Lehramt)', value: input.berechnungsbedarfLehramt, category: 'lehramt' },
-      { name: 'Ergänzungsstunden Lehramt', value: input.ergaenzungsstundenLehramt, category: 'lehramt' },
-      { name: 'Schwerpunktbildung Lehramt', value: input.schwerpunktbildungLehramt, category: 'lehramt' },
-      { name: 'Berufsbildung Lehramt', value: input.berufsbildungLehramt, category: 'lehramt' },
-      { name: 'Ergänzungsstunden Lehramt 2', value: input.ergaenzungsstundenLehramt2, category: 'lehramt' },
-      { name: 'Schwerpunktbildung Lehramt 2', value: input.schwerpunktbildungLehramt2, category: 'lehramt' },
+      // WEITERE BEREICHE (F30-F32, aus Excel-Struktur)
+      { name: 'Bestellungsverfahren', value: input.bestellungsverfahren, category: 'weitere_bereiche' },
+      { name: 'Praktische Pädagogik Lehrkräfte', value: input.praktischePaedagogikLehrkraefte, category: 'weitere_bereiche' },
+      { name: 'Praxissemesterdurchführung', value: input.praxissemesterdurchfuehrung, category: 'weitere_bereiche' },
       
-      // Weitere komplexe Felder
-      { name: 'Entlassungen/Grad. (Verkürzung)', value: input.entlassungenGrad, category: 'weitere' },
-      { name: 'Stellenreserve LehrerInnen', value: input.stellenreserveLehrerinnen, category: 'weitere' },
-      { name: 'Ausfeld Lehrkräfte', value: input.ausfeldLehrkraefte, category: 'weitere' },
-      { name: 'Inner-(d. Sonderreg/austech)', value: input.innerSonderregAustech, category: 'weitere' },
-      { name: 'Ergänzend über Aufbaumöglichkeit', value: input.ergaenzendUeberAufbaumoeglichkeit, category: 'weitere' },
-      { name: 'Stellenreserve LehrerInnen(HS)', value: input.stellenreserveLehrerinnenHS, category: 'weitere' },
-      { name: 'Fertigkeitsfeld', value: input.fertigkeitsfeld, category: 'weitere' },
-      { name: 'Stundenreserve', value: input.stundenreserve, category: 'weitere' },
-      { name: 'Differenz nach Schulsausstattungsrecherche', value: input.differenzNachSchulsausstattungsrecherche, category: 'weitere' },
-      { name: 'Stellenwerte Unterrichtsstunden', value: input.stellenwerteUnterrichtsstunden, category: 'weitere' },
-      { name: 'Altern Grundstaffelung verschiedene Unterrichtsstunden', value: input.alternGrundstaffelungVerschiedeneUnterrichtsstunden, category: 'weitere' },
-      { name: 'Differenz nach Wechsel', value: input.differenzNachWechsel, category: 'weitere' },
-      { name: 'Stellenwerte nach (oben Verrechnung)', value: input.stellenwerteNachObenVerrechnung, category: 'weitere' }
+      // WEITERE ABSCHNITTE (F36, F38, etc.)
+      { name: 'Entlassungen/Grad. (Verkürzung)', value: input.entlassungenGradVerkuerzung, category: 'weitere_abschnitte' },
+      { name: 'Stellenreserve LehrerInnen', value: input.stellenreserveLehrerinnen, category: 'weitere_abschnitte' },
+      
+      // SONSTIGE FELDER
+      { name: 'Ausfeld Lehrkräfte', value: input.ausfeldLehrkraefte, category: 'sonstige' },
+      { name: 'Inner-(d. Sonderreg/austech)', value: input.innerSonderregAustech, category: 'sonstige' },
+      { name: 'Ergänzend über Aufbaumöglichkeit', value: input.ergaenzendUeberAufbaumoeglichkeit, category: 'sonstige' },
+      { name: 'Stellenreserve LehrerInnen(HS)', value: input.stellenreserveLehrerinnenHS, category: 'sonstige' },
+      { name: 'Fertigkeitsfeld', value: input.fertigkeitsfeld, category: 'sonstige' },
+      { name: 'Stundenreserve', value: input.stundenreserve, category: 'sonstige' }
     ];
 
     // Erstelle Planstelle für jedes Eingabefeld (nur wenn Wert > 0)
@@ -860,25 +865,36 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
+    // Berechne Gesamtsumme 
+    berechneteWerte.gesamtPlanstellen = berechneteWerte.summeGrundbedarf + 
+                                       berechneteWerte.summeAusgleichsbedarf + 
+                                       berechneteWerte.weitereBereiche;
+
     // Erstelle berechnete Planstellen (blaue/türkise Felder)
     const berechneteFelder = [
       {
-        name: 'Grundbedarf (Summen aus Grundbedarf, Ausgleichsstunden)',
-        value: berechneteWerte.grundbedarf,
-        formula: '=SUMME(F3:F18+F10)',
+        name: 'Summe Grundbedarf',
+        value: berechneteWerte.summeGrundbedarf,
+        formula: '=SUM(F6,F8:F9)',
         color: 'cyan'
       },
       {
-        name: 'Berufsbildung a. L (Lehramt)',
-        value: berechneteWerte.berufsbildungSumme,
-        formula: '=SUMME(F21:F26)',
+        name: 'Summe Ausgleichsbedarf',
+        value: berechneteWerte.summeAusgleichsbedarf,
+        formula: '=SUM(F12:F25)',
         color: 'cyan'
       },
       {
-        name: 'Summe Personalbestellung',
-        value: berechneteWerte.personalbestellungSumme,
-        formula: '=SUMME(F3:F40)',
+        name: 'Weitere Bereiche',
+        value: berechneteWerte.weitereBereiche,
+        formula: '=SUM(F30:F38)',
         color: 'cyan'
+      },
+      {
+        name: 'Gesamtsumme Planstellen',
+        value: berechneteWerte.gesamtPlanstellen,
+        formula: '=SUM(F10,F27,weitere)',
+        color: 'green'
       }
     ];
 
@@ -905,9 +921,8 @@ export class DatabaseStorage implements IStorage {
       results.push(planstelle);
     }
 
-    // Gesamtberechnung hinzufügen
-    const gesamtStunden = berechneteWerte.personalbestellungSumme + 
-                         input.stellenwerteNachObenVerrechnung;
+    // Gesamtberechnung hinzufügen (Excel-basiert)
+    const gesamtStunden = berechneteWerte.gesamtPlanstellen;
     const benoetigtePlanstellen = input.deputat > 0 ? gesamtStunden / input.deputat : 0;
     
     const gesamtPlanstelle: Planstelle = {

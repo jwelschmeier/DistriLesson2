@@ -491,61 +491,61 @@ export type InsertPdfImport = z.infer<typeof insertPdfImportSchema>;
 export type PdfTable = typeof pdfTables.$inferSelect;
 export type InsertPdfTable = z.infer<typeof insertPdfTableSchema>;
 
-// Schema für Planstellen-Eingabe (ersetzt PDF-Upload)
+// Schema für Planstellen-Eingabe - 1:1 Excel-Struktur aus hochgeladener Datei
 export const planstellenInputSchema = z.object({
+  // Grunddaten
   schulname: z.string().min(1, "Schulname ist erforderlich"),
   schuljahr: z.string().min(1, "Schuljahr ist erforderlich"),
   
-  // Grundschuldaten (erste gelbe Sektion)
-  ausgleichsstunden: z.number().min(0).default(0),
-  fachlehrbr: z.number().min(0).default(0),
-  paedagogik: z.number().min(0).default(0),
-  religionslehrkraefteFortbildung: z.number().min(0).default(0),
-  auslandLehrkraefte: z.number().min(0).default(0),
-  rueckgabeVerguetungsstunde: z.number().min(0).default(0),
-  bestellung: z.number().min(0).default(0),
-  fachUndDienstMedienUndDV: z.number().min(0).default(0),
-  fachberaterSchulaufsicht: z.number().min(0).default(0),
-  weitereSportUndAusstellungsraeume: z.number().min(0).default(0),
-  praxissemesterInSchule: z.number().min(0).default(0),
-  zusaetzlicheAusfallvertretung: z.number().min(0).default(0),
-  entlastungLehrertaetigkeit: z.number().min(0).default(0),
-  entlastungLVOCO: z.number().min(0).default(0),
-  ermaessigungenweitere: z.number().min(0).default(0),
+  // 1. Grundstellen (F3-F10, echte Excel-Bezeichnungen)
+  schuelerzahlStand: z.number().min(0).default(710), // F3: "Schülerzahl Stand 31.08.24"
+  schuelerLehrerrelation: z.number().min(0.1).default(20.19), // F4: "Schüler/Lehrerrelation an der Realschule: (ab 06/18)"
+  abzugLehramtsanwaerter: z.number().default(-0.5), // F8: "bedarfsdeckender Unterricht - Abzug Lehramtsanwärter"
+  rundung: z.number().default(-0.21), // F9: "Rundung"
   
-  // Abzugsarten (zweite gelbe Sektion)
-  abzugsarten: z.number().min(0).default(0),
-  praktischePaedagogikLehrkraefte: z.number().min(0).default(0),
-  praxissemesterdurchfuehrung: z.number().min(0).default(0),
-  unterscheidendeBetreuung: z.number().min(0).default(0),
+  // Ausgleichsbedarf (F12-F26, echte Excel-Bezeichnungen)
+  fachleiter: z.number().min(0).default(0.21), // F12: "Fachleiter"
+  personalrat: z.number().min(0).default(1.64), // F13: "Personalrat"  
+  schulleitungsentlastungFortbildung: z.number().min(0).default(0.04), // F14: "Schulleitungsentlastung - Fortbildung"
+  ausbauLeitungszeit: z.number().min(0).default(0.15), // F15: "Ausbau Leitungszeit"
+  rueckgabeVorgriffstunde: z.number().min(0).default(0.04), // F16: "Rückgabe Vorgriffstunde"
+  digitalisierungsbeauftragter: z.number().min(0).default(0.04), // F17: "Digitalisierungsbeauftragter"
+  fortbildungQualifMedienDS: z.number().min(0).default(0.07), // F18: "Fortb. und Qualif. / Medien und DS"
+  fachberaterSchulaufsicht: z.number().min(0).default(0.07), // F19: "Fachberater Schulaufsicht"
+  wechselndeAusgleichsbedarfe: z.number().min(0).default(0.5), // F20: "Wechs. Merh - und Ausgleichsbedarfe"
+  praxissemesterInSchule: z.number().min(0).default(0.29), // F21: "Praxissemester in Schule"
+  zusaetzlicheAusfallvertretung: z.number().min(0).default(0.25), // F22: "Zusätzliche Ausfallvertretung"
+  entlastungLehrertaetigkeit: z.number().min(0).default(0.04), // F23: "Entlastung Lehrertätigkeit"
+  entlastungLVOCO: z.number().min(0).default(0.04), // F24: "Entlastung LVO&CO"
+  ermaessigungenweitere: z.number().min(0).default(0.3), // F25: "Ermäßigungen weitere"
+  nullWert: z.number().min(0).default(0), // F26: "0"
   
-  // Weitere Sektionen (lila/weiße Felder)
-  verfuegbarePlanstellenSollstaerkestunden: z.string().default("LehrersollGEHS19"),
-  berechnungsbedarfLehramt: z.number().min(0).default(0),
-  ergaenzungsstundenLehramt: z.number().min(0).default(0),
-  schwerpunktbildungLehramt: z.number().min(0).default(0),
+  // Weitere Bereiche (F30-F38, echte Excel-Struktur)
+  praktischePhilosophieIslamkunde: z.number().min(0).default(0.11), // F30: "Praktische Philosphie /Islamkunde"
+  paedagogischeUebermittagsbetreuung: z.number().min(0).default(0.5), // F31: "Pädagogische Übermittagsbetreuung"
+  integrationDurchBildung: z.number().min(0).default(0.3), // F32: "Integration durch Bildung"
   
-  // Berufsbildung a. L (Lehramt)
-  berufsbildungLehramt: z.number().min(0).default(0),
-  ergaenzungsstundenLehramt2: z.number().min(0).default(0),
-  schwerpunktbildungLehramt2: z.number().min(0).default(0),
+  // Weitere Abschnitte (F36, F38, etc.)
+  entlassungenGradVerkuerzung: z.number().min(0).default(0), // F36: "Entlassungen/Grad. (Verkürzung)"
+  gegenUnterrichtsausfallIndFoerderung: z.number().min(0).default(0.77), // F36: "gegen U-Ausfall und für ind. Förderung"
+  stellenreserveLehrerinnen: z.number().min(0).default(0.36), // F38: "Stellenreserve LehrerInnen"
+  teilzeitBlockmodellAnsparphase: z.number().min(0).default(0.36), // F38: "Teilzeit im Blockmodell (Ansparphase)"
   
-  // Weitere komplexe Felder
-  entlassungenGrad: z.number().min(0).default(0),
-  stellenreserveLehrerinnen: z.number().min(0).default(0),
+  // Legacy fields (keep for backward compatibility)  
+  bestellungsverfahren: z.number().min(0).default(0), // Legacy field
+  praktischePaedagogikLehrkraefte: z.number().min(0).default(0), // Legacy field
+  praxissemesterdurchfuehrung: z.number().min(0).default(0.91), // Legacy field
+  
+  // Sonstige Felder (falls in Excel vorhanden, aber nicht in ersten 50 Zeilen gefunden)
   ausfeldLehrkraefte: z.number().min(0).default(0),
   innerSonderregAustech: z.number().min(0).default(0),
   ergaenzendUeberAufbaumoeglichkeit: z.number().min(0).default(0),
   stellenreserveLehrerinnenHS: z.number().min(0).default(0),
-  fertigkeitsfeld: z.number().min(0).default(17.0),
+  fertigkeitsfeld: z.number().min(0).default(0),
   stundenreserve: z.number().min(0).default(0),
-  differenzNachSchulsausstattungsrecherche: z.number().min(0).default(0),
-  stellenwerteUnterrichtsstunden: z.number().min(0).default(0),
-  alternGrundstaffelungVerschiedeneUnterrichtsstunden: z.number().min(0).default(0),
-  differenzNachWechsel: z.number().min(0).default(0),
-  stellenwerteNachObenVerrechnung: z.number().min(0).default(0),
   
-  deputat: z.number().min(1, "Deputat muss mindestens 1 sein")
+  // Standard-Deputat für Berechnung (Excel verwendet 28 für Stundenumrechnung)
+  deputat: z.number().min(1).default(28),
 });
 
 export type PlanstellenInput = z.infer<typeof planstellenInputSchema>;

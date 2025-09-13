@@ -1,0 +1,1548 @@
+{
+  "sheetName": "Tabellenblatt1",
+  "range": "A1:G1027",
+  "cells": [
+    {
+      "address": "A2",
+      "value": "1. Grundstellen",
+      "type": "s",
+      "row": 2,
+      "col": "A"
+    },
+    {
+      "address": "G2",
+      "value": "Stundenanzahl real",
+      "type": "s",
+      "row": 2,
+      "col": "G"
+    },
+    {
+      "address": "A3",
+      "value": "Schülerzahl Stand 31.08.24",
+      "type": "s",
+      "row": 3,
+      "col": "A"
+    },
+    {
+      "address": "F3",
+      "value": 710,
+      "type": "n",
+      "row": 3,
+      "col": "F"
+    },
+    {
+      "address": "A4",
+      "value": "Schüler/Lehrerrelation an der Realschule: (ab 06/18)",
+      "type": "s",
+      "row": 4,
+      "col": "A"
+    },
+    {
+      "address": "F4",
+      "value": 20.19,
+      "type": "n",
+      "row": 4,
+      "col": "F"
+    },
+    {
+      "address": "A5",
+      "value": "Quotient der zwei Größen:",
+      "type": "s",
+      "row": 5,
+      "col": "A"
+    },
+    {
+      "address": "F5",
+      "value": 35.16592372,
+      "formula": "F3/F4",
+      "type": "n",
+      "row": 5,
+      "col": "F"
+    },
+    {
+      "address": "A6",
+      "value": "Quotient der zwei Größen nach der 2. Dezimale abgeschnitten",
+      "type": "s",
+      "row": 6,
+      "col": "A"
+    },
+    {
+      "address": "F6",
+      "value": 35.16,
+      "formula": "TRUNC(F5,2)",
+      "type": "n",
+      "row": 6,
+      "col": "F"
+    },
+    {
+      "address": "A7",
+      "value": "abgerundet auf halbe bzw. ganze Dezimale:",
+      "type": "s",
+      "row": 7,
+      "col": "A"
+    },
+    {
+      "address": "F7",
+      "value": 35,
+      "formula": "IF(F5-INT(F5)<0.5,INT(F5),INT(F5)+0.5)",
+      "type": "n",
+      "row": 7,
+      "col": "F"
+    },
+    {
+      "address": "A8",
+      "value": "bedarfsdeckender Unterricht - Abzug Lehramtsanwärter ",
+      "type": "s",
+      "row": 8,
+      "col": "A"
+    },
+    {
+      "address": "F8",
+      "value": -0.5,
+      "type": "n",
+      "row": 8,
+      "col": "F"
+    },
+    {
+      "address": "G8",
+      "value": -14,
+      "formula": "F8*28",
+      "type": "n",
+      "row": 8,
+      "col": "G"
+    },
+    {
+      "address": "A9",
+      "value": "Rundung",
+      "type": "s",
+      "row": 9,
+      "col": "A"
+    },
+    {
+      "address": "F9",
+      "value": -0.21,
+      "type": "n",
+      "row": 9,
+      "col": "F"
+    },
+    {
+      "address": "G9",
+      "value": -5.88,
+      "formula": "F9*28",
+      "type": "n",
+      "row": 9,
+      "col": "G"
+    },
+    {
+      "address": "A10",
+      "value": "Summe Grundbedarf",
+      "type": "s",
+      "row": 10,
+      "col": "A"
+    },
+    {
+      "address": "F10",
+      "value": 34.45,
+      "formula": "SUM(F6,F8:F9)",
+      "type": "n",
+      "row": 10,
+      "col": "F"
+    },
+    {
+      "address": "G10",
+      "value": -19.88,
+      "formula": "SUM(G8:G9)",
+      "type": "n",
+      "row": 10,
+      "col": "G"
+    },
+    {
+      "address": "A11",
+      "value": "Ausgleichsbedarf",
+      "type": "s",
+      "row": 11,
+      "col": "A"
+    },
+    {
+      "address": "A12",
+      "value": "Fachleiter",
+      "type": "s",
+      "row": 12,
+      "col": "A"
+    },
+    {
+      "address": "F12",
+      "value": 0.21,
+      "type": "n",
+      "row": 12,
+      "col": "F"
+    },
+    {
+      "address": "G12",
+      "value": 5.88,
+      "formula": "F12*28",
+      "type": "n",
+      "row": 12,
+      "col": "G"
+    },
+    {
+      "address": "A13",
+      "value": "Personalrat",
+      "type": "s",
+      "row": 13,
+      "col": "A"
+    },
+    {
+      "address": "F13",
+      "value": 1.64,
+      "type": "n",
+      "row": 13,
+      "col": "F"
+    },
+    {
+      "address": "G13",
+      "value": 45.92,
+      "formula": "F13*28",
+      "type": "n",
+      "row": 13,
+      "col": "G"
+    },
+    {
+      "address": "A14",
+      "value": "Schulleitungsentlastung - Fortbildung",
+      "type": "s",
+      "row": 14,
+      "col": "A"
+    },
+    {
+      "address": "F14",
+      "value": 0.04,
+      "type": "n",
+      "row": 14,
+      "col": "F"
+    },
+    {
+      "address": "G14",
+      "value": 1.12,
+      "formula": "F14*28",
+      "type": "n",
+      "row": 14,
+      "col": "G"
+    },
+    {
+      "address": "A15",
+      "value": "Ausbau Leitungszeit",
+      "type": "s",
+      "row": 15,
+      "col": "A"
+    },
+    {
+      "address": "F15",
+      "value": 0.15,
+      "type": "n",
+      "row": 15,
+      "col": "F"
+    },
+    {
+      "address": "G15",
+      "value": 4.2,
+      "formula": "F15*28",
+      "type": "n",
+      "row": 15,
+      "col": "G"
+    },
+    {
+      "address": "A16",
+      "value": "Rückgabe Vorgriffstunde",
+      "type": "s",
+      "row": 16,
+      "col": "A"
+    },
+    {
+      "address": "F16",
+      "value": 0.04,
+      "type": "n",
+      "row": 16,
+      "col": "F"
+    },
+    {
+      "address": "G16",
+      "value": 1.12,
+      "formula": "F16*28",
+      "type": "n",
+      "row": 16,
+      "col": "G"
+    },
+    {
+      "address": "A17",
+      "value": "Digitalisierungsbeauftragter",
+      "type": "s",
+      "row": 17,
+      "col": "A"
+    },
+    {
+      "address": "F17",
+      "value": 0.04,
+      "type": "n",
+      "row": 17,
+      "col": "F"
+    },
+    {
+      "address": "G17",
+      "value": 1.12,
+      "formula": "F17*28",
+      "type": "n",
+      "row": 17,
+      "col": "G"
+    },
+    {
+      "address": "A18",
+      "value": "Fortb. und Qualif. / Medien und DS",
+      "type": "s",
+      "row": 18,
+      "col": "A"
+    },
+    {
+      "address": "F18",
+      "value": 0.07,
+      "type": "n",
+      "row": 18,
+      "col": "F"
+    },
+    {
+      "address": "G18",
+      "value": 1.96,
+      "formula": "F18*28",
+      "type": "n",
+      "row": 18,
+      "col": "G"
+    },
+    {
+      "address": "A19",
+      "value": "Fachberater Schulaufsicht",
+      "type": "s",
+      "row": 19,
+      "col": "A"
+    },
+    {
+      "address": "F19",
+      "value": 0.07,
+      "type": "n",
+      "row": 19,
+      "col": "F"
+    },
+    {
+      "address": "G19",
+      "value": 1.96,
+      "formula": "F19*28",
+      "type": "n",
+      "row": 19,
+      "col": "G"
+    },
+    {
+      "address": "A20",
+      "value": "Wechs. Merh - und Ausgleichsbedarfe",
+      "type": "s",
+      "row": 20,
+      "col": "A"
+    },
+    {
+      "address": "F20",
+      "value": 0.5,
+      "type": "n",
+      "row": 20,
+      "col": "F"
+    },
+    {
+      "address": "G20",
+      "value": 14,
+      "formula": "F20*28",
+      "type": "n",
+      "row": 20,
+      "col": "G"
+    },
+    {
+      "address": "A21",
+      "value": "Praxissemester in Schule",
+      "type": "s",
+      "row": 21,
+      "col": "A"
+    },
+    {
+      "address": "F21",
+      "value": 0.29,
+      "type": "n",
+      "row": 21,
+      "col": "F"
+    },
+    {
+      "address": "G21",
+      "value": 8.12,
+      "formula": "F21*28",
+      "type": "n",
+      "row": 21,
+      "col": "G"
+    },
+    {
+      "address": "A22",
+      "value": "Ausbildungskonsens KAoA",
+      "type": "s",
+      "row": 22,
+      "col": "A"
+    },
+    {
+      "address": "F22",
+      "value": 0.25,
+      "type": "n",
+      "row": 22,
+      "col": "F"
+    },
+    {
+      "address": "G22",
+      "value": 7,
+      "formula": "F22*28",
+      "type": "n",
+      "row": 22,
+      "col": "G"
+    },
+    {
+      "address": "A23",
+      "value": "Erfassung UNerrichtsausfall",
+      "type": "s",
+      "row": 23,
+      "col": "A"
+    },
+    {
+      "address": "F23",
+      "value": 0.04,
+      "type": "n",
+      "row": 23,
+      "col": "F"
+    },
+    {
+      "address": "G23",
+      "value": 1.12,
+      "formula": "F23*28",
+      "type": "n",
+      "row": 23,
+      "col": "G"
+    },
+    {
+      "address": "A24",
+      "value": "Einführung LOGINEO",
+      "type": "s",
+      "row": 24,
+      "col": "A"
+    },
+    {
+      "address": "F24",
+      "value": 0.04,
+      "type": "n",
+      "row": 24,
+      "col": "F"
+    },
+    {
+      "address": "G24",
+      "value": 1.12,
+      "formula": "F24*28",
+      "type": "n",
+      "row": 24,
+      "col": "G"
+    },
+    {
+      "address": "A25",
+      "value": "Rundungsgewinne (zusätzliche Projekte)",
+      "type": "s",
+      "row": 25,
+      "col": "A"
+    },
+    {
+      "address": "F25",
+      "value": 0.3,
+      "type": "n",
+      "row": 25,
+      "col": "F"
+    },
+    {
+      "address": "G25",
+      "value": 8.4,
+      "formula": "F25*28",
+      "type": "n",
+      "row": 25,
+      "col": "G"
+    },
+    {
+      "address": "G26",
+      "value": 0,
+      "formula": "F26*28",
+      "type": "n",
+      "row": 26,
+      "col": "G"
+    },
+    {
+      "address": "A28",
+      "value": "Summe Ausgleichsbedarf",
+      "type": "s",
+      "row": 28,
+      "col": "A"
+    },
+    {
+      "address": "F28",
+      "value": 3.68,
+      "formula": "SUM(F12:F25)",
+      "type": "n",
+      "row": 28,
+      "col": "F"
+    },
+    {
+      "address": "G28",
+      "value": 103.04,
+      "formula": "F28*28",
+      "type": "n",
+      "row": 28,
+      "col": "G"
+    },
+    {
+      "address": "A29",
+      "value": "Mehrbedarf",
+      "type": "s",
+      "row": 29,
+      "col": "A"
+    },
+    {
+      "address": "A30",
+      "value": "Praktische Philosphie /Islamkunde",
+      "type": "s",
+      "row": 30,
+      "col": "A"
+    },
+    {
+      "address": "F30",
+      "value": 0.11,
+      "type": "n",
+      "row": 30,
+      "col": "F"
+    },
+    {
+      "address": "A31",
+      "value": "Pädagogische Übermittagsbetreuung",
+      "type": "s",
+      "row": 31,
+      "col": "A"
+    },
+    {
+      "address": "F31",
+      "value": 0.5,
+      "type": "n",
+      "row": 31,
+      "col": "F"
+    },
+    {
+      "address": "A32",
+      "value": "Integration durch Bildung",
+      "type": "s",
+      "row": 32,
+      "col": "A"
+    },
+    {
+      "address": "F32",
+      "value": 0.3,
+      "type": "n",
+      "row": 32,
+      "col": "F"
+    },
+    {
+      "address": "A33",
+      "value": "Summe Mehrbedarf",
+      "type": "s",
+      "row": 33,
+      "col": "A"
+    },
+    {
+      "address": "F33",
+      "value": 0.91,
+      "formula": "SUM(F30:F32)",
+      "type": "n",
+      "row": 33,
+      "col": "F"
+    },
+    {
+      "address": "G33",
+      "value": 25.48,
+      "formula": "F33*28",
+      "type": "n",
+      "row": 33,
+      "col": "G"
+    },
+    {
+      "address": "A34",
+      "value": "Grundbedarf (Summe aus Grundbedarf, Ausgleichsbedarf, Mehrbedarf)",
+      "type": "s",
+      "row": 34,
+      "col": "A"
+    },
+    {
+      "address": "F34",
+      "value": 39.04,
+      "formula": "SUM(F33+F28+F10)",
+      "type": "n",
+      "row": 34,
+      "col": "F"
+    },
+    {
+      "address": "G34",
+      "value": 231.56,
+      "formula": "SUM(G12:G33)",
+      "type": "n",
+      "row": 34,
+      "col": "G"
+    },
+    {
+      "address": "A35",
+      "value": "Zusätzliche Stellen",
+      "type": "s",
+      "row": 35,
+      "col": "A"
+    },
+    {
+      "address": "A36",
+      "value": "gegen U-Ausfall und für ind. Förderung",
+      "type": "s",
+      "row": 36,
+      "col": "A"
+    },
+    {
+      "address": "F36",
+      "value": 0.77,
+      "type": "n",
+      "row": 36,
+      "col": "F"
+    },
+    {
+      "address": "G36",
+      "value": 21.56,
+      "formula": "F36*28",
+      "type": "n",
+      "row": 36,
+      "col": "G"
+    },
+    {
+      "address": "A37",
+      "value": "Stellenbesetzung",
+      "type": "s",
+      "row": 37,
+      "col": "A"
+    },
+    {
+      "address": "A38",
+      "value": "Teilzeit im Blockmodell (Ansparphase)",
+      "type": "s",
+      "row": 38,
+      "col": "A"
+    },
+    {
+      "address": "F38",
+      "value": 0.36,
+      "type": "n",
+      "row": 38,
+      "col": "F"
+    },
+    {
+      "address": "G38",
+      "value": 10.08,
+      "formula": "F38*28",
+      "type": "n",
+      "row": 38,
+      "col": "G"
+    },
+    {
+      "address": "A39",
+      "value": "Kapitalisierung päd. Übermittagsbetreuung",
+      "type": "s",
+      "row": 39,
+      "col": "A"
+    },
+    {
+      "address": "F39",
+      "value": 0.56,
+      "type": "n",
+      "row": 39,
+      "col": "F"
+    },
+    {
+      "address": "A40",
+      "value": "Abzug der Kapitalisierung der Übermittagsbetreuung, da Geld an die Gemeinde geht",
+      "type": "s",
+      "row": 40,
+      "col": "A"
+    },
+    {
+      "address": "F40",
+      "value": -0.56,
+      "type": "n",
+      "row": 40,
+      "col": "F"
+    },
+    {
+      "address": "A41",
+      "value": "Summe Stellenbesetzung",
+      "type": "s",
+      "row": 41,
+      "col": "A"
+    },
+    {
+      "address": "F41",
+      "value": 0.36,
+      "formula": "SUM(F38:F40)",
+      "type": "n",
+      "row": 41,
+      "col": "F"
+    },
+    {
+      "address": "A43",
+      "value": "Personalausstattung",
+      "type": "s",
+      "row": 43,
+      "col": "A"
+    },
+    {
+      "address": "A44",
+      "value": "Beurlaubung o. L Elternzeit",
+      "type": "s",
+      "row": 44,
+      "col": "A"
+    },
+    {
+      "address": "A45",
+      "value": "Ersatzeinstellung Elternzeit",
+      "type": "s",
+      "row": 45,
+      "col": "A"
+    },
+    {
+      "address": "A46",
+      "value": "Abornung Zugang  (anderes Kapitel",
+      "type": "s",
+      "row": 46,
+      "col": "A"
+    },
+    {
+      "address": "A47",
+      "value": "Summe Personalausstattung",
+      "type": "s",
+      "row": 47,
+      "col": "A"
+    },
+    {
+      "address": "F47",
+      "value": 0,
+      "formula": "SUM(F44:F46)",
+      "type": "n",
+      "row": 47,
+      "col": "F"
+    },
+    {
+      "address": "A48",
+      "value": "Stellenbedarf (Stellen-Soll) insgesamt (Summe aus 1, 2, 3, 4):",
+      "type": "s",
+      "row": 48,
+      "col": "A"
+    },
+    {
+      "address": "F48",
+      "value": 39.4,
+      "formula": "SUM(F34,F41,F47)",
+      "type": "n",
+      "row": 48,
+      "col": "F"
+    },
+    {
+      "address": "A50",
+      "value": "vorhandene Planstellen (Istbestand):",
+      "type": "s",
+      "row": 50,
+      "col": "A"
+    },
+    {
+      "address": "F50",
+      "value": "#REF!",
+      "formula": "Lehrerplanstellen!F57",
+      "type": "s",
+      "row": 50,
+      "col": "F"
+    },
+    {
+      "address": "A51",
+      "value": "Differenz Soll-Ist",
+      "type": "s",
+      "row": 51,
+      "col": "A"
+    },
+    {
+      "address": "F51",
+      "value": "#REF!",
+      "formula": "F50-F48",
+      "type": "s",
+      "row": 51,
+      "col": "F"
+    },
+    {
+      "address": "A52",
+      "value": "Berechnung der Ermäßigungsstunden (Kollegium)",
+      "type": "s",
+      "row": 52,
+      "col": "A"
+    },
+    {
+      "address": "F52",
+      "value": "Stunden",
+      "type": "s",
+      "row": 52,
+      "col": "F"
+    },
+    {
+      "address": "A53",
+      "value": "Grundstellenbedarf * 0,5:",
+      "type": "s",
+      "row": 53,
+      "col": "A"
+    },
+    {
+      "address": "F53",
+      "value": 17.225,
+      "formula": "F10*0.5",
+      "type": "n",
+      "row": 53,
+      "col": "F"
+    },
+    {
+      "address": "A54",
+      "value": "Entlastungsstunden (Kollegium) gerundet 0 Dezimalen:",
+      "type": "s",
+      "row": 54,
+      "col": "A"
+    },
+    {
+      "address": "F54",
+      "value": 17,
+      "formula": "ROUND(F53,0)",
+      "type": "n",
+      "row": 54,
+      "col": "F"
+    },
+    {
+      "address": "A55",
+      "value": "Berechnung Schulleiterpauschale",
+      "type": "s",
+      "row": 55,
+      "col": "A"
+    },
+    {
+      "address": "F55",
+      "value": "Stunden",
+      "type": "s",
+      "row": 55,
+      "col": "F"
+    },
+    {
+      "address": "A56",
+      "value": "Grundpauschale ",
+      "type": "s",
+      "row": 56,
+      "col": "A"
+    },
+    {
+      "address": "F56",
+      "value": 9,
+      "type": "n",
+      "row": 56,
+      "col": "F"
+    },
+    {
+      "address": "A57",
+      "value": "zusätzl. Entlastung (abhängig v. Stellenanzahl)",
+      "type": "s",
+      "row": 57,
+      "col": "A"
+    },
+    {
+      "address": "F57",
+      "value": 36.58,
+      "formula": "F48*0.7+F56",
+      "type": "n",
+      "row": 57,
+      "col": "F"
+    },
+    {
+      "address": "A58",
+      "value": "Schulleiterentlastung Fortbildung",
+      "type": "s",
+      "row": 58,
+      "col": "A"
+    },
+    {
+      "address": "F58",
+      "value": 0.04,
+      "type": "n",
+      "row": 58,
+      "col": "F"
+    },
+    {
+      "address": "A59",
+      "value": "Ausbau Leitungszeit",
+      "type": "s",
+      "row": 59,
+      "col": "A"
+    },
+    {
+      "address": "F59",
+      "value": 0.12,
+      "type": "n",
+      "row": 59,
+      "col": "F"
+    },
+    {
+      "address": "D60",
+      "value": "Anzahl 44-46 in Stunden",
+      "type": "s",
+      "row": 60,
+      "col": "D"
+    },
+    {
+      "address": "F60",
+      "value": 36.74,
+      "formula": "SUM(F57:F59)",
+      "type": "n",
+      "row": 60,
+      "col": "F"
+    },
+    {
+      "address": "G60",
+      "value": "Stundenanzahl real",
+      "type": "s",
+      "row": 60,
+      "col": "G"
+    },
+    {
+      "address": "A61",
+      "value": "Entlastungsstd. (Schulleitung) gerundet 2 Dezimalen:",
+      "type": "s",
+      "row": 61,
+      "col": "A"
+    },
+    {
+      "address": "F61",
+      "value": 45.74,
+      "formula": "SUM(F56:F59)",
+      "type": "n",
+      "row": 61,
+      "col": "F"
+    },
+    {
+      "address": "G61",
+      "value": 1.633571429,
+      "formula": "F61/28",
+      "type": "n",
+      "row": 61,
+      "col": "G"
+    },
+    {
+      "address": "A62",
+      "value": "Schulleiter 3/5 (aufgerundet ):",
+      "type": "s",
+      "row": 62,
+      "col": "A"
+    },
+    {
+      "address": "F62",
+      "value": 18,
+      "type": "n",
+      "row": 62,
+      "col": "F"
+    },
+    {
+      "address": "G62",
+      "value": " ",
+      "type": "s",
+      "row": 62,
+      "col": "G"
+    },
+    {
+      "address": "A63",
+      "value": "Stellvertreter 2/5 (abgerundet ):",
+      "type": "s",
+      "row": 63,
+      "col": "A"
+    },
+    {
+      "address": "F63",
+      "value": 18,
+      "formula": "ROUNDDOWN(F61*2/5,)",
+      "type": "n",
+      "row": 63,
+      "col": "F"
+    },
+    {
+      "address": "A64",
+      "value": "Ausbau Leitungszeit",
+      "type": "s",
+      "row": 64,
+      "col": "A"
+    },
+    {
+      "address": "F64",
+      "value": 0.11,
+      "type": "n",
+      "row": 64,
+      "col": "F"
+    },
+    {
+      "address": "A65",
+      "value": "minus Entl. (Stundenplanarbeit) aus Schulleitungspauschale:",
+      "type": "s",
+      "row": 65,
+      "col": "A"
+    },
+    {
+      "address": "A66",
+      "value": "geänderte und abgerundete Schulleiterpauschale:",
+      "type": "s",
+      "row": 66,
+      "col": "A"
+    },
+    {
+      "address": "F66",
+      "value": 18,
+      "formula": "INT(F62-F65/2)",
+      "type": "n",
+      "row": 66,
+      "col": "F"
+    },
+    {
+      "address": "A67",
+      "value": "geänderte und aufgerundete Stellvertreterpauschale:",
+      "type": "s",
+      "row": 67,
+      "col": "A"
+    },
+    {
+      "address": "F67",
+      "value": 18,
+      "formula": "ROUND(F63-F65/2+(F62-(INT(F62))),0)",
+      "type": "n",
+      "row": 67,
+      "col": "F"
+    },
+    {
+      "address": "A68",
+      "value": "Klassenbildung",
+      "type": "s",
+      "row": 68,
+      "col": "A"
+    },
+    {
+      "address": "F68",
+      "value": "Klassen",
+      "type": "s",
+      "row": 68,
+      "col": "F"
+    },
+    {
+      "address": "A69",
+      "value": "Sollklassenzahl (Schülerzahl/28):",
+      "type": "s",
+      "row": 69,
+      "col": "A"
+    },
+    {
+      "address": "F69",
+      "value": 25.36,
+      "formula": "ROUND(F3/28,2)",
+      "type": "n",
+      "row": 69,
+      "col": "F"
+    },
+    {
+      "address": "A70",
+      "value": "Istklassenzahl:",
+      "type": "s",
+      "row": 70,
+      "col": "A"
+    },
+    {
+      "address": "F70",
+      "value": 17,
+      "type": "n",
+      "row": 70,
+      "col": "F"
+    },
+    {
+      "address": "A71",
+      "value": "Abweichung:",
+      "type": "s",
+      "row": 71,
+      "col": "A"
+    },
+    {
+      "address": "F71",
+      "value": 8.36,
+      "formula": "F69-F70",
+      "type": "n",
+      "row": 71,
+      "col": "F"
+    },
+    {
+      "address": "A72",
+      "value": "Statistik Unterrichtsstunden",
+      "type": "s",
+      "row": 72,
+      "col": "A"
+    },
+    {
+      "address": "F72",
+      "value": "Stunden",
+      "type": "s",
+      "row": 72,
+      "col": "F"
+    },
+    {
+      "address": "A73",
+      "value": "zur Verfügung stehende Unterrichtsstunden:",
+      "type": "s",
+      "row": 73,
+      "col": "A"
+    },
+    {
+      "address": "F73",
+      "value": "#REF!",
+      "formula": "Lehrerplanstellen!Q57",
+      "type": "s",
+      "row": 73,
+      "col": "F"
+    },
+    {
+      "address": "A74",
+      "value": "Unterrichtssoll (nach Kürzung)",
+      "type": "s",
+      "row": 74,
+      "col": "A"
+    },
+    {
+      "address": "F74",
+      "value": "#ERROR!",
+      "formula": "Lehrerplanstellen!IST_UNTERRSTD",
+      "type": "s",
+      "row": 74,
+      "col": "F"
+    },
+    {
+      "address": "A75",
+      "value": "Abweichung:",
+      "type": "s",
+      "row": 75,
+      "col": "A"
+    },
+    {
+      "address": "F75",
+      "value": "#REF!",
+      "formula": "F73-F74",
+      "type": "s",
+      "row": 75,
+      "col": "F"
+    }
+  ],
+  "formulas": [
+    {
+      "address": "F5",
+      "value": 35.16592372,
+      "formula": "F3/F4",
+      "type": "n",
+      "row": 5,
+      "col": "F"
+    },
+    {
+      "address": "F6",
+      "value": 35.16,
+      "formula": "TRUNC(F5,2)",
+      "type": "n",
+      "row": 6,
+      "col": "F"
+    },
+    {
+      "address": "F7",
+      "value": 35,
+      "formula": "IF(F5-INT(F5)<0.5,INT(F5),INT(F5)+0.5)",
+      "type": "n",
+      "row": 7,
+      "col": "F"
+    },
+    {
+      "address": "G8",
+      "value": -14,
+      "formula": "F8*28",
+      "type": "n",
+      "row": 8,
+      "col": "G"
+    },
+    {
+      "address": "G9",
+      "value": -5.88,
+      "formula": "F9*28",
+      "type": "n",
+      "row": 9,
+      "col": "G"
+    },
+    {
+      "address": "F10",
+      "value": 34.45,
+      "formula": "SUM(F6,F8:F9)",
+      "type": "n",
+      "row": 10,
+      "col": "F"
+    },
+    {
+      "address": "G10",
+      "value": -19.88,
+      "formula": "SUM(G8:G9)",
+      "type": "n",
+      "row": 10,
+      "col": "G"
+    },
+    {
+      "address": "G12",
+      "value": 5.88,
+      "formula": "F12*28",
+      "type": "n",
+      "row": 12,
+      "col": "G"
+    },
+    {
+      "address": "G13",
+      "value": 45.92,
+      "formula": "F13*28",
+      "type": "n",
+      "row": 13,
+      "col": "G"
+    },
+    {
+      "address": "G14",
+      "value": 1.12,
+      "formula": "F14*28",
+      "type": "n",
+      "row": 14,
+      "col": "G"
+    },
+    {
+      "address": "G15",
+      "value": 4.2,
+      "formula": "F15*28",
+      "type": "n",
+      "row": 15,
+      "col": "G"
+    },
+    {
+      "address": "G16",
+      "value": 1.12,
+      "formula": "F16*28",
+      "type": "n",
+      "row": 16,
+      "col": "G"
+    },
+    {
+      "address": "G17",
+      "value": 1.12,
+      "formula": "F17*28",
+      "type": "n",
+      "row": 17,
+      "col": "G"
+    },
+    {
+      "address": "G18",
+      "value": 1.96,
+      "formula": "F18*28",
+      "type": "n",
+      "row": 18,
+      "col": "G"
+    },
+    {
+      "address": "G19",
+      "value": 1.96,
+      "formula": "F19*28",
+      "type": "n",
+      "row": 19,
+      "col": "G"
+    },
+    {
+      "address": "G20",
+      "value": 14,
+      "formula": "F20*28",
+      "type": "n",
+      "row": 20,
+      "col": "G"
+    },
+    {
+      "address": "G21",
+      "value": 8.12,
+      "formula": "F21*28",
+      "type": "n",
+      "row": 21,
+      "col": "G"
+    },
+    {
+      "address": "G22",
+      "value": 7,
+      "formula": "F22*28",
+      "type": "n",
+      "row": 22,
+      "col": "G"
+    },
+    {
+      "address": "G23",
+      "value": 1.12,
+      "formula": "F23*28",
+      "type": "n",
+      "row": 23,
+      "col": "G"
+    },
+    {
+      "address": "G24",
+      "value": 1.12,
+      "formula": "F24*28",
+      "type": "n",
+      "row": 24,
+      "col": "G"
+    },
+    {
+      "address": "G25",
+      "value": 8.4,
+      "formula": "F25*28",
+      "type": "n",
+      "row": 25,
+      "col": "G"
+    },
+    {
+      "address": "G26",
+      "value": 0,
+      "formula": "F26*28",
+      "type": "n",
+      "row": 26,
+      "col": "G"
+    },
+    {
+      "address": "F28",
+      "value": 3.68,
+      "formula": "SUM(F12:F25)",
+      "type": "n",
+      "row": 28,
+      "col": "F"
+    },
+    {
+      "address": "G28",
+      "value": 103.04,
+      "formula": "F28*28",
+      "type": "n",
+      "row": 28,
+      "col": "G"
+    },
+    {
+      "address": "F33",
+      "value": 0.91,
+      "formula": "SUM(F30:F32)",
+      "type": "n",
+      "row": 33,
+      "col": "F"
+    },
+    {
+      "address": "G33",
+      "value": 25.48,
+      "formula": "F33*28",
+      "type": "n",
+      "row": 33,
+      "col": "G"
+    },
+    {
+      "address": "F34",
+      "value": 39.04,
+      "formula": "SUM(F33+F28+F10)",
+      "type": "n",
+      "row": 34,
+      "col": "F"
+    },
+    {
+      "address": "G34",
+      "value": 231.56,
+      "formula": "SUM(G12:G33)",
+      "type": "n",
+      "row": 34,
+      "col": "G"
+    },
+    {
+      "address": "G36",
+      "value": 21.56,
+      "formula": "F36*28",
+      "type": "n",
+      "row": 36,
+      "col": "G"
+    },
+    {
+      "address": "G38",
+      "value": 10.08,
+      "formula": "F38*28",
+      "type": "n",
+      "row": 38,
+      "col": "G"
+    },
+    {
+      "address": "F41",
+      "value": 0.36,
+      "formula": "SUM(F38:F40)",
+      "type": "n",
+      "row": 41,
+      "col": "F"
+    },
+    {
+      "address": "F47",
+      "value": 0,
+      "formula": "SUM(F44:F46)",
+      "type": "n",
+      "row": 47,
+      "col": "F"
+    },
+    {
+      "address": "F48",
+      "value": 39.4,
+      "formula": "SUM(F34,F41,F47)",
+      "type": "n",
+      "row": 48,
+      "col": "F"
+    },
+    {
+      "address": "F50",
+      "value": "#REF!",
+      "formula": "Lehrerplanstellen!F57",
+      "type": "s",
+      "row": 50,
+      "col": "F"
+    },
+    {
+      "address": "F51",
+      "value": "#REF!",
+      "formula": "F50-F48",
+      "type": "s",
+      "row": 51,
+      "col": "F"
+    },
+    {
+      "address": "F53",
+      "value": 17.225,
+      "formula": "F10*0.5",
+      "type": "n",
+      "row": 53,
+      "col": "F"
+    },
+    {
+      "address": "F54",
+      "value": 17,
+      "formula": "ROUND(F53,0)",
+      "type": "n",
+      "row": 54,
+      "col": "F"
+    },
+    {
+      "address": "F57",
+      "value": 36.58,
+      "formula": "F48*0.7+F56",
+      "type": "n",
+      "row": 57,
+      "col": "F"
+    },
+    {
+      "address": "F60",
+      "value": 36.74,
+      "formula": "SUM(F57:F59)",
+      "type": "n",
+      "row": 60,
+      "col": "F"
+    },
+    {
+      "address": "F61",
+      "value": 45.74,
+      "formula": "SUM(F56:F59)",
+      "type": "n",
+      "row": 61,
+      "col": "F"
+    },
+    {
+      "address": "G61",
+      "value": 1.633571429,
+      "formula": "F61/28",
+      "type": "n",
+      "row": 61,
+      "col": "G"
+    },
+    {
+      "address": "F63",
+      "value": 18,
+      "formula": "ROUNDDOWN(F61*2/5,)",
+      "type": "n",
+      "row": 63,
+      "col": "F"
+    },
+    {
+      "address": "F66",
+      "value": 18,
+      "formula": "INT(F62-F65/2)",
+      "type": "n",
+      "row": 66,
+      "col": "F"
+    },
+    {
+      "address": "F67",
+      "value": 18,
+      "formula": "ROUND(F63-F65/2+(F62-(INT(F62))),0)",
+      "type": "n",
+      "row": 67,
+      "col": "F"
+    },
+    {
+      "address": "F69",
+      "value": 25.36,
+      "formula": "ROUND(F3/28,2)",
+      "type": "n",
+      "row": 69,
+      "col": "F"
+    },
+    {
+      "address": "F71",
+      "value": 8.36,
+      "formula": "F69-F70",
+      "type": "n",
+      "row": 71,
+      "col": "F"
+    },
+    {
+      "address": "F73",
+      "value": "#REF!",
+      "formula": "Lehrerplanstellen!Q57",
+      "type": "s",
+      "row": 73,
+      "col": "F"
+    },
+    {
+      "address": "F74",
+      "value": "#ERROR!",
+      "formula": "Lehrerplanstellen!IST_UNTERRSTD",
+      "type": "s",
+      "row": 74,
+      "col": "F"
+    },
+    {
+      "address": "F75",
+      "value": "#REF!",
+      "formula": "F73-F74",
+      "type": "s",
+      "row": 75,
+      "col": "F"
+    }
+  ]
+}
