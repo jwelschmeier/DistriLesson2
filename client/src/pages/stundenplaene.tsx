@@ -695,7 +695,7 @@ export default function Stundenplaene() {
         </header>
 
         {/* Main Content */}
-        <div className="p-6">
+        <div className="p-4">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" data-testid="tabs-stundenplaene">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="teacher" data-testid="tab-lehrer">
@@ -709,8 +709,8 @@ export default function Stundenplaene() {
             </TabsList>
 
             {/* Teacher Tab Content */}
-            <TabsContent value="teacher" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <TabsContent value="teacher" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center">
@@ -759,9 +759,9 @@ export default function Stundenplaene() {
               {selectedTeacher && (
                 <>
                   {/* Teacher Summary Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                     <Card data-testid="card-teacher-max-hours">
-                      <CardContent className="p-6">
+                      <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-muted-foreground text-sm font-medium">Max pro Halbjahr</p>
@@ -778,7 +778,7 @@ export default function Stundenplaene() {
                     </Card>
 
                     <Card data-testid="card-teacher-s1-hours">
-                      <CardContent className="p-6">
+                      <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-muted-foreground text-sm font-medium">1. Halbjahr</p>
@@ -799,7 +799,7 @@ export default function Stundenplaene() {
                     </Card>
 
                     <Card data-testid="card-teacher-s2-hours">
-                      <CardContent className="p-6">
+                      <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-muted-foreground text-sm font-medium">2. Halbjahr</p>
@@ -820,7 +820,7 @@ export default function Stundenplaene() {
                     </Card>
 
                     <Card data-testid="card-teacher-reduction-hours">
-                      <CardContent className="p-6">
+                      <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-muted-foreground text-sm font-medium">Ermäßigungsstunden</p>
@@ -945,8 +945,8 @@ export default function Stundenplaene() {
             </TabsContent>
 
             {/* Class Tab Content */}
-            <TabsContent value="class" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <TabsContent value="class" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center">
@@ -995,9 +995,9 @@ export default function Stundenplaene() {
               {selectedClass && (
                 <>
                   {/* Class Summary Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <Card data-testid="card-class-total-hours">
-                      <CardContent className="p-6">
+                      <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
                             <p className="text-foreground/70 text-sm font-semibold mb-2">Gesamtstunden</p>
@@ -1029,7 +1029,7 @@ export default function Stundenplaene() {
                     </Card>
 
                     <Card data-testid="card-class-teachers">
-                      <CardContent className="p-6">
+                      <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-foreground/70 text-sm font-semibold">Lehrkräfte</p>
@@ -1054,7 +1054,7 @@ export default function Stundenplaene() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                         <div>
                           <span className="text-foreground/70 font-medium">Klassenname:</span>
                           <p className="font-medium">{selectedClass.name}</p>
@@ -1081,9 +1081,9 @@ export default function Stundenplaene() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                           {subjectRequirements.map((req) => (
-                            <div key={req.subject.id} className="border rounded-lg p-3">
+                            <div key={req.subject.id} className="border rounded-lg p-2">
                               <div className="flex items-center justify-between mb-2">
                                 <Badge variant="light">{req.subject.shortName}</Badge>
                                 <span className="text-xs text-muted-foreground">{req.subject.name}</span>
@@ -1119,7 +1119,7 @@ export default function Stundenplaene() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         {/* Add New Assignment Button */}
                         <div className="flex justify-between items-center">
                           <p className="text-sm text-muted-foreground">
@@ -1564,7 +1564,7 @@ export default function Stundenplaene() {
               </DialogDescription>
             </DialogHeader>
             
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="max-h-60 overflow-y-auto">
                 {teamTeachingDialog.availableTeachers.map((teacher) => (
                   <div 
