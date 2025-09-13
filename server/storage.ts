@@ -746,41 +746,168 @@ export class DatabaseStorage implements IStorage {
   async calculatePlanstellenFromInput(input: PlanstellenInput): Promise<Planstelle[]> {
     const results: Planstelle[] = [];
     
-    // Fächer aus der Eingabe
-    const faecher = Object.keys(input.fachstunden);
-    
-    for (const fach of faecher) {
-      const fachData = input.fachstunden[fach];
-      const gesamtStunden = (fachData?.sek1 || 0) + (fachData?.sek2 || 0);
+    // Berechnete Werte basierend auf Excel-Formeln
+    const berechneteWerte = {
+      // =SUMME(F3:F18+F10) - Grundbedarf
+      grundbedarf: input.ausgleichsstunden + 
+                  input.fachlehrbr + 
+                  input.paedagogik + 
+                  input.religionslehrkraefteFortbildung + 
+                  input.auslandLehrkraefte + 
+                  input.rueckgabeVerguetungsstunde + 
+                  input.bestellung + 
+                  input.fachUndDienstMedienUndDV + 
+                  input.fachberaterSchulaufsicht + 
+                  input.weitereSportUndAusstellungsraeume + 
+                  input.praxissemesterInSchule + 
+                  input.zusaetzlicheAusfallvertretung + 
+                  input.entlastungLehrertaetigkeit + 
+                  input.entlastungLVOCO + 
+                  input.ermaessigungenweitere + 
+                  input.fachberaterSchulaufsicht, // F10 doppelt gezählt wie in Excel
       
-      if (gesamtStunden > 0) {
+      // =SUMME(F21:F26) - Berufsbildung a. L (Lehramt)
+      berufsbildungSumme: input.abzugsarten + 
+                         input.praktischePaedagogikLehrkraefte + 
+                         input.praxissemesterdurchfuehrung + 
+                         input.unterscheidendeBetreuung + 
+                         input.berufsbildungLehramt + 
+                         input.ergaenzungsstundenLehramt2,
+                         
+      // =SUMME(F3:F40) - Summe Personalbestellung (wird berechnet)
+      personalbestellungSumme: 0
+    };
+
+    // =SUMME(F3:F40) - Summe Personalbestellung berechnen
+    berechneteWerte.personalbestellungSumme = berechneteWerte.grundbedarf + berechneteWerte.berufsbildungSumme +
+      input.schwerpunktbildungLehramt + input.berechnungsbedarfLehramt + 
+      input.entlassungenGrad + input.stellenreserveLehrerinnen;
+
+    // Erstelle Planstellen für alle Eingabefelder
+    const eingabeFelder = [
+      // Grundschuldaten (gelbe Sektion)
+      { name: 'Ausgleichsstunden', value: input.ausgleichsstunden, category: 'grundschuldaten' },
+      { name: 'Fachlehrbr', value: input.fachlehrbr, category: 'grundschuldaten' },
+      { name: 'Pädagogik', value: input.paedagogik, category: 'grundschuldaten' },
+      { name: 'Religionslehrkräfte/- Fortbildung', value: input.religionslehrkraefteFortbildung, category: 'grundschuldaten' },
+      { name: 'Ausland Lehrkräfte', value: input.auslandLehrkraefte, category: 'grundschuldaten' },
+      { name: 'Rückgabe Vergütungsstunde', value: input.rueckgabeVerguetungsstunde, category: 'grundschuldaten' },
+      { name: 'Bestellung', value: input.bestellung, category: 'grundschuldaten' },
+      { name: 'Fach- und Dienst-/Medien und DV', value: input.fachUndDienstMedienUndDV, category: 'grundschuldaten' },
+      { name: 'Fachberater Schulaufsicht', value: input.fachberaterSchulaufsicht, category: 'grundschuldaten' },
+      { name: 'Weitere Sport- und Ausstellungsräume', value: input.weitereSportUndAusstellungsraeume, category: 'grundschuldaten' },
+      { name: 'Praxissemester in Schule', value: input.praxissemesterInSchule, category: 'grundschuldaten' },
+      { name: 'Zusätzliche Ausfallvertretung', value: input.zusaetzlicheAusfallvertretung, category: 'grundschuldaten' },
+      { name: 'Entlastung Lehrertätigkeit', value: input.entlastungLehrertaetigkeit, category: 'grundschuldaten' },
+      { name: 'Entlastung LVO&CO', value: input.entlastungLVOCO, category: 'grundschuldaten' },
+      { name: 'Ermäßigungen weitere', value: input.ermaessigungenweitere, category: 'grundschuldaten' },
+      
+      // Abzugsarten (gelbe Sektion)
+      { name: 'Abzugsarten', value: input.abzugsarten, category: 'abzugsarten' },
+      { name: 'Praktische Pädagogik Lehrkräfte', value: input.praktischePaedagogikLehrkraefte, category: 'abzugsarten' },
+      { name: 'Praxissemesterdurchführung', value: input.praxissemesterdurchfuehrung, category: 'abzugsarten' },
+      { name: 'Unterscheidende Betreuung', value: input.unterscheidendeBetreuung, category: 'abzugsarten' },
+      
+      // Weitere Sektionen
+      { name: 'Berechnungsbedarf z. L (Lehramt)', value: input.berechnungsbedarfLehramt, category: 'lehramt' },
+      { name: 'Ergänzungsstunden Lehramt', value: input.ergaenzungsstundenLehramt, category: 'lehramt' },
+      { name: 'Schwerpunktbildung Lehramt', value: input.schwerpunktbildungLehramt, category: 'lehramt' },
+      { name: 'Berufsbildung Lehramt', value: input.berufsbildungLehramt, category: 'lehramt' },
+      { name: 'Ergänzungsstunden Lehramt 2', value: input.ergaenzungsstundenLehramt2, category: 'lehramt' },
+      { name: 'Schwerpunktbildung Lehramt 2', value: input.schwerpunktbildungLehramt2, category: 'lehramt' },
+      
+      // Weitere komplexe Felder
+      { name: 'Entlassungen/Grad. (Verkürzung)', value: input.entlassungenGrad, category: 'weitere' },
+      { name: 'Stellenreserve LehrerInnen', value: input.stellenreserveLehrerinnen, category: 'weitere' },
+      { name: 'Ausfeld Lehrkräfte', value: input.ausfeldLehrkraefte, category: 'weitere' },
+      { name: 'Inner-(d. Sonderreg/austech)', value: input.innerSonderregAustech, category: 'weitere' },
+      { name: 'Ergänzend über Aufbaumöglichkeit', value: input.ergaenzendUeberAufbaumoeglichkeit, category: 'weitere' },
+      { name: 'Stellenreserve LehrerInnen(HS)', value: input.stellenreserveLehrerinnenHS, category: 'weitere' },
+      { name: 'Fertigkeitsfeld', value: input.fertigkeitsfeld, category: 'weitere' },
+      { name: 'Stundenreserve', value: input.stundenreserve, category: 'weitere' },
+      { name: 'Differenz nach Schulsausstattungsrecherche', value: input.differenzNachSchulsausstattungsrecherche, category: 'weitere' },
+      { name: 'Stellenwerte Unterrichtsstunden', value: input.stellenwerteUnterrichtsstunden, category: 'weitere' },
+      { name: 'Altern Grundstaffelung verschiedene Unterrichtsstunden', value: input.alternGrundstaffelungVerschiedeneUnterrichtsstunden, category: 'weitere' },
+      { name: 'Differenz nach Wechsel', value: input.differenzNachWechsel, category: 'weitere' },
+      { name: 'Stellenwerte nach (oben Verrechnung)', value: input.stellenwerteNachObenVerrechnung, category: 'weitere' }
+    ];
+
+    // Erstelle Planstelle für jedes Eingabefeld (nur wenn Wert > 0)
+    for (const feld of eingabeFelder) {
+      if (feld.value > 0) {
         const planstelle: Planstelle = {
           id: randomUUID(),
           scenarioId: null,
           subjectId: null,
           grade: null,
-          category: 'grundbedarf',
-          component: fach,
+          category: feld.category,
+          component: feld.name,
           lineType: 'requirement',
           formula: {
-            op: 'add',
-            terms: [fachData.sek1, fachData.sek2],
-            description: `${fach}: ${fachData.sek1} (Sek I) + ${fachData.sek2} (Sek II)`
+            op: 'direct',
+            terms: [feld.value],
+            description: `${feld.name}: Direkteingabe`
           },
-          color: null,
-          requiredHours: gesamtStunden.toString(),
+          color: feld.category === 'grundschuldaten' ? 'yellow' : 
+                feld.category === 'abzugsarten' ? 'yellow' :
+                feld.category === 'lehramt' ? 'purple' : 'gray',
+          requiredHours: feld.value.toString(),
           availableHours: '0',
-          deficit: gesamtStunden.toString(),
+          deficit: feld.value.toString(),
           calculatedAt: new Date()
         };
-        
         results.push(planstelle);
       }
     }
-    
+
+    // Erstelle berechnete Planstellen (blaue/türkise Felder)
+    const berechneteFelder = [
+      {
+        name: 'Grundbedarf (Summen aus Grundbedarf, Ausgleichsstunden)',
+        value: berechneteWerte.grundbedarf,
+        formula: '=SUMME(F3:F18+F10)',
+        color: 'cyan'
+      },
+      {
+        name: 'Berufsbildung a. L (Lehramt)',
+        value: berechneteWerte.berufsbildungSumme,
+        formula: '=SUMME(F21:F26)',
+        color: 'cyan'
+      },
+      {
+        name: 'Summe Personalbestellung',
+        value: berechneteWerte.personalbestellungSumme,
+        formula: '=SUMME(F3:F40)',
+        color: 'cyan'
+      }
+    ];
+
+    for (const feld of berechneteFelder) {
+      const planstelle: Planstelle = {
+        id: randomUUID(),
+        scenarioId: null,
+        subjectId: null,
+        grade: null,
+        category: 'berechnet',
+        component: feld.name,
+        lineType: 'calculated',
+        formula: {
+          op: 'sum',
+          terms: [],
+          description: feld.formula
+        },
+        color: feld.color,
+        requiredHours: feld.value.toString(),
+        availableHours: '0',
+        deficit: feld.value.toString(),
+        calculatedAt: new Date()
+      };
+      results.push(planstelle);
+    }
+
     // Gesamtberechnung hinzufügen
-    const gesamtStunden = Object.values(input.fachstunden).reduce((sum, fach) => 
-      sum + (fach?.sek1 || 0) + (fach?.sek2 || 0), 0);
+    const gesamtStunden = berechneteWerte.personalbestellungSumme + 
+                         input.stellenwerteNachObenVerrechnung;
     const benoetigtePlanstellen = input.deputat > 0 ? gesamtStunden / input.deputat : 0;
     
     const gesamtPlanstelle: Planstelle = {
@@ -789,17 +916,17 @@ export class DatabaseStorage implements IStorage {
       subjectId: null,
       grade: null,
       category: 'summe',
-      component: 'Gesamtbedarf',
+      component: 'Gesamtbedarf Planstellen',
       lineType: 'summary',
       formula: {
         op: 'divide',
         terms: [gesamtStunden, input.deputat],
         description: `Gesamtstunden (${gesamtStunden}) ÷ Deputat (${input.deputat})`
       },
-      color: null,
+      color: 'blue',
       requiredHours: gesamtStunden.toString(),
-      availableHours: '0',
-      deficit: benoetigtePlanstellen.toFixed(2),
+      availableHours: benoetigtePlanstellen.toFixed(2),
+      deficit: '0',
       calculatedAt: new Date()
     };
     
