@@ -209,6 +209,9 @@ ${scheduleText}
         return result;
       }
 
+      // Get existing assignments to check for duplicates
+      const existingAssignments = await storage.getAssignments();
+
       for (const assignmentData of parsedData.assignments) {
         try {
           const teacher = teachers.find(t => t.shortName === assignmentData.teacherShortName);
@@ -225,6 +228,20 @@ ${scheduleText}
           }
           if (!subject) {
             result.errors.push(`Fach "${assignmentData.subjectShortName}" nicht gefunden`);
+            continue;
+          }
+
+          // Check for duplicate assignment
+          const exists = existingAssignments.find(a => 
+            a.teacherId === teacher.id &&
+            a.classId === classObj.id &&
+            a.subjectId === subject.id &&
+            a.schoolYearId === currentSchoolYear.id &&
+            a.semester === (assignmentData.semester || 1)
+          );
+
+          if (exists) {
+            result.errors.push(`Zuweisung ${assignmentData.teacherShortName}-${assignmentData.className}-${assignmentData.subjectShortName} existiert bereits`);
             continue;
           }
 
