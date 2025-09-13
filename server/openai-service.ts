@@ -95,8 +95,7 @@ ${scheduleText}
           }
         ],
         response_format: { type: "json_object" },
-        max_completion_tokens: 4000,
-        temperature: 0.1
+        max_completion_tokens: 4000
       });
 
       const parsedData = JSON.parse(response.choices[0].message.content!);
