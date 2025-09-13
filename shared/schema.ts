@@ -139,6 +139,30 @@ export const subjectMappings = pgTable("subject_mappings", {
   normalizedNameIdx: index("idx_subject_mappings_normalized").on(table.normalizedName),
 }));
 
+// PDF Imports and Tables
+export const pdfImports = pgTable("pdf_imports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fileName: text("file_name").notNull(),
+  fileHash: varchar("file_hash").unique(),
+  uploadedBy: varchar("uploaded_by").references(() => users.id),
+  pageCount: integer("page_count").notNull().default(0),
+  metadata: json("metadata").$type<Record<string, any>>().notNull().default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const pdfTables = pgTable("pdf_tables", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  importId: varchar("import_id").references(() => pdfImports.id, { onDelete: "cascade" }).notNull(),
+  page: integer("page").notNull(),
+  tableIndex: integer("table_index").notNull(),
+  headers: json("headers").$type<string[]>().notNull().default([]),
+  rows: json("rows").$type<string[][]>().notNull().default([]),
+  rawText: text("raw_text"),
+  extractedAt: timestamp("extracted_at").defaultNow(),
+}, (table) => ({
+  importPageIdx: index("idx_pdf_tables_import_page").on(table.importId, table.page),
+}));
+
 // Authentication tables
 
 // Session storage table (required for Replit Auth)
@@ -421,6 +445,19 @@ export const insertSubjectMappingSchema = createInsertSchema(subjectMappings).om
   usedCount: z.number().int().min(0).optional(),
 });
 
+export const insertPdfImportSchema = createInsertSchema(pdfImports).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPdfTableSchema = createInsertSchema(pdfTables).omit({
+  id: true,
+  extractedAt: true,
+}).extend({
+  headers: z.array(z.string()).optional(),
+  rows: z.array(z.array(z.string())).optional(),
+});
+
 // Types
 export type SchoolYear = typeof schoolYears.$inferSelect;
 export type InsertSchoolYear = z.infer<typeof insertSchoolYearSchema>;
@@ -449,3 +486,7 @@ export type UpsertUser = typeof users.$inferInsert;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Invitation = typeof invitations.$inferSelect;
 export type InsertInvitation = z.infer<typeof insertInvitationSchema>;
+export type PdfImport = typeof pdfImports.$inferSelect;
+export type InsertPdfImport = z.infer<typeof insertPdfImportSchema>;
+export type PdfTable = typeof pdfTables.$inferSelect;
+export type InsertPdfTable = z.infer<typeof insertPdfTableSchema>;

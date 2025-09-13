@@ -1,9 +1,10 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
+import { createHash } from "crypto";
 import multer from "multer";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isAdmin } from "./replitAuth";
-import { insertTeacherSchema, insertStudentSchema, insertClassSchema, insertSubjectSchema, insertAssignmentSchema, insertInvitationSchema, Teacher } from "@shared/schema";
+import { insertTeacherSchema, insertStudentSchema, insertClassSchema, insertSubjectSchema, insertAssignmentSchema, insertInvitationSchema, insertPdfImportSchema, insertPdfTableSchema, Teacher } from "@shared/schema";
 import { SchoolYearTransitionParams } from "./storage";
 import { calculateCorrectHours } from "@shared/parallel-subjects";
 import { LessonDistributionImporter } from "./lesson-distribution-importer";
@@ -1774,6 +1775,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching current school year:", error);
       res.status(500).json({ error: "Failed to fetch current school year" });
+    }
+  });
+
+  // PDF Import routes
+  app.get('/api/pdf-imports', isAuthenticated, async (req, res) => {
+    try {
+      const pdfImports = await storage.getPdfImports();
+      res.json(pdfImports);
+    } catch (error) {
+      console.error("Error fetching PDF imports:", error);
+      res.status(500).json({ error: "Failed to fetch PDF imports" });
+    }
+  });
+
+  app.post('/api/pdf-imports', isAuthenticated, upload.single('pdf'), async (req: MulterRequest, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "PDF file is required" });
+      }
+
+      const userId = (req as any).user?.claims.sub;
+      const pdfImportData = insertPdfImportSchema.parse({
+        fileName: req.file.originalname,
+        fileHash: createHash('sha256').update(req.file.buffer).digest('hex'),
+        uploadedBy: userId,
+        pageCount: 0, // Will be updated after processing
+        metadata: {}
+      });
+
+      const pdfImport = await storage.createPdfImport(pdfImportData);
+      res.status(201).json(pdfImport);
+    } catch (error) {
+      console.error("Error creating PDF import:", error);
+      res.status(500).json({ error: "Failed to create PDF import" });
+    }
+  });
+
+  app.get('/api/pdf-tables', isAuthenticated, async (req, res) => {
+    try {
+      const pdfTables = await storage.getPdfTables();
+      res.json(pdfTables);
+    } catch (error) {
+      console.error("Error fetching PDF tables:", error);
+      res.status(500).json({ error: "Failed to fetch PDF tables" });
+    }
+  });
+
+  app.post('/api/pdf-tables', isAuthenticated, async (req, res) => {
+    try {
+      const pdfTableData = insertPdfTableSchema.parse(req.body);
+      const pdfTable = await storage.createPdfTable(pdfTableData);
+      res.status(201).json(pdfTable);
+    } catch (error) {
+      console.error("Error creating PDF table:", error);
+      res.status(500).json({ error: "Failed to create PDF table" });
+    }
+  });
+
+  app.put('/api/pdf-tables/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = insertPdfTableSchema.partial().parse(req.body);
+      const updatedTable = await storage.updatePdfTable(id, updateData);
+      res.json(updatedTable);
+    } catch (error) {
+      console.error("Error updating PDF table:", error);
+      res.status(500).json({ error: "Failed to update PDF table" });
+    }
+  });
+
+  app.delete('/api/pdf-tables/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deletePdfTable(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting PDF table:", error);
+      res.status(500).json({ error: "Failed to delete PDF table" });
+    }
+  });
+
+  // Get tables for a specific PDF import
+  app.get('/api/pdf-imports/:id/tables', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const tables = await storage.getPdfTablesByImport(id);
+      res.json(tables);
+    } catch (error) {
+      console.error("Error fetching tables for PDF import:", error);
+      res.status(500).json({ error: "Failed to fetch tables for PDF import" });
     }
   });
 

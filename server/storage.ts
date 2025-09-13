@@ -10,6 +10,8 @@ import {
   users,
   invitations,
   subjectMappings,
+  pdfImports,
+  pdfTables,
   type Teacher, 
   type InsertTeacher,
   type Student,
@@ -32,7 +34,11 @@ import {
   type Invitation,
   type InsertInvitation,
   type SubjectMapping,
-  type InsertSubjectMapping
+  type InsertSubjectMapping,
+  type PdfImport,
+  type InsertPdfImport,
+  type PdfTable,
+  type InsertPdfTable
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql, desc } from "drizzle-orm";
@@ -216,6 +222,19 @@ export interface IStorage {
   updateSubjectMapping(id: string, mapping: Partial<InsertSubjectMapping>): Promise<SubjectMapping>;
   deleteSubjectMapping(id: string): Promise<void>;
   incrementMappingUsage(id: string): Promise<void>;
+
+  // PDF Imports and Tables
+  getPdfImports(): Promise<PdfImport[]>;
+  getPdfImport(id: string): Promise<PdfImport | undefined>;
+  createPdfImport(pdfImport: InsertPdfImport): Promise<PdfImport>;
+  deletePdfImport(id: string): Promise<void>;
+  
+  getPdfTables(): Promise<PdfTable[]>;
+  getPdfTable(id: string): Promise<PdfTable | undefined>;
+  getPdfTablesByImport(importId: string): Promise<PdfTable[]>;
+  createPdfTable(pdfTable: InsertPdfTable): Promise<PdfTable>;
+  updatePdfTable(id: string, pdfTable: Partial<InsertPdfTable>): Promise<PdfTable>;
+  deletePdfTable(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1423,6 +1442,56 @@ export class DatabaseStorage implements IStorage {
         lastUsedAt: new Date()
       })
       .where(eq(subjectMappings.id, id));
+  }
+
+  // PDF Imports and Tables
+  async getPdfImports(): Promise<PdfImport[]> {
+    return await db.select().from(pdfImports).orderBy(desc(pdfImports.createdAt));
+  }
+
+  async getPdfImport(id: string): Promise<PdfImport | undefined> {
+    const [pdfImport] = await db.select().from(pdfImports).where(eq(pdfImports.id, id));
+    return pdfImport || undefined;
+  }
+
+  async createPdfImport(pdfImport: InsertPdfImport): Promise<PdfImport> {
+    const [created] = await db.insert(pdfImports).values(pdfImport).returning();
+    return created;
+  }
+
+  async deletePdfImport(id: string): Promise<void> {
+    await db.delete(pdfImports).where(eq(pdfImports.id, id));
+  }
+
+  async getPdfTables(): Promise<PdfTable[]> {
+    return await db.select().from(pdfTables).orderBy(desc(pdfTables.extractedAt));
+  }
+
+  async getPdfTable(id: string): Promise<PdfTable | undefined> {
+    const [pdfTable] = await db.select().from(pdfTables).where(eq(pdfTables.id, id));
+    return pdfTable || undefined;
+  }
+
+  async getPdfTablesByImport(importId: string): Promise<PdfTable[]> {
+    return await db.select().from(pdfTables).where(eq(pdfTables.importId, importId));
+  }
+
+  async createPdfTable(pdfTable: InsertPdfTable): Promise<PdfTable> {
+    const [created] = await db.insert(pdfTables).values(pdfTable).returning();
+    return created;
+  }
+
+  async updatePdfTable(id: string, pdfTable: Partial<InsertPdfTable>): Promise<PdfTable> {
+    const [updated] = await db
+      .update(pdfTables)
+      .set(pdfTable)
+      .where(eq(pdfTables.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deletePdfTable(id: string): Promise<void> {
+    await db.delete(pdfTables).where(eq(pdfTables.id, id));
   }
 }
 

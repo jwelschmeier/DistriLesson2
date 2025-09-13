@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { Calculator, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import PDFTableUploader from "@/components/PDFTableUploader";
 
 interface PlanstelleData {
   id: string;
@@ -273,6 +274,14 @@ export default function Planstellberechnung() {
               )}
             </CardContent>
           </Card>
+
+          {/* PDF Upload Section */}
+          <PDFTableUploader 
+            onTableUpdate={(tables) => {
+              console.log('PDF tables updated:', tables);
+              // You can integrate the tables with the planstellen calculation here
+            }}
+          />
 
           {/* Methodology */}
           <Card data-testid="card-methodology">
