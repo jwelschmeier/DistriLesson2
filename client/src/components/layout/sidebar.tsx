@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { BarChart3, Upload, Calculator, Users, Presentation, School, Clock, Sparkles, BookOpen, Calendar, Grid, Settings, RefreshCw, Menu, ChevronLeft } from "lucide-react";
+import { BarChart3, Upload, Calculator, Users, Presentation, School, Clock, Sparkles, BookOpen, Calendar, Grid, Settings, RefreshCw, Menu, ChevronLeft, MessageSquare } from "lucide-react";
 import logoImage from "@assets/logo-removebg-preview_1757711438324.png";
 
 const navigationItems = [
@@ -19,6 +19,7 @@ const navigationItems = [
   { href: "/stdv-le", label: "StdV-Le", icon: Clock },
   { href: "/stdv-kl-optimum", label: "StdV-Kl-Optimum", icon: Sparkles },
   { href: "/schuljahreswechsel", label: "Schuljahreswechsel", icon: RefreshCw },
+  { href: "/chatgpt-import", label: "ChatGPT Import", icon: MessageSquare },
 ];
 
 const adminNavigationItems = [
