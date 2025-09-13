@@ -208,7 +208,7 @@ export default function PlanstellberechnungPage() {
       {/* Header */}
       <div className="flex items-center gap-2">
         <Calculator className="h-6 w-6 text-blue-600" />
-        <h1 className="text-2xl font-bold">Planstellenberechnung - Vollständige Excel-Struktur</h1>
+        <h1 className="text-2xl font-bold">Planstellenberechnung</h1>
       </div>
 
       {/* Grunddaten */}
@@ -241,7 +241,7 @@ export default function PlanstellberechnungPage() {
       {/* VOLLSTÄNDIGE PLANSTELLENTABELLE - 2 SPALTEN */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Planstellenberechnung - 1:1 Excel Struktur</CardTitle>
+          <CardTitle className="text-lg">Planstellenberechnung</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           
