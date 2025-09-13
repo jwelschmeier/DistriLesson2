@@ -59,7 +59,26 @@ export default function PlanstellberechnungPage() {
     aborungZugangAnderes: 0,
     
     // Ermäßigungsstunden-Berechnung
-    grundstellenbedarfFaktor: 0.5
+    grundstellenbedarfFaktor: 0.5,
+    
+    // === NEUE FELDER AUS EXCEL-BILD ===
+    // Vorhandene Planstellen (Istbestand)
+    vorhandenePlanstellen: 0,
+    
+    // Berechnung Schulleiterpauschal
+    grundpauschal: 9,
+    schulleiterentlastungFortbildung: 0.04,
+    ausbauLeitungszeitSchulleiter: 0.12,
+    schulleiterDreiViertel: 18,
+    ausbauLeitungszeitStellvertreter: 0.11,
+    minusEntlastungStundenplanarbeit: 0,
+    
+    // Klassenbildung
+    istklassenzahl: 17.0,
+    
+    // Statistik Unterrichtsstunden
+    verfuegbareUnterrichtsstunden: 0,
+    unterrichtssollNachKuerzung: 0
   })
 
   // === EXAKTE EXCEL-BERECHNUNGEN MIT VALIDIERUNG ===
@@ -123,6 +142,57 @@ export default function PlanstellberechnungPage() {
   
   // F48: Stellenbedarf (Stellen-Soll) insgesamt = SUM(F34,F41,F47)
   const stellenbedarfGesamt = grundbedarfGesamt + summeStellenbesetzung + summePersonalausstattung
+
+  // === NEUE BERECHNUNGEN AUS EXCEL-BILD ===
+  
+  // F51: Differenz Soll-Ist = F50-F48
+  const differenzSollIst = (planstellenData.vorhandenePlanstellen || 0) - stellenbedarfGesamt
+  
+  // F53: Grundstellenbedarf * 0,5 = F10*0.5
+  const grundstellenbedarfHalbe = summeGrundbedarf * (planstellenData.grundstellenbedarfFaktor || 0.5)
+  
+  // F54: Entlastungsstunden (Kollegium) gerundet 0 Dezimalen = ROUND(F53,0)
+  const entlastungsstundenGerundet = Math.round(grundstellenbedarfHalbe)
+  
+  // === BERECHNUNG SCHULLEITERPAUSCHAL ===
+  // F57: zusätzl. Entlastung (abhängig v. Stellenanzahl) = F48*0,7+F56
+  const zusaetzlicheEntlastungStellenzahl = stellenbedarfGesamt * 0.7 + (planstellenData.grundpauschal || 9)
+  
+  // F60: Anzahl 44-46 in Stunden = SUMME(F57:F59)
+  const anzahlStundenSchulleitung = zusaetzlicheEntlastungStellenzahl + 
+                                   (planstellenData.schulleiterentlastungFortbildung || 0.04) +
+                                   (planstellenData.ausbauLeitungszeitSchulleiter || 0.12)
+  
+  // F61: Entlastungsstd. (Schulleitung) gerundet 2 Dezimalen = SUMME(F56:F59)
+  const entlastungsstundenSchulleitungGerundet = Math.round(((planstellenData.grundpauschal || 9) + 
+                                                            zusaetzlicheEntlastungStellenzahl +
+                                                            (planstellenData.schulleiterentlastungFortbildung || 0.04) +
+                                                            (planstellenData.ausbauLeitungszeitSchulleiter || 0.12)) * 100) / 100
+  
+  // F63: Stellvertreter 2/5 (abgerundet) = ABRUNDEN(F61*2/5.)
+  const stellvertreterZweiViertel = Math.floor(entlastungsstundenSchulleitungGerundet * 2 / 5)
+  
+  // F66: geänderte und abgerundete Schulleiterpauschal = GANZZAHL(F62-F65/2)
+  const geaenderteSchulleiterpauschal = Math.trunc((planstellenData.schulleiterDreiViertel || 18) - 
+                                                   (planstellenData.minusEntlastungStundenplanarbeit || 0) / 2)
+  
+  // F67: geänderte und aufgerundete Stellvertreterpauschal = RUNDEN(F63-F65/2+(F62-(GANZZAHL(F62))),0)
+  const geaenderteStellvertreterpauschal = Math.round(stellvertreterZweiViertel - 
+                                                     (planstellenData.minusEntlastungStundenplanarbeit || 0) / 2 + 
+                                                     ((planstellenData.schulleiterDreiViertel || 18) - 
+                                                      Math.trunc(planstellenData.schulleiterDreiViertel || 18)))
+  
+  // === KLASSENBILDUNG ===
+  // F69: Sollklassenzahl (Schülerzahl/28) = RUNDEN(F3/28,2)
+  const sollklassenzahl = Math.round((planstellenData.schuelerzahlStand || 710) / 28 * 100) / 100
+  
+  // F71: Abweichung = F69-F70
+  const abweichungKlassenbildung = sollklassenzahl - (planstellenData.istklassenzahl || 17.0)
+  
+  // === STATISTIK UNTERRICHTSSTUNDEN ===
+  // F75: Abweichung = F73-F74
+  const abweichungUnterrichtsstunden = (planstellenData.verfuegbareUnterrichtsstunden || 0) - 
+                                      (planstellenData.unterrichtssollNachKuerzung || 0)
 
   const handleInputChange = (field: keyof PlanstellenInput, value: string | number) => {
     setPlanstellenData(prev => ({
@@ -730,6 +800,48 @@ export default function PlanstellberechnungPage() {
               <Label className="text-sm font-bold text-lg">Stellenbedarf (Stellen-Soll) insgesamt</Label>
               <div className="p-4 bg-red-100 border border-red-400 rounded text-right font-mono text-xl font-bold" data-testid="display-stellenbedarf-gesamt">
                 {stellenbedarfGesamt.toFixed(2)}
+              </div>
+            </div>
+
+            {/* === VORHANDENE PLANSTELLEN (ISTBESTAND) === */}
+            <div className="grid grid-cols-2 gap-4 items-center mt-6">
+              <Label className="text-sm">Vorhandene Planstellen (Istbestand):</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.vorhandenePlanstellen || 0}
+                onChange={(e) => handleInputChange('vorhandenePlanstellen', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-vorhandene-planstellen"
+              />
+            </div>
+
+            {/* DIFFERENZ SOLL-IST F51 */}
+            <div className="grid grid-cols-2 gap-4 items-center bg-blue-50 p-4 rounded-lg border-2 border-blue-300">
+              <Label className="text-sm font-bold">Differenz Soll-Ist</Label>
+              <div className="p-3 bg-blue-100 border border-blue-400 rounded text-right font-mono text-lg font-bold" data-testid="display-differenz-soll-ist">
+                {differenzSollIst.toFixed(2)}
+              </div>
+            </div>
+
+            {/* === BERECHNUNG DER ERMÄSSIGUNGSSTUNDEN (KOLLEGIUM) === */}
+            <div className="bg-purple-50 p-2 rounded-lg mt-6">
+              <h3 className="font-bold text-center">Berechnung der Ermäßigungsstunden (Kollegium)</h3>
+            </div>
+
+            {/* Grundstellenbedarf * 0,5 */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">Grundstellenbedarf * 0,5:</Label>
+              <div className="p-3 bg-gray-100 border border-gray-400 rounded text-right font-mono text-lg" data-testid="display-grundstellenbedarf-halbe">
+                {grundstellenbedarfHalbe.toFixed(3)}
+              </div>
+            </div>
+
+            {/* Entlastungsstunden (Kollegium) gerundet 0 Dezimalen */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">Entlastungsstunden (Kollegium) gerundet 0 Dezimalen:</Label>
+              <div className="p-3 bg-purple-100 border border-purple-400 rounded text-right font-mono text-lg font-bold" data-testid="display-entlastungsstunden-gerundet">
+                {entlastungsstundenGerundet}
               </div>
             </div>
 
