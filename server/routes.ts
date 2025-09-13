@@ -835,14 +835,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/calculate-planstellen", async (req, res) => {
+  app.post("/api/calculate-planstellen", isAuthenticated, async (req, res) => {
     try {
       // Check if request body contains planstellen input data
       if (req.body && Object.keys(req.body).length > 0) {
         // Validate input data
         const input = planstellenInputSchema.parse(req.body);
         
-        // Calculate planstellen from user input
+        // Calculate planstellen from user input (no persistence)
         const calculated = await storage.calculatePlanstellenFromInput(input);
         
         return res.json({
@@ -872,6 +872,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Planstellen calculation error:", error);
       res.status(500).json({ error: "Failed to calculate planstellen" });
+    }
+  });
+
+  // Separate endpoint for saving planstellen
+  app.post("/api/planstellen/save", isAuthenticated, async (req, res) => {
+    try {
+      // Validate input data
+      const input = planstellenInputSchema.parse(req.body);
+      
+      // Calculate and persist planstellen from user input
+      const calculated = await storage.calculatePlanstellenFromInput(input);
+      
+      // Persist each planstelle to the database
+      const savedPlanstellen = [];
+      for (const planstelle of calculated) {
+        const saved = await storage.createPlanstelle(planstelle);
+        savedPlanstellen.push(saved);
+      }
+      
+      return res.json({
+        message: "Planstellen saved successfully",
+        planstellen: savedPlanstellen,
+        calculated: savedPlanstellen.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Planstellen save error:", error);
+      res.status(500).json({ error: "Failed to save planstellen" });
     }
   });
 

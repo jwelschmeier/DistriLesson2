@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Calculator, TrendingUp, TrendingDown, AlertTriangle, Save } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import type { PlanstellenInput } from "@shared/schema";
 
 interface PlanstelleData {
   id: string;
@@ -28,17 +29,12 @@ interface Subject {
   category: string;
 }
 
-interface LehrerplanstellenState {
-  schulname: string;
-  schuljahr: string;
-  schuelerzahlen: { [jahrgang: number]: number };
-  klassen: { [jahrgang: number]: number };
-  fachstunden: { [fach: string]: { sek1: number; sek2: number } };
-  deputat: number;
-}
+// Verwende das geteilte Schema aus dem Backend
+type LehrerplanstellenState = PlanstellenInput;
 
 export default function Planstellberechnung() {
   const [isCalculating, setIsCalculating] = useState(false);
+  const [previewPlanstellen, setPreviewPlanstellen] = useState<PlanstelleData[] | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -111,6 +107,9 @@ export default function Planstellberechnung() {
     queryKey: ["/api/planstellen"],
   });
 
+  // Use preview data if available, otherwise use persisted data
+  const displayPlanstellen = previewPlanstellen || planstellen || [];
+
   const calculateMutation = useMutation({
     mutationFn: async () => {
       setIsCalculating(true);
@@ -121,11 +120,23 @@ export default function Planstellberechnung() {
       return response.json();
     },
     onSuccess: (data) => {
+      // Set preview data for display
+      if (data.planstellen) {
+        const previewData = data.planstellen.map((p: any) => ({
+          id: p.id,
+          subjectId: p.subjectId || '',
+          subjectName: p.component || 'Unbekannt',
+          requiredHours: parseFloat(p.requiredHours) || 0,
+          availableHours: parseFloat(p.availableHours) || 0,
+          deficit: parseFloat(p.deficit) || 0
+        }));
+        setPreviewPlanstellen(previewData);
+      }
+      
       toast({
         title: "Berechnung abgeschlossen",
-        description: `${data.calculated} Planstellen erfolgreich berechnet.`,
+        description: `${data.calculated || data.planstellen?.length || 0} Planstellen erfolgreich berechnet.`,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/planstellen"] });
       setIsCalculating(false);
     },
     onError: (error) => {
@@ -140,14 +151,15 @@ export default function Planstellberechnung() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/calculate-planstellen", planstellenData);
+      const response = await apiRequest("POST", "/api/planstellen/save", planstellenData);
       return response.json();
     },
     onSuccess: (data) => {
       toast({
         title: "Planstellen gespeichert",
-        description: `Eingabe gespeichert und ${data.calculated} Planstellen berechnet.`,
+        description: `Eingabe gespeichert und ${data.calculated || data.planstellen?.length || 0} Planstellen berechnet.`,
       });
+      setPreviewPlanstellen(null); // Clear preview after saving
       queryClient.invalidateQueries({ queryKey: ["/api/planstellen"] });
     },
     onError: (error) => {
@@ -183,8 +195,8 @@ export default function Planstellberechnung() {
     return <TrendingUp className="w-4 h-4" />;
   };
 
-  const totalRequired = Number(planstellen?.reduce((sum, p) => sum + Number(p.requiredHours || 0), 0) || 0);
-  const totalAvailable = Number(planstellen?.reduce((sum, p) => sum + Number(p.availableHours || 0), 0) || 0);
+  const totalRequired = Number(displayPlanstellen?.reduce((sum, p) => sum + Number(p.requiredHours || 0), 0) || 0);
+  const totalAvailable = Number(displayPlanstellen?.reduce((sum, p) => sum + Number(p.availableHours || 0), 0) || 0);
   const totalDeficit = totalAvailable - totalRequired;
 
   return (
@@ -320,7 +332,7 @@ export default function Planstellberechnung() {
                       </tr>
                     </thead>
                     <tbody className="bg-card divide-y divide-border">
-                      {planstellen.map((planstelle) => {
+                      {displayPlanstellen.map((planstelle) => {
                         const coverage = Number(planstelle.requiredHours || 0) > 0 ? 
                           (Number(planstelle.availableHours || 0) / Number(planstelle.requiredHours || 0)) * 100 : 100;
                         
