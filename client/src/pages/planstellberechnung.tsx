@@ -1058,25 +1058,7 @@ export default function PlanstellberechnungPage() {
         </CardContent>
       </Card>
 
-      {/* Excel-Formel-Referenz */}
-      <Card className="bg-gray-50">
-        <CardHeader>
-          <CardTitle className="text-sm text-gray-700">Excel-Formeln (Referenz)</CardTitle>
-        </CardHeader>
-        <CardContent className="text-xs text-gray-600 space-y-1">
-          <div><strong>Grundbedarf:</strong></div>
-          <div>F5: = F3/F4 ({planstellenData.schuelerzahlStand} / {planstellenData.schuelerLehrerrelation})</div>
-          <div>F6: = TRUNC(F5, 2)</div>
-          <div>F7: = IF(F5-INT(F5)&lt;0.5, INT(F5), INT(F5)+0.5)</div>
-          <div>F10: = SUM(F6, F8:F9)</div>
-          <div><strong>Weitere Summen:</strong></div>
-          <div>Summe Ausgleichsbedarf: = SUM(F12:F26)</div>
-          <div>F34: = SUM(F10 + Ausgleichsbedarf + Mehrbedarfe)</div>
-          <div>F41: = SUM(F38:F40) [Stellenbesetzung]</div>
-          <div>F47: = SUM(F44:F46) [Personalausstattung]</div>
-          <div>F48: = SUM(F34,F41,F47) [Stellenbedarf insgesamt]</div>
-        </CardContent>
-      </Card>
+      
 
     </div>
   )
