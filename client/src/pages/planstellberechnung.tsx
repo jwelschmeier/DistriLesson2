@@ -5,10 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Calculator, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
+import { Calculator, TrendingUp, TrendingDown, AlertTriangle, Save } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import PDFTableUploader from "@/components/PDFTableUploader";
 
 interface PlanstelleData {
   id: string;
@@ -26,10 +28,80 @@ interface Subject {
   category: string;
 }
 
+interface LehrerplanstellenState {
+  schulname: string;
+  schuljahr: string;
+  schuelerzahlen: { [jahrgang: number]: number };
+  klassen: { [jahrgang: number]: number };
+  fachstunden: { [fach: string]: { sek1: number; sek2: number } };
+  deputat: number;
+}
+
 export default function Planstellberechnung() {
   const [isCalculating, setIsCalculating] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // State für Lehrerplanstellen-Eingabe
+  const [planstellenData, setPlanstellenData] = useState<LehrerplanstellenState>({
+    schulname: '',
+    schuljahr: '2024/2025',
+    schuelerzahlen: {},
+    klassen: {},
+    fachstunden: {},
+    deputat: 25
+  });
+  
+  // Berechnungen
+  const gesamtSchueler = Object.values(planstellenData.schuelerzahlen).reduce((sum, val) => sum + (val || 0), 0);
+  const gesamtKlassen = Object.values(planstellenData.klassen).reduce((sum, val) => sum + (val || 0), 0);
+  const gesamtStundenSek1 = Object.values(planstellenData.fachstunden).reduce((sum, fach) => sum + (fach.sek1 || 0), 0);
+  const gesamtStundenSek2 = Object.values(planstellenData.fachstunden).reduce((sum, fach) => sum + (fach.sek2 || 0), 0);
+  const gesamtStunden = gesamtStundenSek1 + gesamtStundenSek2;
+  const berechneteplanstellen = planstellenData.deputat > 0 ? Number((gesamtStunden / planstellenData.deputat).toFixed(2)) : 0;
+  
+  // Update-Funktionen
+  const updateSchuelerzahl = (jahrgang: number, wert: number) => {
+    setPlanstellenData(prev => ({
+      ...prev,
+      schuelerzahlen: { ...prev.schuelerzahlen, [jahrgang]: wert }
+    }));
+  };
+  
+  const updateKlassen = (jahrgang: number, wert: number) => {
+    setPlanstellenData(prev => ({
+      ...prev,
+      klassen: { ...prev.klassen, [jahrgang]: wert }
+    }));
+  };
+  
+  const updateFachstunden = (fach: string, typ: 'sek1' | 'sek2', wert: number) => {
+    setPlanstellenData(prev => ({
+      ...prev,
+      fachstunden: {
+        ...prev.fachstunden,
+        [fach]: {
+          sek1: typ === 'sek1' ? wert : prev.fachstunden[fach]?.sek1 || 0,
+          sek2: typ === 'sek2' ? wert : prev.fachstunden[fach]?.sek2 || 0
+        }
+      }
+    }));
+  };
+  
+  const updateDeputat = (wert: number) => {
+    setPlanstellenData(prev => ({ ...prev, deputat: wert }));
+  };
+  
+  const berechneSchnittKlassengroesse = (jahrgang: number): string => {
+    const schueler = planstellenData.schuelerzahlen[jahrgang] || 0;
+    const klassen = planstellenData.klassen[jahrgang] || 0;
+    return klassen > 0 ? (schueler / klassen).toFixed(1) : '0';
+  };
+  
+  const berechneFachGesamtstunden = (fach: string): number => {
+    const stundenData = planstellenData.fachstunden[fach];
+    return stundenData ? (stundenData.sek1 || 0) + (stundenData.sek2 || 0) : 0;
+  };
 
   const { data: subjects } = useQuery<Subject[]>({
     queryKey: ["/api/subjects"],
@@ -275,13 +347,182 @@ export default function Planstellberechnung() {
             </CardContent>
           </Card>
 
-          {/* PDF Upload Section */}
-          <PDFTableUploader 
-            onTableUpdate={(tables) => {
-              console.log('PDF tables updated:', tables);
-              // You can integrate the tables with the planstellen calculation here
-            }}
-          />
+          {/* Lehrerplanstellen Eingabemaske */}
+          <Card data-testid="card-lehrerplanstellen">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calculator className="h-5 w-5" />
+                Lehrerplanstellen-Eingabe
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Stammdaten */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="schulname">Schulname</Label>
+                    <Input 
+                      id="schulname" 
+                      placeholder="z.B. Gymnasium Musterstadt"
+                      value={planstellenData.schulname}
+                      onChange={(e) => setPlanstellenData(prev => ({ ...prev, schulname: e.target.value }))}
+                      data-testid="input-schulname"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="schuljahr">Schuljahr</Label>
+                    <Input 
+                      id="schuljahr" 
+                      placeholder="z.B. 2024/2025"
+                      value={planstellenData.schuljahr}
+                      onChange={(e) => setPlanstellenData(prev => ({ ...prev, schuljahr: e.target.value }))}
+                      data-testid="input-schuljahr"
+                    />
+                  </div>
+                </div>
+
+                {/* Schülerzahlen und Klassen */}
+                <div>
+                  <h4 className="font-semibold mb-3">Schülerzahlen nach Jahrgangsstufen</h4>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Jahrgangsstufe</TableHead>
+                        <TableHead>Schülerzahl</TableHead>
+                        <TableHead>Klassen</TableHead>
+                        <TableHead>Ø Schüler/Klasse</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {[5, 6, 7, 8, 9, 10, 11, 12, 13].map((jahrgang) => (
+                        <TableRow key={jahrgang}>
+                          <TableCell className="font-medium">{jahrgang}</TableCell>
+                          <TableCell>
+                            <Input 
+                              type="number" 
+                              placeholder="0"
+                              value={planstellenData.schuelerzahlen[jahrgang]?.toString() || ''}
+                              onChange={(e) => updateSchuelerzahl(jahrgang, Number(e.target.value) || 0)}
+                              className="w-20"
+                              data-testid={`input-schueler-${jahrgang}`}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input 
+                              type="number" 
+                              placeholder="0"
+                              value={planstellenData.klassen[jahrgang]?.toString() || ''}
+                              onChange={(e) => updateKlassen(jahrgang, Number(e.target.value) || 0)}
+                              className="w-20"
+                              data-testid={`input-klassen-${jahrgang}`}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground">{berechneSchnittKlassengroesse(jahrgang)}</span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow className="bg-muted/50 font-semibold">
+                        <TableCell>Gesamt</TableCell>
+                        <TableCell>{gesamtSchueler}</TableCell>
+                        <TableCell>{gesamtKlassen}</TableCell>
+                        <TableCell>{gesamtKlassen > 0 ? (gesamtSchueler / gesamtKlassen).toFixed(1) : '0'}</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Unterrichtsstunden */}
+                <div>
+                  <h4 className="font-semibold mb-3">Unterrichtsstunden nach Fächern</h4>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Fach</TableHead>
+                        <TableHead>Wochenstunden Sek I</TableHead>
+                        <TableHead>Wochenstunden Sek II</TableHead>
+                        <TableHead>Gesamt</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {[
+                        'Deutsch', 'Mathematik', 'Englisch', 'Französisch', 'Latein',
+                        'Geschichte', 'Erdkunde', 'Politik', 'Biologie', 'Chemie', 
+                        'Physik', 'Musik', 'Kunst', 'Sport', 'Religion/Ethik'
+                      ].map((fach) => (
+                        <TableRow key={fach}>
+                          <TableCell className="font-medium">{fach}</TableCell>
+                          <TableCell>
+                            <Input 
+                              type="number" 
+                              placeholder="0"
+                              value={planstellenData.fachstunden[fach]?.sek1?.toString() || ''}
+                              onChange={(e) => updateFachstunden(fach, 'sek1', Number(e.target.value) || 0)}
+                              className="w-20"
+                              data-testid={`input-sek1-${fach.toLowerCase()}`}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input 
+                              type="number" 
+                              placeholder="0"
+                              value={planstellenData.fachstunden[fach]?.sek2?.toString() || ''}
+                              onChange={(e) => updateFachstunden(fach, 'sek2', Number(e.target.value) || 0)}
+                              className="w-20"
+                              data-testid={`input-sek2-${fach.toLowerCase()}`}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground">{berechneFachGesamtstunden(fach)}</span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow className="bg-muted/50 font-semibold">
+                        <TableCell>Gesamtstunden</TableCell>
+                        <TableCell>{gesamtStundenSek1}</TableCell>
+                        <TableCell>{gesamtStundenSek2}</TableCell>
+                        <TableCell>{gesamtStunden}</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Planstellenberechnung */}
+                <div>
+                  <h4 className="font-semibold mb-3">Planstellenberechnung</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                      <Label className="text-sm font-medium">Gesamtstunden pro Woche</Label>
+                      <div className="text-2xl font-bold text-blue-600">{gesamtStunden}</div>
+                    </div>
+                    <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                      <Label className="text-sm font-medium">Deputatsstunden pro Lehrer</Label>
+                      <Input 
+                        type="number" 
+                        placeholder="25" 
+                        value={planstellenData.deputat}
+                        onChange={(e) => updateDeputat(Number(e.target.value) || 0)}
+                        className="mt-1"
+                        data-testid="input-deputat"
+                      />
+                    </div>
+                    <div className="p-4 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
+                      <Label className="text-sm font-medium">Berechnete Planstellen</Label>
+                      <div className="text-2xl font-bold text-purple-600">{berechneteplanstellen}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Speichern Button */}
+                <div className="flex justify-end">
+                  <Button data-testid="button-save">
+                    <Save className="h-4 w-4 mr-2" />
+                    Berechnung speichern
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Methodology */}
           <Card data-testid="card-methodology">
