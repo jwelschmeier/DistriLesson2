@@ -89,8 +89,8 @@ export default function Planstellberechnung() {
     return <TrendingUp className="w-4 h-4" />;
   };
 
-  const totalRequired = planstellen?.reduce((sum, p) => sum + p.requiredHours, 0) || 0;
-  const totalAvailable = planstellen?.reduce((sum, p) => sum + p.availableHours, 0) || 0;
+  const totalRequired = Number(planstellen?.reduce((sum, p) => sum + Number(p.requiredHours || 0), 0) || 0);
+  const totalAvailable = Number(planstellen?.reduce((sum, p) => sum + Number(p.availableHours || 0), 0) || 0);
   const totalDeficit = totalAvailable - totalRequired;
 
   return (
