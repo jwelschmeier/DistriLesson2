@@ -980,6 +980,79 @@ export default function PlanstellberechnungPage() {
               </div>
             </div>
 
+            {/* === KLASSENBILDUNG === */}
+            <div className="bg-green-50 p-2 rounded-lg mt-6">
+              <h3 className="font-bold text-center">Klassenbildung</h3>
+            </div>
+
+            {/* Sollklassenzahl */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">Sollklassenzahl</Label>
+              <div className="p-3 bg-gray-100 border border-gray-400 rounded text-right font-mono text-lg" data-testid="display-sollklassenzahl">
+                {sollklassenzahl.toFixed(1)}
+              </div>
+            </div>
+
+            {/* Istklassenzahl */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">Istklassenzahl</Label>
+              <Input
+                type="number"
+                step="0.1"
+                value={planstellenData.istklassenzahl || 17.0}
+                onChange={(e) => handleInputChange('istklassenzahl', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-istklassenzahl"
+              />
+            </div>
+
+            {/* Abweichung Klassenanzahl */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">Abweichung Klassenanzahl</Label>
+              <div className="p-3 bg-green-100 border border-green-400 rounded text-right font-mono text-lg font-bold" data-testid="display-abweichung-klassenanzahl">
+                {abweichungKlassenbildung.toFixed(1)}
+              </div>
+            </div>
+
+            {/* === STATISTIK UNTERRICHTSSTUNDEN === */}
+            <div className="bg-blue-50 p-2 rounded-lg mt-6">
+              <h3 className="font-bold text-center">Statistik Unterrichtsstunden</h3>
+            </div>
+
+            {/* verfügbare Unterrichtsstunden */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">verfügbare Unterrichtsstunden</Label>
+              <Input
+                type="number"
+                step="1"
+                value={planstellenData.verfuegbareUnterrichtsstunden || 0}
+                onChange={(e) => handleInputChange('verfuegbareUnterrichtsstunden', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-verfuegbare-unterrichtsstunden"
+              />
+            </div>
+
+            {/* Unterrichtssoll nach Kürzung */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">Unterrichtssoll nach Kürzung</Label>
+              <Input
+                type="number"
+                step="1"
+                value={planstellenData.unterrichtssollNachKuerzung || 0}
+                onChange={(e) => handleInputChange('unterrichtssollNachKuerzung', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-unterrichtssoll-nach-kuerzung"
+              />
+            </div>
+
+            {/* Abweichung Unterrichtsstunden */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">Abweichung Unterrichtsstunden</Label>
+              <div className="p-3 bg-blue-100 border border-blue-400 rounded text-right font-mono text-lg font-bold" data-testid="display-abweichung-unterrichtsstunden">
+                {abweichungUnterrichtsstunden}
+              </div>
+            </div>
+
           </div>
 
         </CardContent>
