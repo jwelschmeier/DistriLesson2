@@ -113,8 +113,16 @@ export default function PlanstellberechnungPage() {
                                (planstellenData.kapitalisierungPaedUebermittag || 0) +
                                (planstellenData.abzugKapitalisierungUebermittag || 0)
   
+  // F47: Personalausstattung = SUM(F44:F46)
+  const summePersonalausstattung = (planstellenData.beurlaubungElternzeit || 0) +
+                                  (planstellenData.ersatzeinstellungElternzeit || 0) +
+                                  (planstellenData.aborungZugangAnderes || 0)
+  
   // F34: Grundbedarf (Summe aus Grundbedarf, Ausgleichsbedarf, Mehrbedarf) = SUM(F33+F28+F10)
   const grundbedarfGesamt = summeGrundbedarf + summeAusgleichsbedarf + summeWeitereBereiche
+  
+  // F48: Stellenbedarf (Stellen-Soll) insgesamt = SUM(F34,F41,F47)
+  const stellenbedarfGesamt = grundbedarfGesamt + summeStellenbesetzung + summePersonalausstattung
 
   const handleInputChange = (field: keyof PlanstellenInput, value: string | number) => {
     setPlanstellenData(prev => ({
@@ -661,15 +669,67 @@ export default function PlanstellberechnungPage() {
               </div>
             </div>
 
+            {/* === PERSONALAUSSTATTUNG === */}
+            <div className="bg-indigo-50 p-2 rounded-lg mt-6">
+              <h3 className="font-bold text-center">Personalausstattung</h3>
+            </div>
 
+            {/* Beurlaubung o. L Elternzeit */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">Beurlaubung o. L Elternzeit</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.beurlaubungElternzeit || 0}
+                onChange={(e) => handleInputChange('beurlaubungElternzeit', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-beurlaubung-elternzeit"
+              />
+            </div>
+
+            {/* Ersatzeinstellung Elternzeit */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">Ersatzeinstellung Elternzeit</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.ersatzeinstellungElternzeit || 0}
+                onChange={(e) => handleInputChange('ersatzeinstellungElternzeit', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-ersatzeinstellung-elternzeit"
+              />
+            </div>
+
+            {/* Abornung Zugang (anderes Kapitel) */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">Abornung Zugang (anderes Kapitel)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.aborungZugangAnderes || 0}
+                onChange={(e) => handleInputChange('aborungZugangAnderes', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-abornung-zugang"
+              />
+            </div>
+
+            <Separator className="border-t-2" />
+
+            {/* SUMME PERSONALAUSSTATTUNG F47 */}
+            <div className="grid grid-cols-2 gap-4 items-center bg-indigo-50 p-4 rounded-lg border-2 border-indigo-300">
+              <Label className="text-sm font-bold">Summe Personalausstattung</Label>
+              <div className="p-3 bg-indigo-100 border border-indigo-400 rounded text-right font-mono text-lg font-bold" data-testid="display-summe-personalausstattung">
+                {summePersonalausstattung.toFixed(2)}
+              </div>
+            </div>
 
             <Separator className="border-t-4" />
 
-            {/* STELLENBEDARF-GESAMTSUMME (Final mit allen Abschnitten) */}
-            <div className="grid grid-cols-2 gap-4 items-center bg-green-50 p-4 rounded-lg border-2 border-green-300">
-              <Label className="text-sm font-bold text-lg">STELLENBEDARF-GESAMTSUMME</Label>
-              <div className="p-4 bg-green-100 border border-green-400 rounded text-right font-mono text-xl font-bold" data-testid="display-stellenbedarf-endgueltig">
-                {grundbedarfGesamt.toFixed(2)}
+            {/* STELLENBEDARF (STELLEN-SOLL) INSGESAMT F48 */}
+            <div className="grid grid-cols-2 gap-4 items-center bg-red-50 p-4 rounded-lg border-2 border-red-300 mt-6">
+              <Label className="text-sm font-bold text-lg">Stellenbedarf (Stellen-Soll) insgesamt</Label>
+              <div className="p-4 bg-red-100 border border-red-400 rounded text-right font-mono text-xl font-bold" data-testid="display-stellenbedarf-gesamt">
+                {stellenbedarfGesamt.toFixed(2)}
               </div>
             </div>
 
@@ -693,6 +753,8 @@ export default function PlanstellberechnungPage() {
           <div>Summe Ausgleichsbedarf: = SUM(F12:F26)</div>
           <div>F34: = SUM(F10 + Ausgleichsbedarf + Mehrbedarfe)</div>
           <div>F41: = SUM(F38:F40) [Stellenbesetzung]</div>
+          <div>F47: = SUM(F44:F46) [Personalausstattung]</div>
+          <div>F48: = SUM(F34,F41,F47) [Stellenbedarf insgesamt]</div>
         </CardContent>
       </Card>
 
