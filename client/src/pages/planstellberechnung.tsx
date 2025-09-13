@@ -7,7 +7,7 @@ import { Calculator } from 'lucide-react'
 import type { PlanstellenInput } from '@shared/schema'
 
 export default function PlanstellberechnungPage() {
-  // State für erweiterte Tabelle mit Stundenanzahl Real Spalte
+  // State für erweiterte Tabelle - OHNE dritte Spalte
   const [planstellenData, setPlanstellenData] = useState<PlanstellenInput>({
     schulname: "Realschule Musterstadt",
     schuljahr: "2024/25",
@@ -16,25 +16,33 @@ export default function PlanstellberechnungPage() {
     abzugLehramtsanwaerter: -0.5,     // F8: Eingabe
     rundung: -0.21,                   // F9: Eingabe
     
-    // Stundenanzahl Real (neue dritte Spalte)
-    stundenanzahlAbzugLehramtsanwaerter: -14,
-    stundenanzahlRundung: -5.88,
+    // Ausgleichsbedarf F12-F26 aus Excel
+    fachleiter: 0.21,
+    personalrat: 1.64,
+    schulleitungsentlastungFortbildung: 0.04,
+    ausbauLeitungszeit: 0.15,
+    rueckgabeVorgriffstunde: 0.04,
+    digitalisierungsbeauftragter: 0.04,
+    fortbildungQualifMedienDS: 0.07,
+    fachberaterSchulaufsicht: 0.07,
+    wechselndeAusgleichsbedarfe: 0.5,
+    praxissemesterInSchule: 0.29,
+    zusaetzlicheAusfallvertretung: 0.25,
+    entlastungLehrertaetigkeit: 0.04,
+    entlastungLVOCO: 0.04,
+    ermaessigungenweitere: 0.3,
+    nullWert: 0,
     
     // Weitere Bereiche
     praktischePhilosophieIslamkunde: 0,
-    stundenanzahlPraktischePhilosophie: 0,
     paedagogischeUebermittagsbetreuung: 0,
-    stundenanzahlPaedagogischeUebermittagsbetreuung: 0,
     integrationDurchBildung: 0,
-    stundenanzahlIntegrationDurchBildung: 0,
     
     // Freie Zeilen
     freieZeile1Label: "",
     freieZeile1Wert: 0,
-    stundenanzahlFreieZeile1: 0,
     freieZeile2Label: "",
-    freieZeile2Wert: 0,
-    stundenanzahlFreieZeile2: 0
+    freieZeile2Wert: 0
   })
 
   // === EXAKTE EXCEL-BERECHNUNGEN MIT VALIDIERUNG ===
@@ -55,14 +63,29 @@ export default function PlanstellberechnungPage() {
   // F10: "Summe Grundbedarf" = SUM(F6,F8:F9)
   const summeGrundbedarf = quotientAbgeschnitten + planstellenData.abzugLehramtsanwaerter + planstellenData.rundung
 
-  // === STUNDENANZAHL REAL SUMME ===
-  const summeStundenanzahlReal = (planstellenData.stundenanzahlAbzugLehramtsanwaerter || 0) +
-                                (planstellenData.stundenanzahlRundung || 0) +
-                                (planstellenData.stundenanzahlPraktischePhilosophie || 0) +
-                                (planstellenData.stundenanzahlPaedagogischeUebermittagsbetreuung || 0) +
-                                (planstellenData.stundenanzahlIntegrationDurchBildung || 0) +
-                                (planstellenData.stundenanzahlFreieZeile1 || 0) +
-                                (planstellenData.stundenanzahlFreieZeile2 || 0)
+  // === AUSGLEICHSBEDARF SUMME ===
+  const summeAusgleichsbedarf = (planstellenData.fachleiter || 0) +
+                               (planstellenData.personalrat || 0) +
+                               (planstellenData.schulleitungsentlastungFortbildung || 0) +
+                               (planstellenData.ausbauLeitungszeit || 0) +
+                               (planstellenData.rueckgabeVorgriffstunde || 0) +
+                               (planstellenData.digitalisierungsbeauftragter || 0) +
+                               (planstellenData.fortbildungQualifMedienDS || 0) +
+                               (planstellenData.fachberaterSchulaufsicht || 0) +
+                               (planstellenData.wechselndeAusgleichsbedarfe || 0) +
+                               (planstellenData.praxissemesterInSchule || 0) +
+                               (planstellenData.zusaetzlicheAusfallvertretung || 0) +
+                               (planstellenData.entlastungLehrertaetigkeit || 0) +
+                               (planstellenData.entlastungLVOCO || 0) +
+                               (planstellenData.ermaessigungenweitere || 0) +
+                               (planstellenData.nullWert || 0)
+
+  // === WEITERE BEREICHE SUMME ===
+  const summeWeitereBereiche = (planstellenData.praktischePhilosophieIslamkunde || 0) +
+                              (planstellenData.paedagogischeUebermittagsbetreuung || 0) +
+                              (planstellenData.integrationDurchBildung || 0) +
+                              (planstellenData.freieZeile1Wert || 0) +
+                              (planstellenData.freieZeile2Wert || 0)
 
   const handleInputChange = (field: keyof PlanstellenInput, value: string | number) => {
     setPlanstellenData(prev => ({
@@ -78,7 +101,7 @@ export default function PlanstellberechnungPage() {
       {/* Header */}
       <div className="flex items-center gap-2">
         <Calculator className="h-6 w-6 text-blue-600" />
-        <h1 className="text-2xl font-bold">Planstellenberechnung - Erweiterte Tabelle</h1>
+        <h1 className="text-2xl font-bold">Planstellenberechnung - Vollständige Excel-Struktur</h1>
       </div>
 
       {/* Grunddaten */}
@@ -108,18 +131,17 @@ export default function PlanstellberechnungPage() {
         </CardContent>
       </Card>
 
-      {/* ERWEITERTE PLANSTELLENTABELLE - 3 SPALTEN */}
+      {/* VOLLSTÄNDIGE PLANSTELLENTABELLE - 2 SPALTEN */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Planstellenberechnung - Mit Stundenanzahl real</CardTitle>
+          <CardTitle className="text-lg">Planstellenberechnung - 1:1 Excel Struktur</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           
           {/* Tabellen-Header */}
-          <div className="grid grid-cols-3 gap-4 items-center font-bold text-sm bg-gray-100 p-4 rounded-lg">
+          <div className="grid grid-cols-2 gap-4 items-center font-bold text-sm bg-gray-100 p-4 rounded-lg">
             <Label className="text-center">Bezeichnung</Label>
-            <Label className="text-center">Planstellen-Wert</Label>
-            <Label className="text-center">Stundenanzahl real</Label>
+            <Label className="text-center">Wert</Label>
           </div>
 
           <div className="space-y-3">
@@ -130,7 +152,7 @@ export default function PlanstellberechnungPage() {
             </div>
 
             {/* F3: Schülerzahl Stand 31.08.24 (EINGABE) */}
-            <div className="grid grid-cols-3 gap-4 items-center">
+            <div className="grid grid-cols-2 gap-4 items-center">
               <Label className="text-sm">F3: Schülerzahl Stand 31.08.24</Label>
               <Input
                 type="number"
@@ -140,11 +162,10 @@ export default function PlanstellberechnungPage() {
                 className="bg-yellow-50 border-yellow-300"
                 data-testid="input-schuelerzahl"
               />
-              <div className="text-center text-sm text-gray-500">-</div>
             </div>
 
             {/* F4: Schüler/Lehrerrelation an der Realschule: (ab 06/18) (EINGABE) */}
-            <div className="grid grid-cols-3 gap-4 items-center">
+            <div className="grid grid-cols-2 gap-4 items-center">
               <Label className="text-sm">F4: Schüler/Lehrerrelation an der Realschule: (ab 06/18)</Label>
               <Input
                 type="number"
@@ -154,42 +175,38 @@ export default function PlanstellberechnungPage() {
                 className="bg-yellow-50 border-yellow-300"
                 data-testid="input-schuelerrelation"
               />
-              <div className="text-center text-sm text-gray-500">-</div>
             </div>
 
             <Separator />
 
             {/* F5: Quotient der zwei Größen: (BERECHNET) */}
-            <div className="grid grid-cols-3 gap-4 items-center">
+            <div className="grid grid-cols-2 gap-4 items-center">
               <Label className="text-sm font-medium">F5: Quotient der zwei Größen:</Label>
-              <div className={`p-2 border rounded text-right font-mono ${isValidForCalculation ? 'bg-cyan-50 border-cyan-200' : 'bg-red-50 border-red-300'}`}>
+              <div className={`p-2 border rounded text-right font-mono ${isValidForCalculation ? 'bg-cyan-50 border-cyan-200' : 'bg-red-50 border-red-300'}`} data-testid="display-f5">
                 {isValidForCalculation ? quotient.toFixed(8) : 'Division durch 0'}
               </div>
-              <div className="text-center text-sm text-gray-500">-</div>
             </div>
 
             {/* F6: Quotient abgeschnitten nach 2. Dezimalstelle (BERECHNET) */}
-            <div className="grid grid-cols-3 gap-4 items-center">
+            <div className="grid grid-cols-2 gap-4 items-center">
               <Label className="text-sm font-medium">F6: Quotient nach der 2. Dezimale abgeschnitten</Label>
               <div className={`p-2 border rounded text-right font-mono ${isValidForCalculation ? 'bg-cyan-50 border-cyan-200' : 'bg-red-50 border-red-300'}`} data-testid="display-f6">
                 {isValidForCalculation ? quotientAbgeschnitten.toFixed(2) : '0.00'}
               </div>
-              <div className="text-center text-sm text-gray-500">-</div>
             </div>
 
             {/* F7: abgerundet auf halbe bzw. ganze Dezimale (BERECHNET) */}
-            <div className="grid grid-cols-3 gap-4 items-center">
+            <div className="grid grid-cols-2 gap-4 items-center">
               <Label className="text-sm font-medium">F7: abgerundet auf halbe bzw. ganze Dezimale:</Label>
               <div className={`p-2 border rounded text-right font-mono ${isValidForCalculation ? 'bg-cyan-50 border-cyan-200' : 'bg-red-50 border-red-300'}`} data-testid="display-f7">
                 {isValidForCalculation ? abgerundet.toFixed(1) : '0.0'}
               </div>
-              <div className="text-center text-sm text-gray-500">-</div>
             </div>
 
             <Separator />
 
             {/* F8: bedarfsdeckender Unterricht - Abzug Lehramtsanwärter (EINGABE) */}
-            <div className="grid grid-cols-3 gap-4 items-center">
+            <div className="grid grid-cols-2 gap-4 items-center">
               <Label className="text-sm">F8: bedarfsdeckender Unterricht - Abzug Lehramtsanwärter</Label>
               <Input
                 type="number"
@@ -199,18 +216,10 @@ export default function PlanstellberechnungPage() {
                 className="bg-yellow-50 border-yellow-300"
                 data-testid="input-abzug-lehramtsanwaerter"
               />
-              <Input
-                type="number"
-                step="0.01"
-                value={planstellenData.stundenanzahlAbzugLehramtsanwaerter || 0}
-                onChange={(e) => handleInputChange('stundenanzahlAbzugLehramtsanwaerter', parseFloat(e.target.value))}
-                className="bg-green-50 border-green-300"
-                data-testid="input-stundenanzahl-abzug"
-              />
             </div>
 
             {/* F9: Rundung (EINGABE) */}
-            <div className="grid grid-cols-3 gap-4 items-center">
+            <div className="grid grid-cols-2 gap-4 items-center">
               <Label className="text-sm">F9: Rundung</Label>
               <Input
                 type="number"
@@ -220,34 +229,235 @@ export default function PlanstellberechnungPage() {
                 className="bg-yellow-50 border-yellow-300"
                 data-testid="input-rundung"
               />
-              <Input
-                type="number"
-                step="0.01"
-                value={planstellenData.stundenanzahlRundung || 0}
-                onChange={(e) => handleInputChange('stundenanzahlRundung', parseFloat(e.target.value))}
-                className="bg-green-50 border-green-300"
-                data-testid="input-stundenanzahl-rundung"
-              />
             </div>
 
             <Separator className="border-t-2" />
 
             {/* F10: Summe Grundbedarf (BERECHNET) */}
-            <div className="grid grid-cols-3 gap-4 items-center bg-green-50 p-4 rounded-lg border-2 border-green-300">
+            <div className="grid grid-cols-2 gap-4 items-center bg-green-50 p-4 rounded-lg border-2 border-green-300">
               <Label className="text-sm font-bold">F10: Summe Grundbedarf</Label>
               <div className="p-3 bg-green-100 border border-green-400 rounded text-right font-mono text-lg font-bold" data-testid="display-f10">
                 {summeGrundbedarf.toFixed(2)}
               </div>
-              <div className="text-center text-sm text-gray-500">-</div>
+            </div>
+
+            {/* === AUSGLEICHSBEDARF === */}
+            <div className="bg-orange-50 p-2 rounded-lg mt-6">
+              <h3 className="font-bold text-center">Ausgleichsbedarf</h3>
+            </div>
+
+            {/* F12: Fachleiter */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">F12: Fachleiter</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.fachleiter || 0}
+                onChange={(e) => handleInputChange('fachleiter', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-fachleiter"
+              />
+            </div>
+
+            {/* F13: Personalrat */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">F13: Personalrat</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.personalrat || 0}
+                onChange={(e) => handleInputChange('personalrat', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-personalrat"
+              />
+            </div>
+
+            {/* F14: Schulleitungsentlastung - Fortbildung */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">F14: Schulleitungsentlastung - Fortbildung</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.schulleitungsentlastungFortbildung || 0}
+                onChange={(e) => handleInputChange('schulleitungsentlastungFortbildung', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-schulleitungsentlastung"
+              />
+            </div>
+
+            {/* F15: Ausbau Leitungszeit */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">F15: Ausbau Leitungszeit</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.ausbauLeitungszeit || 0}
+                onChange={(e) => handleInputChange('ausbauLeitungszeit', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-ausbau-leitungszeit"
+              />
+            </div>
+
+            {/* F16: Rückgabe Vorgriffstunde */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">F16: Rückgabe Vorgriffstunde</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.rueckgabeVorgriffstunde || 0}
+                onChange={(e) => handleInputChange('rueckgabeVorgriffstunde', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-rueckgabe-vorgriffstunde"
+              />
+            </div>
+
+            {/* F17: Digitalisierungsbeauftragter */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">F17: Digitalisierungsbeauftragter</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.digitalisierungsbeauftragter || 0}
+                onChange={(e) => handleInputChange('digitalisierungsbeauftragter', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-digitalisierungsbeauftragter"
+              />
+            </div>
+
+            {/* F18: Fortb. und Qualif. / Medien und DS */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">F18: Fortb. und Qualif. / Medien und DS</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.fortbildungQualifMedienDS || 0}
+                onChange={(e) => handleInputChange('fortbildungQualifMedienDS', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-fortbildung-qualif"
+              />
+            </div>
+
+            {/* F19: Fachberater Schulaufsicht */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">F19: Fachberater Schulaufsicht</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.fachberaterSchulaufsicht || 0}
+                onChange={(e) => handleInputChange('fachberaterSchulaufsicht', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-fachberater-schulaufsicht"
+              />
+            </div>
+
+            {/* F20: Wechs. Merh - und Ausgleichsbedarfe */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">F20: Wechs. Merh - und Ausgleichsbedarfe</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.wechselndeAusgleichsbedarfe || 0}
+                onChange={(e) => handleInputChange('wechselndeAusgleichsbedarfe', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-wechselnde-ausgleichsbedarfe"
+              />
+            </div>
+
+            {/* F21: Praxissemester in Schule */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">F21: Praxissemester in Schule</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.praxissemesterInSchule || 0}
+                onChange={(e) => handleInputChange('praxissemesterInSchule', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-praxissemester-schule"
+              />
+            </div>
+
+            {/* F22: Zusätzliche Ausfallvertretung */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">F22: Zusätzliche Ausfallvertretung</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.zusaetzlicheAusfallvertretung || 0}
+                onChange={(e) => handleInputChange('zusaetzlicheAusfallvertretung', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-zusaetzliche-ausfallvertretung"
+              />
+            </div>
+
+            {/* F23: Entlastung Lehrertätigkeit */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">F23: Entlastung Lehrertätigkeit</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.entlastungLehrertaetigkeit || 0}
+                onChange={(e) => handleInputChange('entlastungLehrertaetigkeit', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-entlastung-lehrertaetigkeit"
+              />
+            </div>
+
+            {/* F24: Entlastung LVO&CO */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">F24: Entlastung LVO&CO</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.entlastungLVOCO || 0}
+                onChange={(e) => handleInputChange('entlastungLVOCO', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-entlastung-lvoco"
+              />
+            </div>
+
+            {/* F25: Ermäßigungen weitere */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">F25: Ermäßigungen weitere</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.ermaessigungenweitere || 0}
+                onChange={(e) => handleInputChange('ermaessigungenweitere', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-ermaessigungen-weitere"
+              />
+            </div>
+
+            {/* F26: 0 */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">F26: 0</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.nullWert || 0}
+                onChange={(e) => handleInputChange('nullWert', parseFloat(e.target.value))}
+                className="bg-gray-50 border-gray-300"
+                data-testid="input-null-wert"
+              />
+            </div>
+
+            <Separator className="border-t-2" />
+
+            {/* Summe Ausgleichsbedarf (BERECHNET) */}
+            <div className="grid grid-cols-2 gap-4 items-center bg-orange-50 p-4 rounded-lg border-2 border-orange-300">
+              <Label className="text-sm font-bold">Summe Ausgleichsbedarf</Label>
+              <div className="p-3 bg-orange-100 border border-orange-400 rounded text-right font-mono text-lg font-bold" data-testid="display-summe-ausgleichsbedarf">
+                {summeAusgleichsbedarf.toFixed(2)}
+              </div>
             </div>
 
             {/* === WEITERE BEREICHE === */}
-            <div className="bg-blue-50 p-2 rounded-lg mt-6">
+            <div className="bg-purple-50 p-2 rounded-lg mt-6">
               <h3 className="font-bold text-center">Weitere Bereiche</h3>
             </div>
 
             {/* Praktische Philosophie /Islamkunde */}
-            <div className="grid grid-cols-3 gap-4 items-center">
+            <div className="grid grid-cols-2 gap-4 items-center">
               <Label className="text-sm">Praktische Philosophie /Islamkunde</Label>
               <Input
                 type="number"
@@ -257,18 +467,10 @@ export default function PlanstellberechnungPage() {
                 className="bg-yellow-50 border-yellow-300"
                 data-testid="input-praktische-philosophie"
               />
-              <Input
-                type="number"
-                step="0.01"
-                value={planstellenData.stundenanzahlPraktischePhilosophie || 0}
-                onChange={(e) => handleInputChange('stundenanzahlPraktischePhilosophie', parseFloat(e.target.value))}
-                className="bg-green-50 border-green-300"
-                data-testid="input-stundenanzahl-philosophie"
-              />
             </div>
 
             {/* Pädagogische Übermittagsbetreuung */}
-            <div className="grid grid-cols-3 gap-4 items-center">
+            <div className="grid grid-cols-2 gap-4 items-center">
               <Label className="text-sm">Pädagogische Übermittagsbetreuung</Label>
               <Input
                 type="number"
@@ -278,18 +480,10 @@ export default function PlanstellberechnungPage() {
                 className="bg-yellow-50 border-yellow-300"
                 data-testid="input-paedagogische-betreuung"
               />
-              <Input
-                type="number"
-                step="0.01"
-                value={planstellenData.stundenanzahlPaedagogischeUebermittagsbetreuung || 0}
-                onChange={(e) => handleInputChange('stundenanzahlPaedagogischeUebermittagsbetreuung', parseFloat(e.target.value))}
-                className="bg-green-50 border-green-300"
-                data-testid="input-stundenanzahl-betreuung"
-              />
             </div>
 
             {/* Integration durch Bildung */}
-            <div className="grid grid-cols-3 gap-4 items-center">
+            <div className="grid grid-cols-2 gap-4 items-center">
               <Label className="text-sm">Integration durch Bildung</Label>
               <Input
                 type="number"
@@ -299,14 +493,6 @@ export default function PlanstellberechnungPage() {
                 className="bg-yellow-50 border-yellow-300"
                 data-testid="input-integration-bildung"
               />
-              <Input
-                type="number"
-                step="0.01"
-                value={planstellenData.stundenanzahlIntegrationDurchBildung || 0}
-                onChange={(e) => handleInputChange('stundenanzahlIntegrationDurchBildung', parseFloat(e.target.value))}
-                className="bg-green-50 border-green-300"
-                data-testid="input-stundenanzahl-integration"
-              />
             </div>
 
             {/* === FREIE EINGABEZEILEN === */}
@@ -315,12 +501,12 @@ export default function PlanstellberechnungPage() {
             </div>
 
             {/* Freie Zeile 1 */}
-            <div className="grid grid-cols-3 gap-4 items-center">
+            <div className="grid grid-cols-2 gap-4 items-center">
               <Input
                 type="text"
                 value={planstellenData.freieZeile1Label || ""}
                 onChange={(e) => handleInputChange('freieZeile1Label', e.target.value)}
-                className="bg-gray-50 border-gray-300"
+                className="bg-gray-100 border-gray-300"
                 placeholder="Bezeichnung eingeben..."
                 data-testid="input-freie-zeile1-label"
               />
@@ -332,23 +518,15 @@ export default function PlanstellberechnungPage() {
                 className="bg-yellow-50 border-yellow-300"
                 data-testid="input-freie-zeile1-wert"
               />
-              <Input
-                type="number"
-                step="0.01"
-                value={planstellenData.stundenanzahlFreieZeile1 || 0}
-                onChange={(e) => handleInputChange('stundenanzahlFreieZeile1', parseFloat(e.target.value))}
-                className="bg-green-50 border-green-300"
-                data-testid="input-stundenanzahl-freie1"
-              />
             </div>
 
             {/* Freie Zeile 2 */}
-            <div className="grid grid-cols-3 gap-4 items-center">
+            <div className="grid grid-cols-2 gap-4 items-center">
               <Input
                 type="text"
                 value={planstellenData.freieZeile2Label || ""}
                 onChange={(e) => handleInputChange('freieZeile2Label', e.target.value)}
-                className="bg-gray-50 border-gray-300"
+                className="bg-gray-100 border-gray-300"
                 placeholder="Bezeichnung eingeben..."
                 data-testid="input-freie-zeile2-label"
               />
@@ -360,24 +538,25 @@ export default function PlanstellberechnungPage() {
                 className="bg-yellow-50 border-yellow-300"
                 data-testid="input-freie-zeile2-wert"
               />
-              <Input
-                type="number"
-                step="0.01"
-                value={planstellenData.stundenanzahlFreieZeile2 || 0}
-                onChange={(e) => handleInputChange('stundenanzahlFreieZeile2', parseFloat(e.target.value))}
-                className="bg-green-50 border-green-300"
-                data-testid="input-stundenanzahl-freie2"
-              />
             </div>
 
             <Separator className="border-t-2" />
 
-            {/* SUMME STUNDENANZAHL REAL */}
-            <div className="grid grid-cols-3 gap-4 items-center bg-blue-50 p-4 rounded-lg border-2 border-blue-300">
-              <Label className="text-sm font-bold">Summe Stundenanzahl real</Label>
-              <div className="text-center text-sm text-gray-500">-</div>
-              <div className="p-3 bg-blue-100 border border-blue-400 rounded text-right font-mono text-lg font-bold" data-testid="display-summe-stundenanzahl">
-                {summeStundenanzahlReal.toFixed(2)}
+            {/* SUMME WEITERE BEREICHE */}
+            <div className="grid grid-cols-2 gap-4 items-center bg-purple-50 p-4 rounded-lg border-2 border-purple-300">
+              <Label className="text-sm font-bold">Summe weitere Bereiche</Label>
+              <div className="p-3 bg-purple-100 border border-purple-400 rounded text-right font-mono text-lg font-bold" data-testid="display-summe-weitere">
+                {summeWeitereBereiche.toFixed(2)}
+              </div>
+            </div>
+
+            <Separator className="border-t-4" />
+
+            {/* GESAMTSUMME */}
+            <div className="grid grid-cols-2 gap-4 items-center bg-red-50 p-4 rounded-lg border-2 border-red-300">
+              <Label className="text-sm font-bold text-lg">GESAMTSUMME PLANSTELLEN</Label>
+              <div className="p-4 bg-red-100 border border-red-400 rounded text-right font-mono text-xl font-bold" data-testid="display-gesamtsumme">
+                {(summeGrundbedarf + summeAusgleichsbedarf + summeWeitereBereiche).toFixed(2)}
               </div>
             </div>
 
@@ -395,8 +574,9 @@ export default function PlanstellberechnungPage() {
           <div>F5: = F3/F4 ({planstellenData.schuelerzahlStand} / {planstellenData.schuelerLehrerrelation})</div>
           <div>F6: = TRUNC(F5, 2)</div>
           <div>F7: = IF(F5-INT(F5)&lt;0.5, INT(F5), INT(F5)+0.5)</div>
-          <div>F10: = SUM(F6, F8:F9) = {quotientAbgeschnitten.toFixed(2)} + {planstellenData.abzugLehramtsanwaerter} + {planstellenData.rundung}</div>
-          <div>Summe Stundenanzahl real: = SUM(alle Stundenanzahl-Felder)</div>
+          <div>F10: = SUM(F6, F8:F9)</div>
+          <div>Summe Ausgleichsbedarf: = SUM(F12:F26)</div>
+          <div>Gesamtsumme: = F10 + Summe Ausgleichsbedarf + Summe weitere Bereiche</div>
         </CardContent>
       </Card>
 
