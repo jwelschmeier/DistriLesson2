@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import { Sidebar } from '@/components/layout/sidebar'
 import { Calculator, TrendingUp, Users, School, GraduationCap, BarChart3 } from 'lucide-react'
 import type { PlanstellenInput } from '@shared/schema'
 
@@ -205,12 +206,23 @@ export default function PlanstellberechnungPage() {
   }
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <Calculator className="h-6 w-6 text-blue-600" />
-        <h1 className="text-2xl font-bold">Planstellenberechnung</h1>
-      </div>
+    <div className="flex h-screen bg-background">
+      <Sidebar />
+      
+      <main className="flex-1 overflow-auto">
+        {/* Header */}
+        <header className="bg-card border-b border-border px-6 py-4">
+          <div className="flex items-center gap-2">
+            <Calculator className="h-6 w-6 text-blue-600" />
+            <div>
+              <h2 className="text-2xl font-semibold text-foreground">Planstellenberechnung</h2>
+              <p className="text-muted-foreground">Detaillierte Stellenberechnung für deutsche Schulen</p>
+            </div>
+          </div>
+        </header>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
 
       {/* Sticky Summary Area */}
       <Card className="sticky top-4 z-10 shadow-lg border-2 border-blue-200 bg-blue-50">
@@ -1359,6 +1371,8 @@ export default function PlanstellberechnungPage() {
 
       </Accordion>
 
+        </div>
+      </main>
     </div>
   )
 }
