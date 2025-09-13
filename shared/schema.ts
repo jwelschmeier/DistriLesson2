@@ -545,6 +545,22 @@ export const planstellenInputSchema = z.object({
   freieZeile1Wert: z.number().optional().default(0),
   freieZeile2Label: z.string().optional().default(""),
   freieZeile2Wert: z.number().optional().default(0),
+  
+  // === ZUSÄTZLICHE STELLEN (F35-F36) ===
+  gegenUAusfallIndFoerderung: z.number().optional().default(0.77),
+  
+  // === STELLENBESETZUNG (F38-F41) ===  
+  teilzeitBlockmodellAnsparphase: z.number().optional().default(0.36),
+  kapitalisierungPaedUebermittag: z.number().optional().default(0.56),
+  abzugKapitalisierungUebermittag: z.number().optional().default(-0.56),
+  
+  // === PERSONALAUSSTATTUNG (F44-F46) ===
+  beurlaubungElternzeit: z.number().optional().default(0),
+  ersatzeinstellungElternzeit: z.number().optional().default(0),
+  aborungZugangAnderes: z.number().optional().default(0),
+  
+  // === BERECHNUNG ERMÄSSIGUNGSSTUNDEN (F53-F54) ===
+  grundstellenbedarfFaktor: z.number().optional().default(0.5), // für F53: F10*0.5
 });
 
 export type PlanstellenInput = z.infer<typeof planstellenInputSchema>;
