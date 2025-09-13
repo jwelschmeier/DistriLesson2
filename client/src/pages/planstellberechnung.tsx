@@ -227,8 +227,8 @@ export default function Planstellberechnung() {
                     </thead>
                     <tbody className="bg-card divide-y divide-border">
                       {planstellen.map((planstelle) => {
-                        const coverage = planstelle.requiredHours > 0 ? 
-                          (planstelle.availableHours / planstelle.requiredHours) * 100 : 100;
+                        const coverage = Number(planstelle.requiredHours || 0) > 0 ? 
+                          (Number(planstelle.availableHours || 0) / Number(planstelle.requiredHours || 0)) * 100 : 100;
                         
                         return (
                           <tr key={planstelle.id} data-testid={`row-subject-${planstelle.subjectId}`}>
@@ -238,10 +238,10 @@ export default function Planstellberechnung() {
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                              {planstelle.requiredHours.toFixed(1)}
+                              {Number(planstelle.requiredHours || 0).toFixed(1)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                              {planstelle.availableHours.toFixed(1)}
+                              {Number(planstelle.availableHours || 0).toFixed(1)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
@@ -261,7 +261,7 @@ export default function Planstellberechnung() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className={`text-sm font-medium ${getDeficitColor(planstelle.deficit)}`}>
-                                {planstelle.deficit > 0 ? "+" : ""}{planstelle.deficit.toFixed(1)}
+                                {Number(planstelle.deficit || 0) > 0 ? "+" : ""}{Number(planstelle.deficit || 0).toFixed(1)}
                               </span>
                             </td>
                           </tr>
