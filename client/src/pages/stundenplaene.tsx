@@ -317,6 +317,30 @@ export default function Stundenplaene() {
     }
   }, [searchParams, teachers, classes]);
 
+  // UX Safety: Reset selections when context changes to prevent accidental deletion of non-visible items
+  
+  // Reset all selections when switching between teacher/class tabs
+  useEffect(() => {
+    setSelectedTeacherAssignments(new Set());
+    setSelectedClassAssignments(new Set());
+  }, [activeTab]);
+
+  // Reset teacher selections when changing selected teacher
+  useEffect(() => {
+    setSelectedTeacherAssignments(new Set());
+  }, [selectedTeacherId]);
+
+  // Reset class selections when changing selected class
+  useEffect(() => {
+    setSelectedClassAssignments(new Set());
+  }, [selectedClassId]);
+
+  // Reset all selections when changing semester filter
+  useEffect(() => {
+    setSelectedTeacherAssignments(new Set());
+    setSelectedClassAssignments(new Set());
+  }, [selectedSemester]);
+
   // Create lookup maps for efficient joins
   const teacherMap = useMemo(() => {
     if (!teachers) return new Map();
