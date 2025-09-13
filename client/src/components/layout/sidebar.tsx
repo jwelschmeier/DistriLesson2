@@ -19,11 +19,11 @@ const navigationItems = [
   { href: "/stdv-le", label: "StdV-Le", icon: Clock },
   { href: "/stdv-kl-optimum", label: "StdV-Kl-Optimum", icon: Sparkles },
   { href: "/schuljahreswechsel", label: "Schuljahreswechsel", icon: RefreshCw },
-  { href: "/chatgpt-import", label: "ChatGPT Import", icon: MessageSquare },
 ];
 
 const adminNavigationItems = [
   { href: "/admin", label: "Admin-Panel", icon: Settings },
+  { href: "/chatgpt-import", label: "ChatGPT Import", icon: MessageSquare },
 ];
 
 export function Sidebar() {
