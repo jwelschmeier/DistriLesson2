@@ -30,6 +30,64 @@ interface ParsedScheduleData {
   }>;
 }
 
+export class OpenAIHelpService {
+  private openai: OpenAI;
+
+  constructor() {
+    this.openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+
+  async getHelpResponse(userQuestion: string): Promise<string> {
+    try {
+      const systemPrompt = `Du bist ein hilfreicher Assistent für das deutsche Stundenplan-Verwaltungssystem "DistriLesson PLANNER". 
+
+      Das System verwaltet:
+      - Lehrer (mit Qualifikationen und Stundendeputaten)
+      - Klassen (mit Schülerzahlen und Stundenvorgaben)
+      - Fächer (mit Parallelgruppen für Religion/Differenzierung)
+      - Stundenpläne und Zuweisungen
+      - Planstellenberechnung nach deutschen Schulstandards
+      - Master-Stundenplan mit Semester-Planung
+      - CSV-Import für Massendaten
+      - Admin-Panel für Benutzerverwaltung
+
+      Hauptfunktionen:
+      - Dashboard mit Übersichten
+      - Lehrerverwaltung (Kürzel, Namen, Fächer, Deputate)
+      - Klassenverwaltung (Jahrgänge, Schülerzahlen, Zielstunden)
+      - Fächerverwaltung (auch mit Parallelgruppen)
+      - Stundenplanoptimierung
+      - Planstellenberechnung
+      - Schuljahreswechsel
+      - CSV/ChatGPT Import
+
+      Antworte auf Deutsch in freundlichem Ton. Erkläre Funktionen, Prozesse und gib praktische Tipps für die Nutzung des Systems.`;
+
+      const response = await this.openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt
+          },
+          {
+            role: "user",
+            content: userQuestion
+          }
+        ],
+        max_completion_tokens: 1000
+      });
+
+      return response.choices[0].message.content || "Entschuldigung, ich konnte keine Antwort generieren.";
+    } catch (error) {
+      console.error("OpenAI help error:", error);
+      throw new Error(`Fehler beim Generieren der Hilfe-Antwort: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
+    }
+  }
+}
+
 export class OpenAIScheduleService {
   async parseScheduleText(scheduleText: string): Promise<ParsedScheduleData> {
     const prompt = `

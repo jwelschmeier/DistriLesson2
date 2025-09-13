@@ -11,7 +11,7 @@ import { LessonDistributionImporter } from "./lesson-distribution-importer";
 import { PdfLessonParser } from "./pdf-lesson-parser";
 import { PdfLessonImporter } from "./pdf-lesson-importer";
 import { intelligentMappingService } from "./intelligent-mapping-service";
-import { openaiScheduleService } from "./openai-service";
+import { openaiScheduleService, OpenAIHelpService } from "./openai-service";
 import { z } from "zod";
 
 interface MulterRequest extends Request {
@@ -23,6 +23,9 @@ const upload = multer({ storage: multer.memoryStorage() });
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware - setup authentication first
   await setupAuth(app);
+
+  // Initialize OpenAI services
+  const openaiHelpService = new OpenAIHelpService();
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
@@ -1982,6 +1985,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error importing schedule with ChatGPT:", error);
       res.status(500).json({ error: "Failed to import schedule: " + (error as Error).message });
+    }
+  });
+
+  // Help Bot Routes
+  app.post('/api/help/ask', isAuthenticated, async (req, res) => {
+    try {
+      const { question } = req.body;
+      
+      if (!question || typeof question !== 'string') {
+        return res.status(400).json({ error: "question is required and must be a string" });
+      }
+
+      const answer = await openaiHelpService.getHelpResponse(question);
+      res.json({ answer });
+    } catch (error) {
+      console.error("Error getting help response:", error);
+      res.status(500).json({ error: "Failed to get help response: " + (error as Error).message });
     }
   });
 
