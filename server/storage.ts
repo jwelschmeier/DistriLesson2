@@ -38,7 +38,8 @@ import {
   type PdfImport,
   type InsertPdfImport,
   type PdfTable,
-  type InsertPdfTable
+  type InsertPdfTable,
+  type PlanstellenInput
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql, desc } from "drizzle-orm";
@@ -181,6 +182,7 @@ export interface IStorage {
   createPlanstelle(planstelle: InsertPlanstelle): Promise<Planstelle>;
   updatePlanstelle(id: string, planstelle: Partial<InsertPlanstelle>): Promise<Planstelle>;
   deletePlanstelle(id: string): Promise<void>;
+  calculatePlanstellenFromInput(input: PlanstellenInput): Promise<Planstelle[]>;
 
   // Analytics
   getTeacherStats(): Promise<{
@@ -739,6 +741,71 @@ export class DatabaseStorage implements IStorage {
 
   async deletePlanstelle(id: string): Promise<void> {
     await db.delete(planstellen).where(eq(planstellen.id, id));
+  }
+
+  async calculatePlanstellenFromInput(input: PlanstellenInput): Promise<Planstelle[]> {
+    const results: Planstelle[] = [];
+    
+    // Fächer aus der Eingabe
+    const faecher = Object.keys(input.fachstunden);
+    
+    for (const fach of faecher) {
+      const fachData = input.fachstunden[fach];
+      const gesamtStunden = (fachData?.sek1 || 0) + (fachData?.sek2 || 0);
+      
+      if (gesamtStunden > 0) {
+        const planstelle: Planstelle = {
+          id: randomUUID(),
+          scenarioId: null,
+          subjectId: null,
+          grade: null,
+          category: 'grundbedarf',
+          component: fach,
+          lineType: 'requirement',
+          formula: {
+            op: 'add',
+            terms: [fachData.sek1, fachData.sek2],
+            description: `${fach}: ${fachData.sek1} (Sek I) + ${fachData.sek2} (Sek II)`
+          },
+          color: null,
+          requiredHours: gesamtStunden.toString(),
+          availableHours: '0',
+          deficit: gesamtStunden.toString(),
+          calculatedAt: new Date()
+        };
+        
+        results.push(planstelle);
+      }
+    }
+    
+    // Gesamtberechnung hinzufügen
+    const gesamtStunden = Object.values(input.fachstunden).reduce((sum, fach) => 
+      sum + (fach?.sek1 || 0) + (fach?.sek2 || 0), 0);
+    const benoetigtePlanstellen = input.deputat > 0 ? gesamtStunden / input.deputat : 0;
+    
+    const gesamtPlanstelle: Planstelle = {
+      id: randomUUID(),
+      scenarioId: null,
+      subjectId: null,
+      grade: null,
+      category: 'summe',
+      component: 'Gesamtbedarf',
+      lineType: 'summary',
+      formula: {
+        op: 'divide',
+        terms: [gesamtStunden, input.deputat],
+        description: `Gesamtstunden (${gesamtStunden}) ÷ Deputat (${input.deputat})`
+      },
+      color: null,
+      requiredHours: gesamtStunden.toString(),
+      availableHours: '0',
+      deficit: benoetigtePlanstellen.toFixed(2),
+      calculatedAt: new Date()
+    };
+    
+    results.push(gesamtPlanstelle);
+    
+    return results;
   }
 
   // Analytics

@@ -4,7 +4,7 @@ import { createHash } from "crypto";
 import multer from "multer";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isAdmin } from "./replitAuth";
-import { insertTeacherSchema, insertStudentSchema, insertClassSchema, insertSubjectSchema, insertAssignmentSchema, insertInvitationSchema, insertPdfImportSchema, insertPdfTableSchema, Teacher } from "@shared/schema";
+import { insertTeacherSchema, insertStudentSchema, insertClassSchema, insertSubjectSchema, insertAssignmentSchema, insertInvitationSchema, insertPdfImportSchema, insertPdfTableSchema, planstellenInputSchema, Teacher } from "@shared/schema";
 import { SchoolYearTransitionParams } from "./storage";
 import { calculateCorrectHours } from "@shared/parallel-subjects";
 import { LessonDistributionImporter } from "./lesson-distribution-importer";
@@ -837,20 +837,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/calculate-planstellen", async (req, res) => {
     try {
-      // Get current data for calculation
-      const teachers = await storage.getTeachers();
-      const classes = await storage.getClasses();
-      const subjects = await storage.getSubjects();
-      
-      // Perform planstellen calculation (simplified example)
-      const calculated = await performPlanstellenCalculation(teachers, classes, subjects, storage);
-      
-      return res.json({
-        message: "Planstellen calculation completed successfully",
-        calculated: calculated.length,
-        timestamp: new Date().toISOString()
-      });
+      // Check if request body contains planstellen input data
+      if (req.body && Object.keys(req.body).length > 0) {
+        // Validate input data
+        const input = planstellenInputSchema.parse(req.body);
+        
+        // Calculate planstellen from user input
+        const calculated = await storage.calculatePlanstellenFromInput(input);
+        
+        return res.json({
+          message: "Planstellen calculation completed successfully",
+          planstellen: calculated,
+          calculated: calculated.length,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        // Legacy calculation using existing data
+        const teachers = await storage.getTeachers();
+        const classes = await storage.getClasses();
+        const subjects = await storage.getSubjects();
+        
+        // Perform planstellen calculation (simplified example)
+        const calculated = await performPlanstellenCalculation(teachers, classes, subjects, storage);
+        
+        return res.json({
+          message: "Planstellen calculation completed successfully",
+          calculated: calculated.length,
+          timestamp: new Date().toISOString()
+        });
+      }
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
       console.error("Planstellen calculation error:", error);
       res.status(500).json({ error: "Failed to calculate planstellen" });
     }

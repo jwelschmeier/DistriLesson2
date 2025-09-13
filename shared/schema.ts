@@ -490,3 +490,18 @@ export type PdfImport = typeof pdfImports.$inferSelect;
 export type InsertPdfImport = z.infer<typeof insertPdfImportSchema>;
 export type PdfTable = typeof pdfTables.$inferSelect;
 export type InsertPdfTable = z.infer<typeof insertPdfTableSchema>;
+
+// Schema für Planstellen-Eingabe (ersetzt PDF-Upload)
+export const planstellenInputSchema = z.object({
+  schulname: z.string().min(1, "Schulname ist erforderlich"),
+  schuljahr: z.string().min(1, "Schuljahr ist erforderlich"),
+  schuelerzahlen: z.record(z.number().int().min(0)),
+  klassen: z.record(z.number().int().min(0)),
+  fachstunden: z.record(z.object({
+    sek1: z.number().min(0),
+    sek2: z.number().min(0)
+  })),
+  deputat: z.number().min(1, "Deputat muss mindestens 1 sein")
+});
+
+export type PlanstellenInput = z.infer<typeof planstellenInputSchema>;

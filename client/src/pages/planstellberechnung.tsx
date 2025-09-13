@@ -115,15 +115,15 @@ export default function Planstellberechnung() {
     mutationFn: async () => {
       setIsCalculating(true);
       // Simulate calculation time
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      const response = await apiRequest("POST", "/api/calculate-planstellen", {});
+      const response = await apiRequest("POST", "/api/calculate-planstellen", planstellenData);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Berechnung abgeschlossen",
-        description: "Planstellen wurden erfolgreich neu berechnet.",
+        description: `${data.calculated} Planstellen erfolgreich berechnet.`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/planstellen"] });
       setIsCalculating(false);
@@ -135,6 +135,27 @@ export default function Planstellberechnung() {
         variant: "destructive",
       });
       setIsCalculating(false);
+    },
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/calculate-planstellen", planstellenData);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Planstellen gespeichert",
+        description: `Eingabe gespeichert und ${data.calculated} Planstellen berechnet.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/planstellen"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Speichern fehlgeschlagen",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -515,9 +536,22 @@ export default function Planstellberechnung() {
 
                 {/* Speichern Button */}
                 <div className="flex justify-end">
-                  <Button data-testid="button-save">
-                    <Save className="h-4 w-4 mr-2" />
-                    Berechnung speichern
+                  <Button 
+                    onClick={() => saveMutation.mutate()}
+                    disabled={saveMutation.isPending}
+                    data-testid="button-save"
+                  >
+                    {saveMutation.isPending ? (
+                      <>
+                        <Save className="h-4 w-4 mr-2 animate-spin" />
+                        Speichern...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4 mr-2" />
+                        Berechnung speichern
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
