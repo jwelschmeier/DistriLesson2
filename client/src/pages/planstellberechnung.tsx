@@ -845,6 +845,141 @@ export default function PlanstellberechnungPage() {
               </div>
             </div>
 
+            {/* === BERECHNUNG SCHULLEITERPAUSCHAL === */}
+            <div className="bg-orange-50 p-2 rounded-lg mt-6">
+              <h3 className="font-bold text-center">Berechnung Schulleiterpauschal</h3>
+            </div>
+
+            {/* Grundpauschal */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">Grundpauschal</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.grundpauschal || 9}
+                onChange={(e) => handleInputChange('grundpauschal', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-grundpauschal"
+              />
+            </div>
+
+            {/* zusätzl. Entlastung (abhängig v. Stellenanzahl) */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">zusätzl. Entlastung (abhängig v. Stellenanzahl)</Label>
+              <div className="p-3 bg-gray-100 border border-gray-400 rounded text-right font-mono text-lg" data-testid="display-zusaetzliche-entlastung">
+                {zusaetzlicheEntlastungStellenzahl.toFixed(2)}
+              </div>
+            </div>
+
+            {/* Schulleiterentlastung Fortbildung */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">Schulleiterentlastung Fortbildung</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.schulleiterentlastungFortbildung || 0.04}
+                onChange={(e) => handleInputChange('schulleiterentlastungFortbildung', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-schulleiterentlastung-fortbildung"
+              />
+            </div>
+
+            {/* Ausbau Leitungszeit */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">Ausbau Leitungszeit</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.ausbauLeitungszeitSchulleiter || 0.12}
+                onChange={(e) => handleInputChange('ausbauLeitungszeitSchulleiter', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-ausbau-leitungszeit-schulleiter"
+              />
+            </div>
+
+            <Separator className="border-t-1" />
+
+            {/* Anzahl 44-46 in Stunden */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">Anzahl 44-46 in Stunden</Label>
+              <div className="p-3 bg-gray-100 border border-gray-400 rounded text-right font-mono text-lg" data-testid="display-anzahl-stunden-schulleitung">
+                {anzahlStundenSchulleitung.toFixed(2)}
+              </div>
+            </div>
+
+            {/* Entlastungsstd. (Schulleitung) gerundet 2 Dezimalen */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">Entlastungsstd. (Schulleitung) gerundet 2 Dezimalen</Label>
+              <div className="p-3 bg-orange-100 border border-orange-400 rounded text-right font-mono text-lg font-bold" data-testid="display-entlastung-schulleitung-gerundet">
+                {entlastungsstundenSchulleitungGerundet.toFixed(2)}
+              </div>
+            </div>
+
+            {/* Schulleiter 3/5 (aufgerundet) */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">Schulleiter 3/5 (aufgerundet)</Label>
+              <Input
+                type="number"
+                step="1"
+                value={planstellenData.schulleiterDreiViertel || 18}
+                onChange={(e) => handleInputChange('schulleiterDreiViertel', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-schulleiter-drei-viertel"
+              />
+            </div>
+
+            {/* Stellvertreter 2/5 (abgerundet) */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">Stellvertreter 2/5 (abgerundet)</Label>
+              <div className="p-3 bg-gray-100 border border-gray-400 rounded text-right font-mono text-lg" data-testid="display-stellvertreter-zwei-viertel">
+                {stellvertreterZweiViertel}
+              </div>
+            </div>
+
+            {/* Ausbau Leitungszeit (Stellvertreter) */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">Ausbau Leitungszeit</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.ausbauLeitungszeitStellvertreter || 0.11}
+                onChange={(e) => handleInputChange('ausbauLeitungszeitStellvertreter', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-ausbau-leitungszeit-stellvertreter"
+              />
+            </div>
+
+            {/* minus Entl. (Stundenplanarbeit) aus Schuleitungspauschale */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">minus Entl. (Stundenplanarbeit) aus Schuleitungspauschale</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.minusEntlastungStundenplanarbeit || 0}
+                onChange={(e) => handleInputChange('minusEntlastungStundenplanarbeit', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-minus-entlastung-stundenplan"
+              />
+            </div>
+
+            <Separator className="border-t-2" />
+
+            {/* geänderte und abgerundete Schulleiterpauschal */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">geänderte und abgerundete Schulleiterpauschal</Label>
+              <div className="p-3 bg-orange-100 border border-orange-400 rounded text-right font-mono text-lg font-bold" data-testid="display-geaenderte-schulleiterpauschal">
+                {geaenderteSchulleiterpauschal}
+              </div>
+            </div>
+
+            {/* geänderte und aufgerundete Stellvertreterpauschal */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">geänderte und aufgerundete Stellvertreterpauschal</Label>
+              <div className="p-3 bg-orange-100 border border-orange-400 rounded text-right font-mono text-lg font-bold" data-testid="display-geaenderte-stellvertreterpauschal">
+                {geaenderteStellvertreterpauschal}
+              </div>
+            </div>
+
           </div>
 
         </CardContent>
