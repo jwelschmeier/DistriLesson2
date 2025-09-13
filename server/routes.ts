@@ -539,6 +539,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk delete assignments
+  app.delete("/api/assignments/bulk", async (req, res) => {
+    try {
+      const { assignmentIds } = req.body;
+      
+      if (!assignmentIds || !Array.isArray(assignmentIds) || assignmentIds.length === 0) {
+        return res.status(400).json({ error: "assignmentIds must be a non-empty array" });
+      }
+      
+      // Delete all assignments
+      await Promise.all(assignmentIds.map(id => storage.deleteAssignment(id)));
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error in bulk delete assignments:", error);
+      res.status(500).json({ error: "Failed to delete assignments" });
+    }
+  });
+
   // Detect and create missing semester 2 assignments
   app.post("/api/assignments/fix-missing-semester2", async (req, res) => {
     try {

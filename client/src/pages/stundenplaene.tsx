@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs as SemesterTabs, TabsContent as SemesterTabsContent, TabsList as SemesterTabsList, TabsTrigger as SemesterTabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Calendar, Clock, Users, BookOpen, Presentation, School, GraduationCap, Save, Trash2, Plus } from "lucide-react";
@@ -40,6 +41,16 @@ export default function Stundenplaene() {
     hoursPerWeek: number;
     semester: "1" | "2";
   } | null>(null);
+  
+  // State for multi-selection
+  const [selectedTeacherAssignments, setSelectedTeacherAssignments] = useState<Set<string>>(new Set());
+  const [selectedClassAssignments, setSelectedClassAssignments] = useState<Set<string>>(new Set());
+  const [bulkDeleteDialog, setBulkDeleteDialog] = useState<{
+    isOpen: boolean;
+    context: 'teacher' | 'class';
+    selectedIds: string[];
+  }>({ isOpen: false, context: 'teacher', selectedIds: [] });
+  
   const { toast } = useToast();
 
   const { data: teachers, isLoading: teachersLoading } = useQuery<Teacher[]>({
@@ -170,6 +181,102 @@ export default function Stundenplaene() {
       });
     },
   });
+
+  // Bulk delete mutation
+  const bulkDeleteAssignmentsMutation = useMutation({
+    mutationFn: async (assignmentIds: string[]) => {
+      await apiRequest("DELETE", "/api/assignments/bulk", { assignmentIds });
+    },
+    onSuccess: (_, deletedIds) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      // Clear selections for deleted assignments
+      setSelectedTeacherAssignments(prev => {
+        const newSet = new Set(prev);
+        deletedIds.forEach(id => newSet.delete(id));
+        return newSet;
+      });
+      setSelectedClassAssignments(prev => {
+        const newSet = new Set(prev);
+        deletedIds.forEach(id => newSet.delete(id));
+        return newSet;
+      });
+      toast({
+        title: "Erfolg",
+        description: `${deletedIds.length} Zuweisung${deletedIds.length !== 1 ? 'en' : ''} wurde${deletedIds.length !== 1 ? 'n' : ''} erfolgreich gelöscht.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Fehler",
+        description: "Zuweisungen konnten nicht gelöscht werden.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Multi-selection helper functions
+  const toggleTeacherAssignmentSelection = (assignmentId: string) => {
+    setSelectedTeacherAssignments(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(assignmentId)) {
+        newSet.delete(assignmentId);
+      } else {
+        newSet.add(assignmentId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleClassAssignmentSelection = (assignmentId: string) => {
+    setSelectedClassAssignments(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(assignmentId)) {
+        newSet.delete(assignmentId);
+      } else {
+        newSet.add(assignmentId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllTeacherAssignments = (selectAll: boolean) => {
+    if (selectAll) {
+      setSelectedTeacherAssignments(new Set(teacherAssignments.map(a => a.id)));
+    } else {
+      setSelectedTeacherAssignments(new Set());
+    }
+  };
+
+  const selectAllClassAssignments = (selectAll: boolean) => {
+    if (selectAll) {
+      setSelectedClassAssignments(new Set(classAssignments.map(a => a.id)));
+    } else {
+      setSelectedClassAssignments(new Set());
+    }
+  };
+
+  const openBulkDeleteDialog = (context: 'teacher' | 'class') => {
+    const selectedIds = context === 'teacher' 
+      ? Array.from(selectedTeacherAssignments)
+      : Array.from(selectedClassAssignments);
+    
+    setBulkDeleteDialog({
+      isOpen: true,
+      context,
+      selectedIds
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (bulkDeleteDialog.selectedIds.length === 0) return;
+    
+    try {
+      await bulkDeleteAssignmentsMutation.mutateAsync(bulkDeleteDialog.selectedIds);
+      setBulkDeleteDialog({ isOpen: false, context: 'teacher', selectedIds: [] });
+    } catch (error) {
+      // Error handled by mutation onError
+    }
+  };
 
   // State for team teaching dialog
   const [teamTeachingDialog, setTeamTeachingDialog] = useState<{
@@ -858,8 +965,19 @@ export default function Stundenplaene() {
                   {/* Teacher Assignments Table */}
                   <Card>
                     <CardHeader>
-                      <CardTitle>
-                        Stundenplan für {selectedTeacher.firstName} {selectedTeacher.lastName}
+                      <CardTitle className="flex items-center justify-between">
+                        <span>Stundenplan für {selectedTeacher.firstName} {selectedTeacher.lastName}</span>
+                        {selectedTeacherAssignments.size > 0 && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => openBulkDeleteDialog('teacher')}
+                            data-testid="button-bulk-delete-teacher"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            {selectedTeacherAssignments.size} ausgewählte löschen
+                          </Button>
+                        )}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -872,6 +990,13 @@ export default function Stundenplaene() {
                         <Table data-testid="table-teacher-assignments">
                           <TableHeader>
                             <TableRow>
+                              <TableHead className="w-12">
+                                <Checkbox
+                                  checked={teacherAssignments.length > 0 && selectedTeacherAssignments.size === teacherAssignments.length}
+                                  onCheckedChange={(checked) => selectAllTeacherAssignments(checked as boolean)}
+                                  data-testid="checkbox-select-all-teacher"
+                                />
+                              </TableHead>
                               <TableHead>Klasse</TableHead>
                               <TableHead>Fach</TableHead>
                               <TableHead>Stunden</TableHead>
@@ -882,6 +1007,13 @@ export default function Stundenplaene() {
                           <TableBody>
                             {teacherAssignments.map((assignment) => (
                               <TableRow key={assignment.id} data-testid={`row-teacher-assignment-${assignment.id}`}>
+                                <TableCell>
+                                  <Checkbox
+                                    checked={selectedTeacherAssignments.has(assignment.id)}
+                                    onCheckedChange={() => toggleTeacherAssignmentSelection(assignment.id)}
+                                    data-testid={`checkbox-teacher-assignment-${assignment.id}`}
+                                  />
+                                </TableCell>
                                 <TableCell className="font-medium">
                                   {assignment.class?.name || 'Unbekannt'}
                                 </TableCell>
@@ -1114,8 +1246,19 @@ export default function Stundenplaene() {
                   {/* Class Assignments Table */}
                   <Card>
                     <CardHeader>
-                      <CardTitle>
-                        Stundenplan für Klasse {selectedClass.name}
+                      <CardTitle className="flex items-center justify-between">
+                        <span>Stundenplan für Klasse {selectedClass.name}</span>
+                        {selectedClassAssignments.size > 0 && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => openBulkDeleteDialog('class')}
+                            data-testid="button-bulk-delete-class"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            {selectedClassAssignments.size} ausgewählte löschen
+                          </Button>
+                        )}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -1144,6 +1287,13 @@ export default function Stundenplaene() {
                         <Table data-testid="table-class-assignments">
                           <TableHeader>
                             <TableRow>
+                              <TableHead className="w-12">
+                                <Checkbox
+                                  checked={classAssignments.length > 0 && selectedClassAssignments.size === classAssignments.length}
+                                  onCheckedChange={(checked) => selectAllClassAssignments(checked as boolean)}
+                                  data-testid="checkbox-select-all-class"
+                                />
+                              </TableHead>
                               <TableHead>Lehrkraft</TableHead>
                               <TableHead>Fach</TableHead>
                               <TableHead>Stunden</TableHead>
@@ -1155,6 +1305,9 @@ export default function Stundenplaene() {
                             {/* New Assignment Row */}
                             {newAssignment && (
                               <TableRow data-testid="row-new-assignment">
+                                <TableCell>
+                                  {/* Empty cell for checkbox column in new assignment row */}
+                                </TableCell>
                                 <TableCell>
                                   <Select
                                     value={newAssignment.teacherId}
@@ -1265,6 +1418,13 @@ export default function Stundenplaene() {
                             {/* Existing Assignment Rows */}
                             {classAssignments.map((assignment) => (
                               <TableRow key={assignment.id} data-testid={`row-class-assignment-${assignment.id}`}>
+                                <TableCell>
+                                  <Checkbox
+                                    checked={selectedClassAssignments.has(assignment.id)}
+                                    onCheckedChange={() => toggleClassAssignmentSelection(assignment.id)}
+                                    data-testid={`checkbox-class-assignment-${assignment.id}`}
+                                  />
+                                </TableCell>
                                 <TableCell>
                                   <Select
                                     value={getEffectiveValue(assignment, 'teacherId') as string}
@@ -1611,6 +1771,57 @@ export default function Stundenplaene() {
           </DialogContent>
         </Dialog>
       </main>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <AlertDialog open={bulkDeleteDialog.isOpen} onOpenChange={(open) => 
+        setBulkDeleteDialog(prev => ({ ...prev, isOpen: open }))
+      }>
+        <AlertDialogContent data-testid="dialog-bulk-delete">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mehrere Zuweisungen löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Möchten Sie wirklich <strong>{bulkDeleteDialog.selectedIds.length}</strong> Zuweisungen löschen?
+              <br /><br />
+              {bulkDeleteDialog.context === 'teacher' ? (
+                <>
+                  Diese Stunden werden für <strong>{selectedTeacher?.firstName} {selectedTeacher?.lastName}</strong> 
+                  wieder verfügbar und können anderen Kollegen zugewiesen werden.
+                </>
+              ) : (
+                <>
+                  Diese Stunden werden aus dem Stundenplan von <strong>Klasse {selectedClass?.name}</strong> 
+                  entfernt und stehen wieder zur Verfügung.
+                </>
+              )}
+              <br /><br />
+              <strong>Diese Aktion kann nicht rückgängig gemacht werden.</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-bulk-delete">
+              Abbrechen
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              disabled={bulkDeleteAssignmentsMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-bulk-delete"
+            >
+              {bulkDeleteAssignmentsMutation.isPending ? (
+                <>
+                  <Clock className="h-4 w-4 mr-2 animate-spin" />
+                  Lösche...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {bulkDeleteDialog.selectedIds.length} Zuweisungen löschen
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
