@@ -200,6 +200,17 @@ ${scheduleText}
           if (!exists) {
             await storage.createTeacher(validatedTeacher);
             result.teachers++;
+          } else {
+            // Update existing teacher with new qualifications
+            const allQualifications = [...exists.qualifications, ...teacherData.qualifications];
+            const uniqueQualifications = allQualifications.filter((qual, index) => allQualifications.indexOf(qual) === index);
+            const updatedTeacher = {
+              ...exists,
+              qualifications: uniqueQualifications,
+              notes: exists.notes + " | Aktualisiert via ChatGPT"
+            };
+            await storage.updateTeacher(exists.id, updatedTeacher);
+            result.teachers++;
           }
         } catch (error) {
           result.errors.push(`Lehrer ${teacherData.shortName}: ${(error as Error).message}`);
@@ -225,6 +236,14 @@ ${scheduleText}
           if (!exists) {
             await storage.createClass(validatedClass);
             result.classes++;
+          } else {
+            // Update existing class
+            const updatedClass = {
+              ...exists,
+              studentCount: classData.studentCount || exists.studentCount
+            };
+            await storage.updateClass(exists.id, updatedClass);
+            result.classes++;
           }
         } catch (error) {
           result.errors.push(`Klasse ${classData.name}: ${(error as Error).message}`);
@@ -247,6 +266,9 @@ ${scheduleText}
           
           if (!exists) {
             await storage.createSubject(validatedSubject);
+            result.subjects++;
+          } else {
+            // Subject exists, count as processed
             result.subjects++;
           }
         } catch (error) {
@@ -289,16 +311,29 @@ ${scheduleText}
           }
 
           // Check for duplicate assignment
+          const semesterStr = (assignmentData.semester || 1).toString() as "1" | "2";
           const exists = existingAssignments.find(a => 
             a.teacherId === teacher.id &&
             a.classId === classObj.id &&
             a.subjectId === subject.id &&
             a.schoolYearId === currentSchoolYear.id &&
-            a.semester === (assignmentData.semester || 1)
+            a.semester === semesterStr
           );
 
           if (exists) {
-            result.errors.push(`Zuweisung ${assignmentData.teacherShortName}-${assignmentData.className}-${assignmentData.subjectShortName} existiert bereits`);
+            // Update existing assignment with new hours
+            const updatedAssignment = {
+              hoursPerWeek: assignmentData.hoursPerWeek.toString(),
+              teacherId: exists.teacherId,
+              classId: exists.classId,
+              subjectId: exists.subjectId,
+              semester: exists.semester as "1" | "2",
+              schoolYearId: exists.schoolYearId,
+              isOptimized: exists.isOptimized,
+              teamTeachingId: exists.teamTeachingId
+            };
+            await storage.updateAssignment(exists.id, updatedAssignment);
+            result.assignments++;
             continue;
           }
 
@@ -308,7 +343,7 @@ ${scheduleText}
             subjectId: subject.id,
             schoolYearId: currentSchoolYear.id,
             hoursPerWeek: assignmentData.hoursPerWeek.toString(),
-            semester: assignmentData.semester || 1,
+            semester: semesterStr,
             teamTeachingId: null
           });
 
