@@ -491,7 +491,7 @@ export type InsertPdfImport = z.infer<typeof insertPdfImportSchema>;
 export type PdfTable = typeof pdfTables.$inferSelect;
 export type InsertPdfTable = z.infer<typeof insertPdfTableSchema>;
 
-// Schema für Planstellen-Eingabe - NUR GRUNDBEDARF Excel F3-F10
+// Schema für Planstellen-Eingabe - ERWEITERT mit Stundenanzahl Real Spalte
 export const planstellenInputSchema = z.object({
   // Grunddaten
   schulname: z.string().min(1, "Schulname ist erforderlich").default("Realschule Musterstadt"),
@@ -515,6 +515,30 @@ export const planstellenInputSchema = z.object({
   rundung: z.number().default(-0.21),
   
   // F10: "Summe Grundbedarf" = SUM(F6,F8:F9) = 34.45 (BERECHNET)
+  
+  // === STUNDENANZAHL REAL SPALTE (Manuelle Eingaben vom User gewünscht) ===
+  stundenanzahlAbzugLehramtsanwaerter: z.number().optional().default(0),
+  stundenanzahlRundung: z.number().optional().default(0),
+  
+  // === WEITERE BEREICHE AUS NEUER EXCEL-TABELLE ===
+  // F30-F32: Weitere Bereiche
+  praktischePhilosophieIslamkunde: z.number().optional().default(0),
+  stundenanzahlPraktischePhilosophie: z.number().optional().default(0),
+  
+  paedagogischeUebermittagsbetreuung: z.number().optional().default(0),
+  stundenanzahlPaedagogischeUebermittagsbetreuung: z.number().optional().default(0),
+  
+  integrationDurchBildung: z.number().optional().default(0),
+  stundenanzahlIntegrationDurchBildung: z.number().optional().default(0),
+  
+  // === FREIE EINGABEZEILEN (vom User angefordert) ===
+  freieZeile1Label: z.string().optional().default(""),
+  freieZeile1Wert: z.number().optional().default(0),
+  stundenanzahlFreieZeile1: z.number().optional().default(0),
+  
+  freieZeile2Label: z.string().optional().default(""),
+  freieZeile2Wert: z.number().optional().default(0),
+  stundenanzahlFreieZeile2: z.number().optional().default(0),
 });
 
 export type PlanstellenInput = z.infer<typeof planstellenInputSchema>;
