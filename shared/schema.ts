@@ -495,12 +495,56 @@ export type InsertPdfTable = z.infer<typeof insertPdfTableSchema>;
 export const planstellenInputSchema = z.object({
   schulname: z.string().min(1, "Schulname ist erforderlich"),
   schuljahr: z.string().min(1, "Schuljahr ist erforderlich"),
-  schuelerzahlen: z.record(z.number().int().min(0)),
-  klassen: z.record(z.number().int().min(0)),
-  fachstunden: z.record(z.object({
-    sek1: z.number().min(0),
-    sek2: z.number().min(0)
-  })),
+  
+  // Grundschuldaten (erste gelbe Sektion)
+  ausgleichsstunden: z.number().min(0).default(0),
+  fachlehrbr: z.number().min(0).default(0),
+  paedagogik: z.number().min(0).default(0),
+  religionslehrkraefteFortbildung: z.number().min(0).default(0),
+  auslandLehrkraefte: z.number().min(0).default(0),
+  rueckgabeVerguetungsstunde: z.number().min(0).default(0),
+  bestellung: z.number().min(0).default(0),
+  fachUndDienstMedienUndDV: z.number().min(0).default(0),
+  fachberaterSchulaufsicht: z.number().min(0).default(0),
+  weitereSportUndAusstellungsraeume: z.number().min(0).default(0),
+  praxissemesterInSchule: z.number().min(0).default(0),
+  zusaetzlicheAusfallvertretung: z.number().min(0).default(0),
+  entlastungLehrertaetigkeit: z.number().min(0).default(0),
+  entlastungLVOCO: z.number().min(0).default(0),
+  ermaessigungenweitere: z.number().min(0).default(0),
+  
+  // Abzugsarten (zweite gelbe Sektion)
+  abzugsarten: z.number().min(0).default(0),
+  praktischePaedagogikLehrkraefte: z.number().min(0).default(0),
+  praxissemesterdurchfuehrung: z.number().min(0).default(0),
+  unterscheidendeBetreuung: z.number().min(0).default(0),
+  
+  // Weitere Sektionen (lila/weiße Felder)
+  verfuegbarePlanstellenSollstaerkestunden: z.string().default("LehrersollGEHS19"),
+  berechnungsbedarfLehramt: z.number().min(0).default(0),
+  ergaenzungsstundenLehramt: z.number().min(0).default(0),
+  schwerpunktbildungLehramt: z.number().min(0).default(0),
+  
+  // Berufsbildung a. L (Lehramt)
+  berufsbildungLehramt: z.number().min(0).default(0),
+  ergaenzungsstundenLehramt2: z.number().min(0).default(0),
+  schwerpunktbildungLehramt2: z.number().min(0).default(0),
+  
+  // Weitere komplexe Felder
+  entlassungenGrad: z.number().min(0).default(0),
+  stellenreserveLehrerinnen: z.number().min(0).default(0),
+  ausfeldLehrkraefte: z.number().min(0).default(0),
+  innerSonderregAustech: z.number().min(0).default(0),
+  ergaenzendUeberAufbaumoeglichkeit: z.number().min(0).default(0),
+  stellenreserveLehrerinnenHS: z.number().min(0).default(0),
+  fertigkeitsfeld: z.number().min(0).default(17.0),
+  stundenreserve: z.number().min(0).default(0),
+  differenzNachSchulsausstattungsrecherche: z.number().min(0).default(0),
+  stellenwerteUnterrichtsstunden: z.number().min(0).default(0),
+  alternGrundstaffelungVerschiedeneUnterrichtsstunden: z.number().min(0).default(0),
+  differenzNachWechsel: z.number().min(0).default(0),
+  stellenwerteNachObenVerrechnung: z.number().min(0).default(0),
+  
   deputat: z.number().min(1, "Deputat muss mindestens 1 sein")
 });
 
