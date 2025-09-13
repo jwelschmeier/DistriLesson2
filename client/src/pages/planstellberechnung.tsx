@@ -153,7 +153,7 @@ export default function PlanstellberechnungPage() {
 
             {/* F3: Schülerzahl Stand 31.08.24 (EINGABE) */}
             <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">F3: Schülerzahl Stand 31.08.24</Label>
+              <Label className="text-sm">Schülerzahl Stand 31.08.24</Label>
               <Input
                 type="number"
                 step="1"
@@ -166,7 +166,7 @@ export default function PlanstellberechnungPage() {
 
             {/* F4: Schüler/Lehrerrelation an der Realschule: (ab 06/18) (EINGABE) */}
             <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">F4: Schüler/Lehrerrelation an der Realschule: (ab 06/18)</Label>
+              <Label className="text-sm">Schüler/Lehrerrelation an der Realschule: (ab 06/18)</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -181,7 +181,7 @@ export default function PlanstellberechnungPage() {
 
             {/* F5: Quotient der zwei Größen: (BERECHNET) */}
             <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm font-medium">F5: Quotient der zwei Größen:</Label>
+              <Label className="text-sm font-medium">Quotient der zwei Größen:</Label>
               <div className={`p-2 border rounded text-right font-mono ${isValidForCalculation ? 'bg-cyan-50 border-cyan-200' : 'bg-red-50 border-red-300'}`} data-testid="display-f5">
                 {isValidForCalculation ? quotient.toFixed(8) : 'Division durch 0'}
               </div>
@@ -189,7 +189,7 @@ export default function PlanstellberechnungPage() {
 
             {/* F6: Quotient abgeschnitten nach 2. Dezimalstelle (BERECHNET) */}
             <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm font-medium">F6: Quotient nach der 2. Dezimale abgeschnitten</Label>
+              <Label className="text-sm font-medium">Quotient nach der 2. Dezimale abgeschnitten</Label>
               <div className={`p-2 border rounded text-right font-mono ${isValidForCalculation ? 'bg-cyan-50 border-cyan-200' : 'bg-red-50 border-red-300'}`} data-testid="display-f6">
                 {isValidForCalculation ? quotientAbgeschnitten.toFixed(2) : '0.00'}
               </div>
@@ -197,7 +197,7 @@ export default function PlanstellberechnungPage() {
 
             {/* F7: abgerundet auf halbe bzw. ganze Dezimale (BERECHNET) */}
             <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm font-medium">F7: abgerundet auf halbe bzw. ganze Dezimale:</Label>
+              <Label className="text-sm font-medium">abgerundet auf halbe bzw. ganze Dezimale:</Label>
               <div className={`p-2 border rounded text-right font-mono ${isValidForCalculation ? 'bg-cyan-50 border-cyan-200' : 'bg-red-50 border-red-300'}`} data-testid="display-f7">
                 {isValidForCalculation ? abgerundet.toFixed(1) : '0.0'}
               </div>
@@ -207,7 +207,7 @@ export default function PlanstellberechnungPage() {
 
             {/* F8: bedarfsdeckender Unterricht - Abzug Lehramtsanwärter (EINGABE) */}
             <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">F8: bedarfsdeckender Unterricht - Abzug Lehramtsanwärter</Label>
+              <Label className="text-sm">bedarfsdeckender Unterricht - Abzug Lehramtsanwärter</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -220,7 +220,7 @@ export default function PlanstellberechnungPage() {
 
             {/* F9: Rundung (EINGABE) */}
             <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">F9: Rundung</Label>
+              <Label className="text-sm">Rundung</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -235,7 +235,7 @@ export default function PlanstellberechnungPage() {
 
             {/* F10: Summe Grundbedarf (BERECHNET) */}
             <div className="grid grid-cols-2 gap-4 items-center bg-green-50 p-4 rounded-lg border-2 border-green-300">
-              <Label className="text-sm font-bold">F10: Summe Grundbedarf</Label>
+              <Label className="text-sm font-bold">Summe Grundbedarf</Label>
               <div className="p-3 bg-green-100 border border-green-400 rounded text-right font-mono text-lg font-bold" data-testid="display-f10">
                 {summeGrundbedarf.toFixed(2)}
               </div>
@@ -248,7 +248,7 @@ export default function PlanstellberechnungPage() {
 
             {/* F12: Fachleiter */}
             <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">F12: Fachleiter</Label>
+              <Label className="text-sm">Fachleiter</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -261,7 +261,7 @@ export default function PlanstellberechnungPage() {
 
             {/* F13: Personalrat */}
             <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">F13: Personalrat</Label>
+              <Label className="text-sm">Personalrat</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -274,7 +274,7 @@ export default function PlanstellberechnungPage() {
 
             {/* F14: Schulleitungsentlastung - Fortbildung */}
             <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">F14: Schulleitungsentlastung - Fortbildung</Label>
+              <Label className="text-sm">Schulleitungsentlastung - Fortbildung</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -287,7 +287,7 @@ export default function PlanstellberechnungPage() {
 
             {/* F15: Ausbau Leitungszeit */}
             <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">F15: Ausbau Leitungszeit</Label>
+              <Label className="text-sm">Ausbau Leitungszeit</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -300,7 +300,7 @@ export default function PlanstellberechnungPage() {
 
             {/* F16: Rückgabe Vorgriffstunde */}
             <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">F16: Rückgabe Vorgriffstunde</Label>
+              <Label className="text-sm">Rückgabe Vorgriffstunde</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -313,7 +313,7 @@ export default function PlanstellberechnungPage() {
 
             {/* F17: Digitalisierungsbeauftragter */}
             <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">F17: Digitalisierungsbeauftragter</Label>
+              <Label className="text-sm">Digitalisierungsbeauftragter</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -326,7 +326,7 @@ export default function PlanstellberechnungPage() {
 
             {/* F18: Fortb. und Qualif. / Medien und DS */}
             <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">F18: Fortb. und Qualif. / Medien und DS</Label>
+              <Label className="text-sm">Fortb. und Qualif. / Medien und DS</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -339,7 +339,7 @@ export default function PlanstellberechnungPage() {
 
             {/* F19: Fachberater Schulaufsicht */}
             <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">F19: Fachberater Schulaufsicht</Label>
+              <Label className="text-sm">Fachberater Schulaufsicht</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -352,7 +352,7 @@ export default function PlanstellberechnungPage() {
 
             {/* F20: Wechs. Merh - und Ausgleichsbedarfe */}
             <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">F20: Wechs. Merh - und Ausgleichsbedarfe</Label>
+              <Label className="text-sm">Wechs. Merh - und Ausgleichsbedarfe</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -365,7 +365,7 @@ export default function PlanstellberechnungPage() {
 
             {/* F21: Praxissemester in Schule */}
             <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">F21: Praxissemester in Schule</Label>
+              <Label className="text-sm">Praxissemester in Schule</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -378,7 +378,7 @@ export default function PlanstellberechnungPage() {
 
             {/* F22: Zusätzliche Ausfallvertretung */}
             <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">F22: Zusätzliche Ausfallvertretung</Label>
+              <Label className="text-sm">Zusätzliche Ausfallvertretung</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -391,7 +391,7 @@ export default function PlanstellberechnungPage() {
 
             {/* F23: Entlastung Lehrertätigkeit */}
             <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">F23: Entlastung Lehrertätigkeit</Label>
+              <Label className="text-sm">Entlastung Lehrertätigkeit</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -404,7 +404,7 @@ export default function PlanstellberechnungPage() {
 
             {/* F24: Entlastung LVO&CO */}
             <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">F24: Entlastung LVO&CO</Label>
+              <Label className="text-sm">Entlastung LVO&CO</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -417,7 +417,7 @@ export default function PlanstellberechnungPage() {
 
             {/* F25: Ermäßigungen weitere */}
             <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">F25: Ermäßigungen weitere</Label>
+              <Label className="text-sm">Ermäßigungen weitere</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -430,7 +430,7 @@ export default function PlanstellberechnungPage() {
 
             {/* F26: 0 */}
             <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">F26: 0</Label>
+              <Label className="text-sm">0</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -441,61 +441,7 @@ export default function PlanstellberechnungPage() {
               />
             </div>
 
-            <Separator className="border-t-2" />
-
-            {/* Summe Ausgleichsbedarf (BERECHNET) */}
-            <div className="grid grid-cols-2 gap-4 items-center bg-orange-50 p-4 rounded-lg border-2 border-orange-300">
-              <Label className="text-sm font-bold">Summe Ausgleichsbedarf</Label>
-              <div className="p-3 bg-orange-100 border border-orange-400 rounded text-right font-mono text-lg font-bold" data-testid="display-summe-ausgleichsbedarf">
-                {summeAusgleichsbedarf.toFixed(2)}
-              </div>
-            </div>
-
-            {/* === WEITERE BEREICHE === */}
-            <div className="bg-purple-50 p-2 rounded-lg mt-6">
-              <h3 className="font-bold text-center">Weitere Bereiche</h3>
-            </div>
-
-            {/* Praktische Philosophie /Islamkunde */}
-            <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">Praktische Philosophie /Islamkunde</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={planstellenData.praktischePhilosophieIslamkunde || 0}
-                onChange={(e) => handleInputChange('praktischePhilosophieIslamkunde', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
-                data-testid="input-praktische-philosophie"
-              />
-            </div>
-
-            {/* Pädagogische Übermittagsbetreuung */}
-            <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">Pädagogische Übermittagsbetreuung</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={planstellenData.paedagogischeUebermittagsbetreuung || 0}
-                onChange={(e) => handleInputChange('paedagogischeUebermittagsbetreuung', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
-                data-testid="input-paedagogische-betreuung"
-              />
-            </div>
-
-            {/* Integration durch Bildung */}
-            <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">Integration durch Bildung</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={planstellenData.integrationDurchBildung || 0}
-                onChange={(e) => handleInputChange('integrationDurchBildung', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
-                data-testid="input-integration-bildung"
-              />
-            </div>
-
-            {/* === FREIE EINGABEZEILEN === */}
+            {/* === FREIE EINGABEZEILEN (VOR SUMME) === */}
             <div className="bg-gray-50 p-2 rounded-lg mt-6">
               <h3 className="font-bold text-center">Freie Eingabezeilen</h3>
             </div>
@@ -542,9 +488,63 @@ export default function PlanstellberechnungPage() {
 
             <Separator className="border-t-2" />
 
-            {/* SUMME WEITERE BEREICHE */}
+            {/* Summe Ausgleichsbedarf (BERECHNET) */}
+            <div className="grid grid-cols-2 gap-4 items-center bg-orange-50 p-4 rounded-lg border-2 border-orange-300">
+              <Label className="text-sm font-bold">Summe Ausgleichsbedarf</Label>
+              <div className="p-3 bg-orange-100 border border-orange-400 rounded text-right font-mono text-lg font-bold" data-testid="display-summe-ausgleichsbedarf">
+                {summeAusgleichsbedarf.toFixed(2)}
+              </div>
+            </div>
+
+            {/* === MEHRBEDARFE (umbenannt von "Weitere Bereiche") === */}
+            <div className="bg-purple-50 p-2 rounded-lg mt-6">
+              <h3 className="font-bold text-center">Mehrbedarfe</h3>
+            </div>
+
+            {/* Praktische Philosophie /Islamkunde */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">Praktische Philosophie /Islamkunde</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.praktischePhilosophieIslamkunde || 0}
+                onChange={(e) => handleInputChange('praktischePhilosophieIslamkunde', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-praktische-philosophie"
+              />
+            </div>
+
+            {/* Pädagogische Übermittagsbetreuung */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">Pädagogische Übermittagsbetreuung</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.paedagogischeUebermittagsbetreuung || 0}
+                onChange={(e) => handleInputChange('paedagogischeUebermittagsbetreuung', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-paedagogische-betreuung"
+              />
+            </div>
+
+            {/* Integration durch Bildung */}
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <Label className="text-sm">Integration durch Bildung</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={planstellenData.integrationDurchBildung || 0}
+                onChange={(e) => handleInputChange('integrationDurchBildung', parseFloat(e.target.value))}
+                className="bg-yellow-50 border-yellow-300"
+                data-testid="input-integration-bildung"
+              />
+            </div>
+
+            <Separator className="border-t-2" />
+
+            {/* SUMME MEHRBEDARFE (umbenannt) */}
             <div className="grid grid-cols-2 gap-4 items-center bg-purple-50 p-4 rounded-lg border-2 border-purple-300">
-              <Label className="text-sm font-bold">Summe weitere Bereiche</Label>
+              <Label className="text-sm font-bold">Summe Mehrbedarfe</Label>
               <div className="p-3 bg-purple-100 border border-purple-400 rounded text-right font-mono text-lg font-bold" data-testid="display-summe-weitere">
                 {summeWeitereBereiche.toFixed(2)}
               </div>
