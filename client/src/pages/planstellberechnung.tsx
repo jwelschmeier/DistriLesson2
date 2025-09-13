@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { Calculator } from 'lucide-react'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import { Calculator, TrendingUp, Users, School, GraduationCap, BarChart3 } from 'lucide-react'
 import type { PlanstellenInput } from '@shared/schema'
 
 export default function PlanstellberechnungPage() {
@@ -211,104 +212,160 @@ export default function PlanstellberechnungPage() {
         <h1 className="text-2xl font-bold">Planstellenberechnung</h1>
       </div>
 
-      {/* Grunddaten */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Grunddaten</CardTitle>
+      {/* Sticky Summary Area */}
+      <Card className="sticky top-4 z-10 shadow-lg border-2 border-blue-200 bg-blue-50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-blue-600" />
+            Übersicht - Wichtige Ergebnisse
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Schulname</Label>
-              <Input
-                value={planstellenData.schulname}
-                onChange={(e) => handleInputChange('schulname', e.target.value)}
-                data-testid="input-schulname"
-              />
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="text-sm text-gray-600">Stellenbedarf insgesamt</div>
+              <div className="text-xl font-bold text-blue-700" data-testid="summary-stellenbedarf-gesamt">
+                {stellenbedarfGesamt.toFixed(2)}
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Schuljahr</Label>
-              <Input
-                value={planstellenData.schuljahr}
-                onChange={(e) => handleInputChange('schuljahr', e.target.value)}
-                data-testid="input-schuljahr"
-              />
+            <div className="text-center">
+              <div className="text-sm text-gray-600">Vorhandene Planstellen</div>
+              <div className="text-xl font-bold text-green-700" data-testid="summary-vorhandene-planstellen">
+                {(planstellenData.vorhandenePlanstellen || 0).toFixed(2)}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-sm text-gray-600">Differenz Soll-Ist</div>
+              <div className={`text-xl font-bold ${differenzSollIst >= 0 ? 'text-green-700' : 'text-red-700'}`} data-testid="summary-differenz-soll-ist">
+                {differenzSollIst >= 0 ? '+' : ''}{differenzSollIst.toFixed(2)}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-sm text-gray-600">Grundbedarf</div>
+              <div className="text-xl font-bold text-purple-700" data-testid="summary-grundbedarf">
+                {summeGrundbedarf.toFixed(2)}
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* VOLLSTÄNDIGE PLANSTELLENTABELLE - 2 SPALTEN */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Planstellenberechnung</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          
-          {/* Tabellen-Header */}
-          <div className="grid grid-cols-2 gap-4 items-center font-bold text-sm bg-gray-100 p-4 rounded-lg">
-            <Label className="text-center">Bezeichnung</Label>
-            <Label className="text-center">Wert</Label>
-          </div>
-
-          <div className="space-y-3">
-            
-            {/* === 1. GRUNDBEDARF === */}
-            <div className="bg-blue-50 p-2 rounded-lg">
-              <h3 className="font-bold text-center">1. Grundbedarf</h3>
-            </div>
-
-            {/* F3: Schülerzahl Stand 31.08.24 (EINGABE) */}
-            <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">Schülerzahl Stand 31.08.24</Label>
-              <Input
-                type="number"
-                step="1"
-                value={planstellenData.schuelerzahlStand}
-                onChange={(e) => handleInputChange('schuelerzahlStand', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
-                data-testid="input-schuelerzahl"
-              />
-            </div>
-
-            {/* F4: Schüler/Lehrerrelation an der Realschule: (ab 06/18) (EINGABE) */}
-            <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">Schüler/Lehrerrelation an der Realschule: (ab 06/18)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={planstellenData.schuelerLehrerrelation}
-                onChange={(e) => handleInputChange('schuelerLehrerrelation', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
-                data-testid="input-schuelerrelation"
-              />
-            </div>
-
-            <Separator />
-
-            {/* F5: Quotient der zwei Größen: (BERECHNET) */}
-            <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm font-medium">Quotient der zwei Größen:</Label>
-              <div className={`p-2 border rounded text-right font-mono ${isValidForCalculation ? 'bg-cyan-50 border-cyan-200' : 'bg-red-50 border-red-300'}`} data-testid="display-f5">
-                {isValidForCalculation ? quotient.toFixed(8) : 'Division durch 0'}
+      {/* Accordion Sections */}
+      <Accordion type="multiple" defaultValue={["grunddaten", "stellenbedarf"]} className="space-y-4">
+        
+        {/* 1. Grunddaten */}
+        <AccordionItem value="grunddaten">
+          <Card>
+            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <div className="flex items-center gap-3">
+                <School className="h-5 w-5 text-blue-600" />
+                <span className="text-lg font-semibold">Grunddaten</span>
               </div>
-            </div>
+            </AccordionTrigger>
+            <AccordionContent>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Schulname</Label>
+                    <Input
+                      value={planstellenData.schulname}
+                      onChange={(e) => handleInputChange('schulname', e.target.value)}
+                      data-testid="input-schulname"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Schuljahr</Label>
+                    <Input
+                      value={planstellenData.schuljahr}
+                      onChange={(e) => handleInputChange('schuljahr', e.target.value)}
+                      data-testid="input-schuljahr"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </AccordionContent>
+          </Card>
+        </AccordionItem>
 
-            {/* F6: Quotient abgeschnitten nach 2. Dezimalstelle (BERECHNET) */}
-            <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm font-medium">Quotient nach der 2. Dezimale abgeschnitten</Label>
-              <div className={`p-2 border rounded text-right font-mono ${isValidForCalculation ? 'bg-cyan-50 border-cyan-200' : 'bg-red-50 border-red-300'}`} data-testid="display-f6">
-                {isValidForCalculation ? quotientAbgeschnitten.toFixed(2) : '0.00'}
+        {/* 2. Stellenbedarf-Berechnung */}
+        <AccordionItem value="stellenbedarf">
+          <Card>
+            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <div className="flex items-center gap-3">
+                <Calculator className="h-5 w-5 text-green-600" />
+                <span className="text-lg font-semibold">Stellenbedarf-Berechnung</span>
+                <div className="ml-auto text-sm text-gray-600">
+                  Gesamt: {stellenbedarfGesamt.toFixed(2)}
+                </div>
               </div>
-            </div>
+            </AccordionTrigger>
+            <AccordionContent>
+              <CardContent className="space-y-6">
+                
+                {/* Tabellen-Header */}
+                <div className="grid grid-cols-2 gap-4 items-center font-bold text-sm bg-gray-100 p-4 rounded-lg">
+                  <Label className="text-center">Bezeichnung</Label>
+                  <Label className="text-center">Wert</Label>
+                </div>
 
-            {/* F7: abgerundet auf halbe bzw. ganze Dezimale (BERECHNET) */}
-            <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm font-medium">abgerundet auf halbe bzw. ganze Dezimale:</Label>
-              <div className={`p-2 border rounded text-right font-mono ${isValidForCalculation ? 'bg-cyan-50 border-cyan-200' : 'bg-red-50 border-red-300'}`} data-testid="display-f7">
-                {isValidForCalculation ? abgerundet.toFixed(1) : '0.0'}
-              </div>
-            </div>
+                <div className="space-y-3">
+                  
+                  {/* === 1. GRUNDBEDARF === */}
+                  <div className="bg-blue-50 p-2 rounded-lg">
+                    <h3 className="font-bold text-center">1. Grundbedarf</h3>
+                  </div>
+
+                  {/* F3: Schülerzahl Stand 31.08.24 (EINGABE) */}
+                  <div className="grid grid-cols-2 gap-4 items-center">
+                    <Label className="text-sm">Schülerzahl Stand 31.08.24</Label>
+                    <Input
+                      type="number"
+                      step="1"
+                      value={planstellenData.schuelerzahlStand}
+                      onChange={(e) => handleInputChange('schuelerzahlStand', parseFloat(e.target.value))}
+                      className="bg-yellow-50 border-yellow-300"
+                      data-testid="input-schuelerzahl"
+                    />
+                  </div>
+
+                  {/* F4: Schüler/Lehrerrelation an der Realschule: (ab 06/18) (EINGABE) */}
+                  <div className="grid grid-cols-2 gap-4 items-center">
+                    <Label className="text-sm">Schüler/Lehrerrelation an der Realschule: (ab 06/18)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={planstellenData.schuelerLehrerrelation}
+                      onChange={(e) => handleInputChange('schuelerLehrerrelation', parseFloat(e.target.value))}
+                      className="bg-yellow-50 border-yellow-300"
+                      data-testid="input-schuelerrelation"
+                    />
+                  </div>
+
+                  <Separator />
+
+                  {/* F5: Quotient der zwei Größen: (BERECHNET) */}
+                  <div className="grid grid-cols-2 gap-4 items-center">
+                    <Label className="text-sm font-medium">Quotient der zwei Größen:</Label>
+                    <div className={`p-2 border rounded text-right font-mono ${isValidForCalculation ? 'bg-cyan-50 border-cyan-200' : 'bg-red-50 border-red-300'}`} data-testid="display-f5">
+                      {isValidForCalculation ? quotient.toFixed(8) : 'Division durch 0'}
+                    </div>
+                  </div>
+
+                  {/* F6: Quotient abgeschnitten nach 2. Dezimalstelle (BERECHNET) */}
+                  <div className="grid grid-cols-2 gap-4 items-center">
+                    <Label className="text-sm font-medium">Quotient nach der 2. Dezimale abgeschnitten</Label>
+                    <div className={`p-2 border rounded text-right font-mono ${isValidForCalculation ? 'bg-cyan-50 border-cyan-200' : 'bg-red-50 border-red-300'}`} data-testid="display-f6">
+                      {isValidForCalculation ? quotientAbgeschnitten.toFixed(2) : '0.00'}
+                    </div>
+                  </div>
+
+                  {/* F7: abgerundet auf halbe bzw. ganze Dezimale (BERECHNET) */}
+                  <div className="grid grid-cols-2 gap-4 items-center">
+                    <Label className="text-sm font-medium">abgerundet auf halbe bzw. ganze Dezimale:</Label>
+                    <div className={`p-2 border rounded text-right font-mono ${isValidForCalculation ? 'bg-cyan-50 border-cyan-200' : 'bg-red-50 border-red-300'}`} data-testid="display-f7">
+                      {isValidForCalculation ? abgerundet.toFixed(1) : '0.0'}
+                    </div>
+                  </div>
 
             <Separator />
 
@@ -1053,12 +1110,254 @@ export default function PlanstellberechnungPage() {
               </div>
             </div>
 
-          </div>
+                </div>
+              </CardContent>
+            </AccordionContent>
+          </Card>
+        </AccordionItem>
 
-        </CardContent>
-      </Card>
+        {/* 3. Personal-Analyse */}
+        <AccordionItem value="personal-analyse">
+          <Card>
+            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <div className="flex items-center gap-3">
+                <Users className="h-5 w-5 text-purple-600" />
+                <span className="text-lg font-semibold">Personal-Analyse</span>
+                <div className="ml-auto text-sm text-gray-600">
+                  Differenz: {differenzSollIst >= 0 ? '+' : ''}{differenzSollIst.toFixed(2)}
+                </div>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 items-center">
+                  <Label className="text-sm">Vorhandene Planstellen (Istbestand)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={planstellenData.vorhandenePlanstellen || 0}
+                    onChange={(e) => handleInputChange('vorhandenePlanstellen', parseFloat(e.target.value))}
+                    className="bg-yellow-50 border-yellow-300"
+                    data-testid="input-vorhandene-planstellen"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4 items-center bg-blue-50 p-4 rounded-lg border-2 border-blue-300">
+                  <Label className="text-sm font-bold">Differenz Soll-Ist</Label>
+                  <div className={`p-3 border rounded text-right font-mono text-lg font-bold ${differenzSollIst >= 0 ? 'bg-green-100 border-green-400' : 'bg-red-100 border-red-400'}`} data-testid="display-differenz-soll-ist">
+                    {differenzSollIst >= 0 ? '+' : ''}{differenzSollIst.toFixed(2)}
+                  </div>
+                </div>
+              </CardContent>
+            </AccordionContent>
+          </Card>
+        </AccordionItem>
 
-      
+        {/* 4. Ermäßigungsstunden */}
+        <AccordionItem value="ermaessigungsstunden">
+          <Card>
+            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <div className="flex items-center gap-3">
+                <GraduationCap className="h-5 w-5 text-orange-600" />
+                <span className="text-lg font-semibold">Ermäßigungsstunden</span>
+                <div className="ml-auto text-sm text-gray-600">
+                  Kollegium: {entlastungsstundenGerundet}
+                </div>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 items-center">
+                  <Label className="text-sm">Grundstellenbedarf-Faktor</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={planstellenData.grundstellenbedarfFaktor || 0.5}
+                    onChange={(e) => handleInputChange('grundstellenbedarfFaktor', parseFloat(e.target.value))}
+                    className="bg-yellow-50 border-yellow-300"
+                    data-testid="input-grundstellenbedarf-faktor"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4 items-center">
+                  <Label className="text-sm font-medium">Grundstellenbedarf * Faktor</Label>
+                  <div className="p-2 border rounded text-right font-mono bg-cyan-50 border-cyan-200" data-testid="display-grundstellenbedarf-halbe">
+                    {grundstellenbedarfHalbe.toFixed(2)}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 items-center bg-orange-50 p-4 rounded-lg border-2 border-orange-300">
+                  <Label className="text-sm font-bold">Entlastungsstunden (Kollegium) gerundet</Label>
+                  <div className="p-3 bg-orange-100 border border-orange-400 rounded text-right font-mono text-lg font-bold" data-testid="display-entlastungsstunden-gerundet">
+                    {entlastungsstundenGerundet}
+                  </div>
+                </div>
+              </CardContent>
+            </AccordionContent>
+          </Card>
+        </AccordionItem>
+
+        {/* 5. Schulleitung */}
+        <AccordionItem value="schulleitung">
+          <Card>
+            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <div className="flex items-center gap-3">
+                <School className="h-5 w-5 text-indigo-600" />
+                <span className="text-lg font-semibold">Schulleitung</span>
+                <div className="ml-auto text-sm text-gray-600">
+                  Schulleiter: {geaenderteSchulleiterpauschal} | Stellvertreter: {geaenderteStellvertreterpauschal}
+                </div>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent>
+              <CardContent className="space-y-4">
+                <div className="bg-indigo-50 p-2 rounded-lg">
+                  <h3 className="font-bold text-center">Schulleiterpauschal-Berechnung</h3>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 items-center">
+                  <Label className="text-sm">Grundpauschal</Label>
+                  <Input
+                    type="number"
+                    step="1"
+                    value={planstellenData.grundpauschal || 9}
+                    onChange={(e) => handleInputChange('grundpauschal', parseFloat(e.target.value))}
+                    className="bg-yellow-50 border-yellow-300"
+                    data-testid="input-grundpauschal"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 items-center">
+                  <Label className="text-sm">Schulleiter 3/4 (abgerundet)</Label>
+                  <Input
+                    type="number"
+                    step="1"
+                    value={planstellenData.schulleiterDreiViertel || 18}
+                    onChange={(e) => handleInputChange('schulleiterDreiViertel', parseFloat(e.target.value))}
+                    className="bg-yellow-50 border-yellow-300"
+                    data-testid="input-schulleiter-drei-viertel"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 items-center">
+                  <Label className="text-sm">minus Entlastung Stundenplanarbeit</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={planstellenData.minusEntlastungStundenplanarbeit || 0}
+                    onChange={(e) => handleInputChange('minusEntlastungStundenplanarbeit', parseFloat(e.target.value))}
+                    className="bg-yellow-50 border-yellow-300"
+                    data-testid="input-minus-entlastung-stundenplanarbeit"
+                  />
+                </div>
+
+                <Separator />
+
+                <div className="grid grid-cols-2 gap-4 items-center">
+                  <Label className="text-sm font-medium">geänderte und abgerundete Schulleiterpauschal</Label>
+                  <div className="p-3 bg-indigo-100 border border-indigo-400 rounded text-right font-mono text-lg font-bold" data-testid="display-geaenderte-schulleiterpauschal">
+                    {geaenderteSchulleiterpauschal}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 items-center">
+                  <Label className="text-sm font-medium">geänderte und aufgerundete Stellvertreterpauschal</Label>
+                  <div className="p-3 bg-indigo-100 border border-indigo-400 rounded text-right font-mono text-lg font-bold" data-testid="display-geaenderte-stellvertreterpauschal">
+                    {geaenderteStellvertreterpauschal}
+                  </div>
+                </div>
+              </CardContent>
+            </AccordionContent>
+          </Card>
+        </AccordionItem>
+
+        {/* 6. Klassen & Unterricht */}
+        <AccordionItem value="klassen-unterricht">
+          <Card>
+            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <div className="flex items-center gap-3">
+                <BarChart3 className="h-5 w-5 text-teal-600" />
+                <span className="text-lg font-semibold">Klassen & Unterricht</span>
+                <div className="ml-auto text-sm text-gray-600">
+                  Klassen: {planstellenData.istklassenzahl} | Abweichung: {abweichungKlassenbildung.toFixed(1)}
+                </div>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent>
+              <CardContent className="space-y-6">
+                
+                {/* Klassenbildung */}
+                <div className="bg-green-50 p-2 rounded-lg">
+                  <h3 className="font-bold text-center">Klassenbildung</h3>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 items-center">
+                  <Label className="text-sm font-medium">Sollklassenzahl</Label>
+                  <div className="p-3 bg-gray-100 border border-gray-400 rounded text-right font-mono text-lg" data-testid="display-sollklassenzahl">
+                    {sollklassenzahl.toFixed(1)}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 items-center">
+                  <Label className="text-sm">Istklassenzahl</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={planstellenData.istklassenzahl || 17.0}
+                    onChange={(e) => handleInputChange('istklassenzahl', parseFloat(e.target.value))}
+                    className="bg-yellow-50 border-yellow-300"
+                    data-testid="input-istklassenzahl"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 items-center bg-green-50 p-4 rounded-lg border-2 border-green-300">
+                  <Label className="text-sm font-bold">Abweichung Klassenanzahl</Label>
+                  <div className="p-3 bg-green-100 border border-green-400 rounded text-right font-mono text-lg font-bold" data-testid="display-abweichung-klassenanzahl">
+                    {abweichungKlassenbildung.toFixed(1)}
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Statistik Unterrichtsstunden */}
+                <div className="bg-blue-50 p-2 rounded-lg">
+                  <h3 className="font-bold text-center">Statistik Unterrichtsstunden</h3>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 items-center">
+                  <Label className="text-sm">verfügbare Unterrichtsstunden</Label>
+                  <Input
+                    type="number"
+                    step="1"
+                    value={planstellenData.verfuegbareUnterrichtsstunden || 0}
+                    onChange={(e) => handleInputChange('verfuegbareUnterrichtsstunden', parseFloat(e.target.value))}
+                    className="bg-yellow-50 border-yellow-300"
+                    data-testid="input-verfuegbare-unterrichtsstunden"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 items-center">
+                  <Label className="text-sm">Unterrichtssoll nach Kürzung</Label>
+                  <Input
+                    type="number"
+                    step="1"
+                    value={planstellenData.unterrichtssollNachKuerzung || 0}
+                    onChange={(e) => handleInputChange('unterrichtssollNachKuerzung', parseFloat(e.target.value))}
+                    className="bg-yellow-50 border-yellow-300"
+                    data-testid="input-unterrichtssoll-nach-kuerzung"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 items-center bg-blue-50 p-4 rounded-lg border-2 border-blue-300">
+                  <Label className="text-sm font-bold">Abweichung Unterrichtsstunden</Label>
+                  <div className="p-3 bg-blue-100 border border-blue-400 rounded text-right font-mono text-lg font-bold" data-testid="display-abweichung-unterrichtsstunden">
+                    {abweichungUnterrichtsstunden}
+                  </div>
+                </div>
+
+              </CardContent>
+            </AccordionContent>
+          </Card>
+        </AccordionItem>
+
+      </Accordion>
 
     </div>
   )
