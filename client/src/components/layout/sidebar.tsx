@@ -23,7 +23,6 @@ const navigationItems = [
 
 const adminNavigationItems = [
   { href: "/admin", label: "Admin-Panel", icon: Settings },
-  { href: "/chatgpt-import", label: "ChatGPT Import", icon: MessageSquare },
 ];
 
 export function Sidebar() {

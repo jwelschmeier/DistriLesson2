@@ -11,7 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { isUnauthorizedError, redirectToLogin } from "@/lib/authUtils";
 import { Sidebar } from "@/components/layout/sidebar";
-import { Trash2, Mail, Copy, Calendar, Users } from "lucide-react";
+import { ChatGPTImport } from "@/components/ChatGPTImport";
+import { Trash2, Mail, Copy, Calendar, Users, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -327,6 +328,22 @@ export default function AdminPanel() {
               </Table>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* ChatGPT Import */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            ChatGPT Import
+          </CardTitle>
+          <CardDescription>
+            Stundenplan-Daten mit ChatGPT automatisch importieren und verarbeiten.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ChatGPTImport />
         </CardContent>
       </Card>
         </div>
