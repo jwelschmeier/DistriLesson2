@@ -561,6 +561,35 @@ export const planstellenInputSchema = z.object({
   
   // === BERECHNUNG ERMÄSSIGUNGSSTUNDEN (F53-F54) ===
   grundstellenbedarfFaktor: z.number().optional().default(0.5), // für F53: F10*0.5
+  
+  // === VORHANDENE PLANSTELLEN (ISTBESTAND) ===
+  // F50: Vorhandene Planstellen (Istbestand) = Lehrerplanstellen!F57
+  vorhandenePlanstellen: z.number().optional().default(0),
+  
+  // === BERECHNUNG SCHULLEITERPAUSCHAL ===
+  // F56: Grundpauschal
+  grundpauschal: z.number().optional().default(9),
+  // F57: Schulleiterentlastung Fortbildung  
+  schulleiterentlastungFortbildung: z.number().optional().default(0.04),
+  // F58: Ausbau Leitungszeit
+  ausbauLeitungszeitSchulleiter: z.number().optional().default(0.12),
+  // F61: Schulleiter 3/5 (aufgerundet)
+  schulleiterDreiViertel: z.number().optional().default(18),
+  // F63: Stellvertreter 2/5 (abgerundet) - wird berechnet
+  // F64: Ausbau Leitungszeit 
+  ausbauLeitungszeitStellvertreter: z.number().optional().default(0.11),
+  // F65: minus Entl. (Stundenplanarbeit) aus Schuleitungspauschale
+  minusEntlastungStundenplanarbeit: z.number().optional().default(0),
+  
+  // === KLASSENBILDUNG ===
+  // F70: Istklassenzahl
+  istklassenzahl: z.number().optional().default(17.0),
+  
+  // === STATISTIK UNTERRICHTSSTUNDEN ===
+  // F73: zur Verfügung stehende Unterrichtsstunden = Lehrerplanstellen!Q57
+  verfuegbareUnterrichtsstunden: z.number().optional().default(0),
+  // F74: Unterrichtssoll (nach Kürzung) = Lehrerplanstellen!IST_UNTERRSTD  
+  unterrichtssollNachKuerzung: z.number().optional().default(0),
 });
 
 export type PlanstellenInput = z.infer<typeof planstellenInputSchema>;
