@@ -580,15 +580,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteAssignment(id: string): Promise<void> {
-    console.log(`DEBUG STORAGE: Starting deletion of assignment with ID: ${id}`);
-    try {
-      const result = await db.delete(assignments).where(eq(assignments.id, id));
-      console.log(`DEBUG STORAGE: Delete result:`, result);
-      console.log(`DEBUG STORAGE: Assignment ${id} deleted successfully`);
-    } catch (error) {
-      console.error(`DEBUG STORAGE: Error deleting assignment ${id}:`, error);
-      throw error;
-    }
+    await db.delete(assignments).where(eq(assignments.id, id));
   }
 
   async getAssignmentsByTeacher(teacherId: string): Promise<Assignment[]> {

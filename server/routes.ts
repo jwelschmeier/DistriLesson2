@@ -530,47 +530,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk delete assignments - MUST be before /:id route!
+  app.delete("/api/assignments/bulk", async (req, res) => {
+    try {
+      const { assignmentIds } = req.body;
+      
+      if (!assignmentIds || !Array.isArray(assignmentIds) || assignmentIds.length === 0) {
+        return res.status(400).json({ error: "assignmentIds must be a non-empty array" });
+      }
+      
+      console.log(`Bulk deleting ${assignmentIds.length} assignments:`, assignmentIds);
+      
+      // Delete all assignments
+      for (const id of assignmentIds) {
+        await storage.deleteAssignment(id);
+      }
+      
+      console.log("Bulk deletion completed successfully");
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error in bulk delete assignments:", error);
+      res.status(500).json({ error: "Failed to delete assignments" });
+    }
+  });
+
   app.delete("/api/assignments/:id", async (req, res) => {
     try {
       await storage.deleteAssignment(req.params.id);
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete assignment" });
-    }
-  });
-
-  // Bulk delete assignments
-  app.delete("/api/assignments/bulk", async (req, res) => {
-    try {
-      console.log("DEBUG: Full request object keys:", Object.keys(req));
-      console.log("DEBUG: Request body type:", typeof req.body);
-      console.log("DEBUG: Request body content:", JSON.stringify(req.body, null, 2));
-      console.log("DEBUG: Request headers:", req.headers);
-      
-      const { assignmentIds } = req.body;
-      console.log("DEBUG: Extracted assignmentIds:", assignmentIds);
-      console.log("DEBUG: assignmentIds type:", typeof assignmentIds);
-      console.log("DEBUG: assignmentIds is array:", Array.isArray(assignmentIds));
-      
-      if (!assignmentIds || !Array.isArray(assignmentIds) || assignmentIds.length === 0) {
-        console.log("DEBUG: Invalid assignmentIds - returning 400");
-        return res.status(400).json({ error: "assignmentIds must be a non-empty array" });
-      }
-      
-      console.log(`DEBUG: Starting deletion of ${assignmentIds.length} assignments`);
-      
-      // Delete all assignments
-      for (const id of assignmentIds) {
-        console.log(`DEBUG: Deleting assignment with ID: ${id}`);
-        await storage.deleteAssignment(id);
-        console.log(`DEBUG: Successfully deleted assignment: ${id}`);
-      }
-      
-      console.log("DEBUG: All assignments deleted successfully");
-      res.status(204).send();
-    } catch (error) {
-      console.error("Error in bulk delete assignments:", error);
-      res.status(500).json({ error: "Failed to delete assignments" });
     }
   });
 
