@@ -172,6 +172,76 @@ export default function Klassenverwaltung() {
     },
   });
 
+  // Mutation to create all differentiation courses at once
+  const createDifferentiationCoursesMutation = useMutation({
+    mutationFn: async () => {
+      const courses = [
+        // Jahrgang 7
+        { name: "07FS", grade: 7 }, { name: "07TK", grade: 7 }, { name: "07NW", grade: 7 }, 
+        { name: "07INF", grade: 7 }, { name: "07SW1", grade: 7 }, { name: "07SW2", grade: 7 }, { name: "07MU", grade: 7 },
+        // Jahrgang 8
+        { name: "08FS", grade: 8 }, { name: "08NW", grade: 8 }, { name: "08TK", grade: 8 }, 
+        { name: "08INF", grade: 8 }, { name: "08SW1", grade: 8 }, { name: "08MU", grade: 8 },
+        // Jahrgang 9
+        { name: "09FS", grade: 9 }, { name: "09NW", grade: 9 }, { name: "09TK", grade: 9 }, 
+        { name: "09SW1", grade: 9 }, { name: "09SW2", grade: 9 },
+        // Jahrgang 10
+        { name: "10FS", grade: 10 }, { name: "10TK", grade: 10 }, { name: "10NW", grade: 10 }, 
+        { name: "10SW1", grade: 10 }, { name: "10SW2", grade: 10 }
+      ];
+
+      const results = [];
+      let createdCount = 0;
+      let skippedCount = 0;
+      
+      for (const course of courses) {
+        try {
+          // Check if course already exists
+          const existingCourse = classes?.find(c => c.name === course.name);
+          if (existingCourse) {
+            skippedCount++;
+            continue;
+          }
+
+          const courseData = {
+            name: course.name,
+            grade: course.grade,
+            studentCount: 15, // Default for differentiation courses
+            subjectHours: {},
+            targetHoursTotal: null,
+            targetHoursSemester1: null,
+            targetHoursSemester2: null,
+            classTeacher1Id: undefined,
+            classTeacher2Id: undefined,
+          };
+
+          const response = await apiRequest("POST", "/api/classes", courseData);
+          await response.json();
+          createdCount++;
+        } catch (error) {
+          console.error(`Failed to create course ${course.name}:`, error);
+        }
+      }
+      
+      return { createdCount, skippedCount };
+    },
+    onSuccess: (result) => {
+      toast({
+        title: "Differenzierungskurse erstellt",
+        description: `${result.createdCount} Kurse erstellt, ${result.skippedCount} bereits vorhanden.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/classes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Fehler beim Erstellen der Kurse",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleClassSubmit = async (data: ClassFormData) => {
     if (editingClass) {
       updateClassMutation.mutate({ id: editingClass.id, data });
@@ -447,6 +517,19 @@ export default function Klassenverwaltung() {
                   </Form>
                 </DialogContent>
               </Dialog>
+
+              <Button 
+                variant="secondary" 
+                onClick={() => createDifferentiationCoursesMutation.mutate()}
+                disabled={createDifferentiationCoursesMutation.isPending}
+                data-testid="button-create-differentiation-courses"
+              >
+                <School className="mr-2 h-4 w-4" />
+                {createDifferentiationCoursesMutation.isPending 
+                  ? "Erstelle Kurse..." 
+                  : "Differenzierungskurse hinzufügen"
+                }
+              </Button>
             </div>
           </div>
         </header>
