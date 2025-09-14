@@ -175,19 +175,69 @@ export default function Klassenverwaltung() {
   // Mutation to create all differentiation courses at once
   const createDifferentiationCoursesMutation = useMutation({
     mutationFn: async () => {
+      // EXAKTE Kursliste basierend auf der CSV-Datei - keine Abweichungen!
       const courses = [
-        // Jahrgang 7
-        { name: "07FS", grade: 7 }, { name: "07TK", grade: 7 }, { name: "07NW", grade: 7 }, 
-        { name: "07INF", grade: 7 }, { name: "07SW1", grade: 7 }, { name: "07SW2", grade: 7 }, { name: "07MU", grade: 7 },
-        // Jahrgang 8
-        { name: "08FS", grade: 8 }, { name: "08NW", grade: 8 }, { name: "08TK", grade: 8 }, 
-        { name: "08INF", grade: 8 }, { name: "08SW1", grade: 8 }, { name: "08MU", grade: 8 },
-        // Jahrgang 9
-        { name: "09FS", grade: 9 }, { name: "09NW", grade: 9 }, { name: "09TK", grade: 9 }, 
-        { name: "09SW1", grade: 9 }, { name: "09SW2", grade: 9 },
-        // Jahrgang 10
-        { name: "10FS", grade: 10 }, { name: "10TK", grade: 10 }, { name: "10NW", grade: 10 }, 
-        { name: "10SW1", grade: 10 }, { name: "10SW2", grade: 10 }
+        // Jahrgang 5 - Religionskurse
+        { name: "05ER1", grade: 5 }, { name: "05ER2", grade: 5 },
+        { name: "05KR1", grade: 5 }, { name: "05KR2", grade: 5 }, { name: "05KR3", grade: 5 },
+        { name: "05PP1", grade: 5 },
+        
+        // Jahrgang 6 - Religionskurse und Förderung  
+        { name: "06ER1", grade: 6 }, { name: "06ER2", grade: 6 },
+        { name: "06FÖRS1", grade: 6 }, { name: "06FÖRS2", grade: 6 },
+        { name: "06KR1", grade: 6 }, { name: "06KR2", grade: 6 }, { name: "06KR3", grade: 6 },
+        { name: "06PP1", grade: 6 }, { name: "06PP2", grade: 6 },
+        
+        // Jahrgang 7 - EXAKT aus CSV
+        { name: "07DF", grade: 7 }, { name: "07EF", grade: 7 },
+        { name: "07ER1", grade: 7 }, { name: "07ER2", grade: 7 },
+        { name: "07FS", grade: 7 }, 
+        { name: "07INF_IF", grade: 7 }, // Combined name from CSV
+        { name: "07KR1", grade: 7 }, { name: "07KR2", grade: 7 }, { name: "07KR3", grade: 7 },
+        { name: "07MF", grade: 7 },
+        { name: "07MUS", grade: 7 }, // CSV uses MUS, not MU
+        { name: "07NW_BI", grade: 7 }, // Combined name from CSV
+        { name: "07PP1", grade: 7 }, { name: "07PP2", grade: 7 },
+        { name: "07SW", grade: 7 },
+        { name: "07TC1", grade: 7 }, { name: "07TC2", grade: 7 }, // CSV has TC1/TC2 for Jahrgang 7
+        
+        // Jahrgang 8 - EXAKT aus CSV
+        { name: "08DF", grade: 8 }, { name: "08EF", grade: 8 },
+        { name: "08ER1", grade: 8 }, { name: "08ER2", grade: 8 },
+        { name: "08FS", grade: 8 },
+        { name: "08INF_IF", grade: 8 }, // Combined name from CSV
+        { name: "08KR1", grade: 8 }, { name: "08KR2", grade: 8 },
+        { name: "08MF", grade: 8 },
+        { name: "08MUS", grade: 8 }, // CSV uses MUS
+        { name: "08NW_BI", grade: 8 }, // Combined name from CSV
+        { name: "08PP1", grade: 8 },
+        { name: "08SW", grade: 8 },
+        { name: "08TC", grade: 8 }, // CSV uses TC for Jahrgang 8+
+        
+        // Jahrgang 9 - EXAKT aus CSV
+        { name: "09DF", grade: 9 }, { name: "09EF", grade: 9 },
+        { name: "09ER1", grade: 9 }, { name: "09ER2", grade: 9 },
+        { name: "09FS", grade: 9 },
+        { name: "09INF_IF", grade: 9 }, // Combined name from CSV
+        { name: "09KR1", grade: 9 }, { name: "09KR2", grade: 9 }, { name: "09KR3", grade: 9 },
+        { name: "09MF", grade: 9 },
+        { name: "09MUS", grade: 9 }, // CSV uses MUS
+        { name: "09NW_BI", grade: 9 }, // Combined name from CSV
+        { name: "09PP1", grade: 9 },
+        { name: "09SW", grade: 9 },
+        { name: "09TC", grade: 9 }, // CSV uses TC
+        
+        // Jahrgang 10 - EXAKT aus CSV
+        { name: "10DF", grade: 10 }, { name: "10EF", grade: 10 },
+        { name: "10ER1", grade: 10 }, { name: "10ER2", grade: 10 },
+        { name: "10FS", grade: 10 },
+        { name: "10INF_IF", grade: 10 }, // Combined name from CSV
+        { name: "10KR1", grade: 10 }, { name: "10KR2", grade: 10 }, { name: "10KR3", grade: 10 },
+        { name: "10MF", grade: 10 },
+        { name: "10NW_BI", grade: 10 }, // Combined name from CSV
+        { name: "10PP1", grade: 10 },
+        { name: "10SW", grade: 10 },
+        { name: "10TC", grade: 10 } // CSV uses TC
       ];
 
       const results = [];
@@ -527,7 +577,7 @@ export default function Klassenverwaltung() {
                 <School className="mr-2 h-4 w-4" />
                 {createDifferentiationCoursesMutation.isPending 
                   ? "Erstelle Kurse..." 
-                  : "Differenzierungskurse hinzufügen"
+                  : "Alle Kurse hinzufügen (CSV-basiert)"
                 }
               </Button>
             </div>
