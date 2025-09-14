@@ -157,6 +157,10 @@ STUNDENPLAN-TEXT:
 ${scheduleText}
 `;
 
+    // Add debugging for input length
+    console.log("Input prompt length:", prompt.length, "characters");
+    console.log("Schedule text length:", scheduleText.length, "characters");
+    
     try {
       const response = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -171,7 +175,7 @@ ${scheduleText}
           }
         ],
         response_format: { type: "json_object" },
-        max_completion_tokens: 8000
+        max_tokens: 16000
       });
 
       const content = response.choices[0].message.content;
