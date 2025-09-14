@@ -108,54 +108,17 @@ export class OpenAIScheduleService {
   }
 
   async parseScheduleText(scheduleText: string): Promise<ParsedScheduleData> {
-    const prompt = `
-Du bist ein Experte für deutsche Stundenpläne und SCHILD NRW Datenstrukturen. 
-Analysiere den folgenden Stundenplan-Text und extrahiere alle relevanten Informationen.
+    // Limit input text to prevent token issues
+    const maxInputLength = 3000;
+    const trimmedText = scheduleText.length > maxInputLength 
+      ? scheduleText.substring(0, maxInputLength) + "..." 
+      : scheduleText;
 
-WICHTIGE REGELN:
-1. Lehrer-Kürzel sind normalerweise 2-4 Buchstaben (z.B. "MÜL", "SCH", "BRA")
-2. Klassen-Namen folgen dem Format wie "5a", "10b", "Q1", "Q2" etc.
-3. Fächer haben Standard-Abkürzungen wie "D", "M", "E", "BIO", "CH", "PH", "KU", "MU", "SP", "REL", "PP", "SoWi", "GE", "EK"
-4. Stundenzahlen pro Woche sind normalerweise 1-6 Stunden
-5. Semester: 1 = erstes Halbjahr, 2 = zweites Halbjahr
+    const prompt = `Extrahiere aus diesem Stundenplan JSON-Daten:
 
-Gib die Daten in folgendem JSON-Format zurück:
-{
-  "teachers": [
-    {
-      "name": "Vollständiger Name",
-      "shortName": "Kürzel",
-      "qualifications": ["Fach1", "Fach2"]
-    }
-  ],
-  "classes": [
-    {
-      "name": "5a",
-      "grade": 5,
-      "studentCount": 25
-    }
-  ],
-  "subjects": [
-    {
-      "name": "Deutsch",
-      "shortName": "D",
-      "category": "Hauptfach"
-    }
-  ],
-  "assignments": [
-    {
-      "teacherShortName": "MÜL",
-      "className": "5a",
-      "subjectShortName": "D",
-      "hoursPerWeek": 4,
-      "semester": 1
-    }
-  ]
-}
+{"teachers":[{"name":"Name","shortName":"ABC","qualifications":["D","M"]}],"classes":[{"name":"5a","grade":5,"studentCount":null}],"subjects":[{"name":"Deutsch","shortName":"D","category":"Hauptfach"}],"assignments":[{"teacherShortName":"ABC","className":"5a","subjectShortName":"D","hoursPerWeek":4,"semester":1}]}
 
-STUNDENPLAN-TEXT:
-${scheduleText}
-`;
+Text: ${trimmedText}`;
 
     // Add debugging for input length
     console.log("Input prompt length:", prompt.length, "characters");
@@ -163,19 +126,16 @@ ${scheduleText}
     
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
-          {
-            role: "system",
-            content: "Du bist ein Experte für deutsche Schulstundenpläne. Antworte immer mit validen JSON-Daten."
-          },
           {
             role: "user",
             content: prompt
           }
         ],
         response_format: { type: "json_object" },
-        max_tokens: 16000
+        max_tokens: 4000,
+        temperature: 0
       });
 
       const content = response.choices[0].message.content;
