@@ -40,6 +40,7 @@ type GradeBulkEditData = z.infer<typeof gradeBulkEditSchema>;
 export default function Klassenverwaltung() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterGrade, setFilterGrade] = useState("all");
+  const [filterType, setFilterType] = useState<"all" | "klassen" | "kurse">("all");
   const [isClassDialogOpen, setIsClassDialogOpen] = useState(false);
   const [isGradeBulkEditOpen, setIsGradeBulkEditOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<Class | null>(null);
@@ -326,10 +327,25 @@ export default function Klassenverwaltung() {
     gradeBulkEditMutation.mutate(data);
   };
 
+  // Hilfsfunktion: Unterscheidet zwischen normalen Klassen und Kursen
+  const isRegularClass = (className: string): boolean => {
+    // Normale Klassen: 05A, 06B, 07C, etc. (Jahrgang + einzelner Buchstabe)
+    return /^\d{2}[A-Z]$/.test(className);
+  };
+
   const filteredClasses = classes?.filter((classData) => {
     const matchesSearch = classData.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesGrade = filterGrade === "all" || classData.grade.toString() === filterGrade;
-    return matchesSearch && matchesGrade;
+    
+    // Typ-Filter: Klassen vs Kurse
+    let matchesType = true;
+    if (filterType === "klassen") {
+      matchesType = isRegularClass(classData.name);
+    } else if (filterType === "kurse") {
+      matchesType = !isRegularClass(classData.name);
+    }
+    
+    return matchesSearch && matchesGrade && matchesType;
   }) || [];
 
   const totalClasses = classes?.length || 0;
@@ -601,12 +617,40 @@ export default function Klassenverwaltung() {
             </Card>
           </div>
 
+          {/* Filter-Tabs */}
+          <div className="flex items-center space-x-2 border-b border-border">
+            <Button
+              variant={filterType === "all" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setFilterType("all")}
+              data-testid="filter-all"
+            >
+              Alle
+            </Button>
+            <Button
+              variant={filterType === "klassen" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setFilterType("klassen")}
+              data-testid="filter-klassen"
+            >
+              Klassen
+            </Button>
+            <Button
+              variant={filterType === "kurse" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setFilterType("kurse")}
+              data-testid="filter-kurse"
+            >
+              Kurse
+            </Button>
+          </div>
+
           {/* Search and Filter */}
           <div className="flex items-center space-x-4">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Klassen suchen..."
+                placeholder={filterType === "klassen" ? "Klassen suchen..." : filterType === "kurse" ? "Kurse suchen..." : "Klassen/Kurse suchen..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-8"
