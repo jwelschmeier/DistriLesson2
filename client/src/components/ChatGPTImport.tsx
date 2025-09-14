@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +8,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, MessageSquare, Upload, CheckCircle, AlertCircle, Users, GraduationCap, BookOpen, Calendar } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, MessageSquare, Upload, CheckCircle, AlertCircle, Users, GraduationCap, BookOpen, Calendar, Edit } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -48,6 +50,7 @@ interface ImportResult {
 export function ChatGPTImport() {
   const [scheduleText, setScheduleText] = useState("");
   const [parsedData, setParsedData] = useState<ParsedScheduleData | null>(null);
+  const [editedData, setEditedData] = useState<ParsedScheduleData | null>(null);
   const [previewDialog, setPreviewDialog] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const { toast } = useToast();
@@ -61,6 +64,7 @@ export function ChatGPTImport() {
     },
     onSuccess: (data: ParsedScheduleData) => {
       setParsedData(data);
+      setEditedData(JSON.parse(JSON.stringify(data))); // Deep copy
       setPreviewDialog(true);
       toast({
         title: "Stundenplan erfolgreich analysiert",
@@ -130,13 +134,41 @@ export function ChatGPTImport() {
   };
 
   const handleImport = () => {
-    if (!scheduleText.trim()) return;
-    importScheduleMutation.mutate(scheduleText);
+    if (!editedData) return;
+    
+    // Convert edited data back to schedule text format for backend processing
+    const reconstructedText = reconstructScheduleText(editedData);
+    importScheduleMutation.mutate(reconstructedText);
+  };
+
+  const reconstructScheduleText = (data: ParsedScheduleData): string => {
+    // Generate a simple text format that the backend can process
+    let text = "STUNDENPLAN:\n\n";
+    
+    data.teachers.forEach(teacher => {
+      text += `${teacher.name} (${teacher.shortName})\n`;
+    });
+    
+    text += "\nZUWEISUNGEN:\n";
+    data.assignments.forEach(assignment => {
+      text += `${assignment.teacherShortName} - ${assignment.className} - ${assignment.subjectShortName} (${assignment.hoursPerWeek}h, ${assignment.semester}. Hj.)\n`;
+    });
+    
+    return text;
+  };
+
+  const updateEditedData = (section: keyof ParsedScheduleData, index: number, field: string, value: any) => {
+    if (!editedData) return;
+    
+    const newData = JSON.parse(JSON.stringify(editedData));
+    (newData[section] as any[])[index][field] = value;
+    setEditedData(newData);
   };
 
   const resetForm = () => {
     setScheduleText("");
     setParsedData(null);
+    setEditedData(null);
     setImportResult(null);
     setPreviewDialog(false);
   };
@@ -258,27 +290,56 @@ MÜL (Müller) - Deutsch, Englisch
       <Dialog open={previewDialog} onOpenChange={setPreviewDialog}>
         <DialogContent className="max-w-4xl max-h-[80vh]">
           <DialogHeader>
-            <DialogTitle>Erkannte Daten - Vorschau</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5" />
+              Erkannte Daten bearbeiten
+            </DialogTitle>
             <DialogDescription>
-              Überprüfen Sie die von ChatGPT erkannten Daten vor dem Import.
+              Überprüfen und bearbeiten Sie die von ChatGPT erkannten Daten vor dem Import.
             </DialogDescription>
           </DialogHeader>
           
           <ScrollArea className="max-h-[60vh]">
-            {parsedData && (
+            {editedData && (
               <div className="space-y-6">
                 {/* Teachers */}
                 <div>
                   <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
                     <Users className="h-5 w-5" />
-                    Lehrer ({parsedData.teachers.length})
+                    Lehrer ({editedData.teachers.length})
                   </h3>
-                  <div className="grid gap-2">
-                    {parsedData.teachers.map((teacher, index) => (
-                      <div key={index} className="p-3 border rounded-lg">
-                        <div className="font-medium">{teacher.name} ({teacher.shortName})</div>
-                        <div className="text-sm text-muted-foreground">
-                          Qualifikationen: {teacher.qualifications.join(", ") || "Keine angegeben"}
+                  <div className="space-y-3">
+                    {editedData.teachers.map((teacher, index) => (
+                      <div key={index} className="p-3 border rounded-lg space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground">Name</label>
+                            <Input 
+                              value={teacher.name}
+                              onChange={(e) => updateEditedData('teachers', index, 'name', e.target.value)}
+                              className="h-8"
+                              data-testid={`input-teacher-name-${index}`}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground">Kürzel</label>
+                            <Input 
+                              value={teacher.shortName}
+                              onChange={(e) => updateEditedData('teachers', index, 'shortName', e.target.value)}
+                              className="h-8"
+                              data-testid={`input-teacher-shortname-${index}`}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground">Qualifikationen (kommagetrennt)</label>
+                          <Input 
+                            value={teacher.qualifications.join(", ")}
+                            onChange={(e) => updateEditedData('teachers', index, 'qualifications', e.target.value.split(",").map(q => q.trim()).filter(q => q))}
+                            className="h-8"
+                            placeholder="Deutsch, Englisch, ..."
+                            data-testid={`input-teacher-qualifications-${index}`}
+                          />
                         </div>
                       </div>
                     ))}
@@ -291,14 +352,44 @@ MÜL (Müller) - Deutsch, Englisch
                 <div>
                   <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
                     <GraduationCap className="h-5 w-5" />
-                    Klassen ({parsedData.classes.length})
+                    Klassen ({editedData.classes.length})
                   </h3>
-                  <div className="grid gap-2">
-                    {parsedData.classes.map((classItem, index) => (
+                  <div className="space-y-3">
+                    {editedData.classes.map((classItem, index) => (
                       <div key={index} className="p-3 border rounded-lg">
-                        <div className="font-medium">{classItem.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          Jahrgang {classItem.grade} • {classItem.studentCount} Schüler
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground">Klassenname</label>
+                            <Input 
+                              value={classItem.name}
+                              onChange={(e) => updateEditedData('classes', index, 'name', e.target.value)}
+                              className="h-8"
+                              data-testid={`input-class-name-${index}`}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground">Jahrgang</label>
+                            <Input 
+                              type="number"
+                              value={classItem.grade}
+                              onChange={(e) => updateEditedData('classes', index, 'grade', parseInt(e.target.value) || 0)}
+                              className="h-8"
+                              min="1"
+                              max="13"
+                              data-testid={`input-class-grade-${index}`}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground">Schüleranzahl</label>
+                            <Input 
+                              type="number"
+                              value={classItem.studentCount}
+                              onChange={(e) => updateEditedData('classes', index, 'studentCount', parseInt(e.target.value) || 0)}
+                              className="h-8"
+                              min="1"
+                              data-testid={`input-class-studentcount-${index}`}
+                            />
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -311,13 +402,49 @@ MÜL (Müller) - Deutsch, Englisch
                 <div>
                   <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
                     <BookOpen className="h-5 w-5" />
-                    Fächer ({parsedData.subjects.length})
+                    Fächer ({editedData.subjects.length})
                   </h3>
-                  <div className="grid gap-2">
-                    {parsedData.subjects.map((subject, index) => (
-                      <div key={index} className="p-3 border rounded-lg">
-                        <div className="font-medium">{subject.name} ({subject.shortName})</div>
-                        <Badge variant="secondary">{subject.category}</Badge>
+                  <div className="space-y-3">
+                    {editedData.subjects.map((subject, index) => (
+                      <div key={index} className="p-3 border rounded-lg space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground">Fachname</label>
+                            <Input 
+                              value={subject.name}
+                              onChange={(e) => updateEditedData('subjects', index, 'name', e.target.value)}
+                              className="h-8"
+                              data-testid={`input-subject-name-${index}`}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground">Kürzel</label>
+                            <Input 
+                              value={subject.shortName}
+                              onChange={(e) => updateEditedData('subjects', index, 'shortName', e.target.value)}
+                              className="h-8"
+                              data-testid={`input-subject-shortname-${index}`}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground">Kategorie</label>
+                          <Select
+                            value={subject.category}
+                            onValueChange={(value) => updateEditedData('subjects', index, 'category', value)}
+                          >
+                            <SelectTrigger className="h-8" data-testid={`select-subject-category-${index}`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Hauptfach">Hauptfach</SelectItem>
+                              <SelectItem value="Nebenfach">Nebenfach</SelectItem>
+                              <SelectItem value="Wahlpflichtfach">Wahlpflichtfach</SelectItem>
+                              <SelectItem value="AG">AG</SelectItem>
+                              <SelectItem value="Förderunterricht">Förderunterricht</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -329,16 +456,68 @@ MÜL (Müller) - Deutsch, Englisch
                 <div>
                   <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
                     <Calendar className="h-5 w-5" />
-                    Zuweisungen ({parsedData.assignments.length})
+                    Zuweisungen ({editedData.assignments.length})
                   </h3>
-                  <div className="grid gap-2">
-                    {parsedData.assignments.map((assignment, index) => (
-                      <div key={index} className="p-3 border rounded-lg">
-                        <div className="font-medium">
-                          {assignment.teacherShortName} → {assignment.className} → {assignment.subjectShortName}
+                  <div className="space-y-3">
+                    {editedData.assignments.map((assignment, index) => (
+                      <div key={index} className="p-3 border rounded-lg space-y-2">
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground">Lehrer</label>
+                            <Input 
+                              value={assignment.teacherShortName}
+                              onChange={(e) => updateEditedData('assignments', index, 'teacherShortName', e.target.value)}
+                              className="h-8"
+                              data-testid={`input-assignment-teacher-${index}`}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground">Klasse</label>
+                            <Input 
+                              value={assignment.className}
+                              onChange={(e) => updateEditedData('assignments', index, 'className', e.target.value)}
+                              className="h-8"
+                              data-testid={`input-assignment-class-${index}`}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground">Fach</label>
+                            <Input 
+                              value={assignment.subjectShortName}
+                              onChange={(e) => updateEditedData('assignments', index, 'subjectShortName', e.target.value)}
+                              className="h-8"
+                              data-testid={`input-assignment-subject-${index}`}
+                            />
+                          </div>
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          {assignment.hoursPerWeek}h/Woche • {assignment.semester}. Semester
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground">Stunden/Woche</label>
+                            <Input 
+                              type="number"
+                              value={assignment.hoursPerWeek}
+                              onChange={(e) => updateEditedData('assignments', index, 'hoursPerWeek', parseFloat(e.target.value) || 0)}
+                              className="h-8"
+                              min="0"
+                              step="0.5"
+                              data-testid={`input-assignment-hours-${index}`}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground">Halbjahr</label>
+                            <Select
+                              value={assignment.semester.toString()}
+                              onValueChange={(value) => updateEditedData('assignments', index, 'semester', parseInt(value))}
+                            >
+                              <SelectTrigger className="h-8" data-testid={`select-assignment-semester-${index}`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1">1. Hj.</SelectItem>
+                                <SelectItem value="2">2. Hj.</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                       </div>
                     ))}
