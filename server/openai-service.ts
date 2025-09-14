@@ -108,121 +108,109 @@ export class OpenAIScheduleService {
   }
 
   async parseScheduleText(scheduleText: string): Promise<ParsedScheduleData> {
-    console.log("Parsing schedule text:", scheduleText.substring(0, 100) + "...");
+    // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
+    console.log("Parsing schedule text with OpenAI GPT-5...");
     
-    // TEMPORÄRE MOCK-LÖSUNG: Da OpenAI Token-Probleme hat, verwende ich Testdaten
-    // TODO: OpenAI-Integration später reparieren
-    
-    const mockData: ParsedScheduleData = {
-      teachers: [
-        {
-          name: "Maria Müller",
-          shortName: "MUE",
-          qualifications: ["D", "GE", "PP"]
-        },
-        {
-          name: "Peter Schmidt", 
-          shortName: "SCH",
-          qualifications: ["M", "PH", "IF"]
-        },
-        {
-          name: "Anna Weber",
-          shortName: "WEB", 
-          qualifications: ["E", "F", "SP"]
+    // Intelligent input trimming - preserve structure
+    const maxInputLength = 2000;
+    let trimmedText = scheduleText;
+    if (scheduleText.length > maxInputLength) {
+      // Try to keep complete lines when trimming
+      const lines = scheduleText.split('\n');
+      let charCount = 0;
+      let includedLines = [];
+      
+      for (const line of lines) {
+        if (charCount + line.length + 1 <= maxInputLength) {
+          includedLines.push(line);
+          charCount += line.length + 1;
+        } else {
+          break;
         }
-      ],
-      classes: [
-        {
-          name: "05A",
-          grade: 5,
-          studentCount: 28
-        },
-        {
-          name: "06B", 
-          grade: 6,
-          studentCount: 25
-        },
-        {
-          name: "07C",
-          grade: 7, 
-          studentCount: 30
-        }
-      ],
-      subjects: [
-        {
-          name: "Deutsch",
-          shortName: "D", 
-          category: "Hauptfach"
-        },
-        {
-          name: "Mathematik",
-          shortName: "M",
-          category: "Hauptfach" 
-        },
-        {
-          name: "Englisch",
-          shortName: "E",
-          category: "Hauptfach"
-        },
-        {
-          name: "Geschichte", 
-          shortName: "GE",
-          category: "Gesellschaft"
-        },
-        {
-          name: "Physik",
-          shortName: "PH", 
-          category: "MINT"
-        }
-      ],
-      assignments: [
-        {
-          teacherShortName: "MUE",
-          className: "05A", 
-          subjectShortName: "D",
-          hoursPerWeek: 5,
-          semester: 1
-        },
-        {
-          teacherShortName: "MUE",
-          className: "05A",
-          subjectShortName: "D", 
-          hoursPerWeek: 5,
-          semester: 2
-        },
-        {
-          teacherShortName: "SCH",
-          className: "06B",
-          subjectShortName: "M",
-          hoursPerWeek: 4,
-          semester: 1
-        },
-        {
-          teacherShortName: "SCH", 
-          className: "06B",
-          subjectShortName: "M",
-          hoursPerWeek: 4,
-          semester: 2
-        },
-        {
-          teacherShortName: "WEB",
-          className: "07C",
-          subjectShortName: "E", 
-          hoursPerWeek: 4,
-          semester: 1
-        },
-        {
-          teacherShortName: "WEB",
-          className: "07C",
-          subjectShortName: "E",
-          hoursPerWeek: 4, 
-          semester: 2
-        }
-      ]
-    };
+      }
+      
+      trimmedText = includedLines.join('\n') + (includedLines.length < lines.length ? '\n...(weitere Daten)' : '');
+    }
 
-    console.log("Returning mock data with:", mockData.teachers.length, "teachers,", mockData.classes.length, "classes");
-    return mockData;
+    const prompt = `Analysiere diesen deutschen Stundenplan und extrahiere die Daten als JSON.
+
+Antworte AUSSCHLIESSLICH mit einem gültigen JSON-Objekt in diesem Format:
+{
+  "teachers": [{"name": "Vollname oder null", "shortName": "ABC", "qualifications": ["D", "M"]}],
+  "classes": [{"name": "5a", "grade": 5, "studentCount": null}],
+  "subjects": [{"name": "Deutsch", "shortName": "D", "category": "Hauptfach"}],
+  "assignments": [{"teacherShortName": "ABC", "className": "5a", "subjectShortName": "D", "hoursPerWeek": 4, "semester": 1}]
+}
+
+Wichtige Regeln:
+- Lehrer-Kürzel sind meist 2-4 Buchstaben (z.B. "MÜL", "SCH")
+- Klassen wie "5a", "10b", "Q1" normalisieren
+- Standard-Fächer: D, M, E, BIO, CH, PH, KU, MU, SP, REL, PP, SoWi, GE, EK
+- Semester: 1 = erstes Halbjahr, 2 = zweites Halbjahr
+
+Stundenplan-Text:
+${trimmedText}`;
+
+    console.log("Prompt length:", prompt.length, "Input length:", scheduleText.length);
+    
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-5", // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
+        messages: [
+          {
+            role: "system",
+            content: "Du bist ein Experte für deutsche Schulstundenpläne. Antworte ausschließlich mit validen JSON-Daten."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        response_format: { type: "json_object" }, // Use JSON mode as per blueprint
+        max_tokens: 3000,
+        temperature: 0
+      });
+
+      const content = response.choices[0].message.content;
+      console.log("OpenAI GPT-5 Response:", {
+        contentLength: content?.length || 0,
+        finishReason: response.choices[0].finish_reason,
+        hasContent: !!content
+      });
+
+      if (!content) {
+        throw new Error("OpenAI returned empty response");
+      }
+
+      if (response.choices[0].finish_reason === 'length') {
+        console.warn("Response was truncated, trying with shorter input...");
+        // Retry with much shorter input
+        const shorterText = scheduleText.substring(0, 800);
+        return this.parseScheduleText(shorterText);
+      }
+
+      const parsedData = JSON.parse(content);
+      
+      // Validate structure
+      if (!parsedData.teachers || !parsedData.classes || !parsedData.subjects || !parsedData.assignments) {
+        throw new Error("Invalid data structure returned by OpenAI");
+      }
+      
+      console.log("Successfully parsed:", {
+        teachers: parsedData.teachers?.length || 0,
+        classes: parsedData.classes?.length || 0,
+        subjects: parsedData.subjects?.length || 0,
+        assignments: parsedData.assignments?.length || 0
+      });
+
+      return parsedData as ParsedScheduleData;
+    } catch (error) {
+      console.error("OpenAI parsing error:", error);
+      if (error instanceof SyntaxError) {
+        throw new Error("Fehler beim Parsen der OpenAI Antwort. Die JSON-Antwort war unvollständig oder fehlerhaft.");
+      }
+      throw new Error("Fehler beim Parsen des Stundenplans mit ChatGPT: " + (error as Error).message);
+    }
   }
 
   async importParsedData(parsedData: ParsedScheduleData): Promise<{
