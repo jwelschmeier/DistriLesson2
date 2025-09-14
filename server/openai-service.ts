@@ -153,13 +153,31 @@ ${scheduleText}
           }
         ],
         response_format: { type: "json_object" },
-        max_completion_tokens: 4000
+        max_completion_tokens: 8000
       });
 
-      const parsedData = JSON.parse(response.choices[0].message.content!);
+      const content = response.choices[0].message.content;
+      console.log("OpenAI Raw Response:", {
+        content: content,
+        contentLength: content?.length || 0,
+        finishReason: response.choices[0].finish_reason
+      });
+
+      if (!content) {
+        throw new Error("OpenAI returned empty response");
+      }
+
+      if (response.choices[0].finish_reason === 'length') {
+        throw new Error("OpenAI response was cut off due to token limit. Versuchen Sie kürzeren Text.");
+      }
+
+      const parsedData = JSON.parse(content);
       return parsedData as ParsedScheduleData;
     } catch (error) {
       console.error("OpenAI parsing error:", error);
+      if (error instanceof SyntaxError) {
+        throw new Error("Fehler beim Parsen der OpenAI Antwort. Die JSON-Antwort war unvollständig oder fehlerhaft.");
+      }
       throw new Error("Fehler beim Parsen des Stundenplans mit ChatGPT: " + (error as Error).message);
     }
   }
