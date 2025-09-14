@@ -268,9 +268,9 @@ ${scheduleText}
             grade: classData.grade,
             studentCount: classData.studentCount || 25,
             subjectHours: {},
-            targetHoursTotal: "",
-            targetHoursSemester1: "",
-            targetHoursSemester2: ""
+            targetHoursTotal: null,
+            targetHoursSemester1: null,
+            targetHoursSemester2: null
           });
 
           const existingClasses = await storage.getClasses();
