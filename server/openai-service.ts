@@ -93,14 +93,14 @@ export class OpenAIScheduleService {
    * Normalize class names to match database format (e.g., "5a" -> "05A")
    */
   private normalizeClassName(className: string): string {
-    if (!className) return className;
+    if (!className || typeof className !== 'string') return className;
     
-    // Extract grade (number) and class letter
-    const match = className.match(/^(\d{1,2})([a-zA-Z]?)$/);
+    // Extract grade (number) and class letters (supports multiple letters like "fs", "tk")
+    const match = className.match(/^(\d{1,2})([a-zA-Z]*)$/);
     if (!match) return className;
     
     const [, grade, letter] = match;
-    // Pad grade with leading zero if single digit, uppercase the letter
+    // Pad grade with leading zero if single digit, uppercase the letters
     const normalizedGrade = grade.padStart(2, '0');
     const normalizedLetter = letter.toUpperCase();
     
@@ -219,11 +219,15 @@ ${scheduleText}
       // 1. Import Teachers
       for (const teacherData of parsedData.teachers) {
         try {
+          // Handle null/undefined teacher names safely
+          const fullName = teacherData.name || teacherData.shortName || "Unbekannt";
+          const nameParts = fullName.split(' ');
+          
           const validatedTeacher = insertTeacherSchema.parse({
-            firstName: teacherData.name.split(' ')[0] || "",
-            lastName: teacherData.name.split(' ').slice(1).join(' ') || teacherData.name,
-            shortName: teacherData.shortName,
-            email: `${teacherData.shortName.toLowerCase()}@schule.de`,
+            firstName: nameParts[0] || teacherData.shortName || "Unbekannt",
+            lastName: nameParts.slice(1).join(' ') || "",
+            shortName: teacherData.shortName || "",
+            email: `${(teacherData.shortName || '').toLowerCase()}@schule.de`,
             currentHours: "0",
             qualifications: teacherData.qualifications || [],
             notes: "Importiert via ChatGPT"
@@ -332,6 +336,12 @@ ${scheduleText}
 
       for (const assignmentData of parsedData.assignments) {
         try {
+          // Skip assignments with null/empty className (e.g., AGs without specific class)
+          if (!assignmentData.className || assignmentData.className.trim() === '') {
+            console.log(`Skipping assignment without class: ${assignmentData.teacherShortName} - ${assignmentData.subjectShortName}`);
+            continue;
+          }
+          
           // Normalize class name for matching
           const normalizedClassName = this.normalizeClassName(assignmentData.className);
           
