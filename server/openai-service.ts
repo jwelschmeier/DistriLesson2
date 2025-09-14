@@ -89,6 +89,24 @@ export class OpenAIHelpService {
 }
 
 export class OpenAIScheduleService {
+  /**
+   * Normalize class names to match database format (e.g., "5a" -> "05A")
+   */
+  private normalizeClassName(className: string): string {
+    if (!className) return className;
+    
+    // Extract grade (number) and class letter
+    const match = className.match(/^(\d{1,2})([a-zA-Z]?)$/);
+    if (!match) return className;
+    
+    const [, grade, letter] = match;
+    // Pad grade with leading zero if single digit, uppercase the letter
+    const normalizedGrade = grade.padStart(2, '0');
+    const normalizedLetter = letter.toUpperCase();
+    
+    return `${normalizedGrade}${normalizedLetter}`;
+  }
+
   async parseScheduleText(scheduleText: string): Promise<ParsedScheduleData> {
     const prompt = `
 Du bist ein Experte für deutsche Stundenpläne und SCHILD NRW Datenstrukturen. 
@@ -238,8 +256,11 @@ ${scheduleText}
       // 2. Import Classes
       for (const classData of parsedData.classes) {
         try {
+          // Normalize class name to match database format (e.g., "5a" -> "05A")
+          const normalizedClassName = this.normalizeClassName(classData.name);
+          
           const validatedClass = insertClassSchema.parse({
-            name: classData.name,
+            name: normalizedClassName,
             grade: classData.grade,
             studentCount: classData.studentCount || 25,
             subjectHours: {},
@@ -249,7 +270,7 @@ ${scheduleText}
           });
 
           const existingClasses = await storage.getClasses();
-          const exists = existingClasses.find(c => c.name === classData.name);
+          const exists = existingClasses.find(c => c.name === normalizedClassName);
           
           if (!exists) {
             await storage.createClass(validatedClass);
@@ -264,7 +285,7 @@ ${scheduleText}
             result.classes++;
           }
         } catch (error) {
-          result.errors.push(`Klasse ${classData.name}: ${(error as Error).message}`);
+          result.errors.push(`Klasse ${classData.name} (normalisiert zu ${this.normalizeClassName(classData.name)}): ${(error as Error).message}`);
         }
       }
 
@@ -311,8 +332,11 @@ ${scheduleText}
 
       for (const assignmentData of parsedData.assignments) {
         try {
+          // Normalize class name for matching
+          const normalizedClassName = this.normalizeClassName(assignmentData.className);
+          
           const teacher = teachers.find(t => t.shortName === assignmentData.teacherShortName);
-          const classObj = classes.find(c => c.name === assignmentData.className);
+          const classObj = classes.find(c => c.name === normalizedClassName);
           const subject = subjects.find(s => s.shortName === assignmentData.subjectShortName);
 
           if (!teacher) {
@@ -320,7 +344,7 @@ ${scheduleText}
             continue;
           }
           if (!classObj) {
-            result.errors.push(`Klasse "${assignmentData.className}" nicht gefunden`);
+            result.errors.push(`Klasse "${assignmentData.className}" (normalisiert zu "${normalizedClassName}") nicht gefunden`);
             continue;
           }
           if (!subject) {
@@ -368,7 +392,8 @@ ${scheduleText}
           await storage.createAssignment(validatedAssignment);
           result.assignments++;
         } catch (error) {
-          result.errors.push(`Zuweisung ${assignmentData.teacherShortName}-${assignmentData.className}-${assignmentData.subjectShortName}: ${(error as Error).message}`);
+          const normalizedClassName = this.normalizeClassName(assignmentData.className);
+          result.errors.push(`Zuweisung ${assignmentData.teacherShortName}-${assignmentData.className}(→${normalizedClassName})-${assignmentData.subjectShortName}: ${(error as Error).message}`);
         }
       }
 
