@@ -63,12 +63,42 @@ export function ChatGPTImport() {
       return response.json();
     },
     onSuccess: (data: ParsedScheduleData) => {
-      setParsedData(data);
-      setEditedData(JSON.parse(JSON.stringify(data))); // Deep copy
+      // Clean null values and set defaults
+      const cleanedData = {
+        teachers: data.teachers.map(teacher => ({
+          ...teacher,
+          name: teacher.name || teacher.shortName || "Unbekannt",
+          shortName: teacher.shortName || "",
+          qualifications: teacher.qualifications || []
+        })),
+        classes: data.classes.map(classItem => ({
+          ...classItem,
+          name: classItem.name || "",
+          grade: classItem.grade || 5,
+          studentCount: classItem.studentCount || 25
+        })),
+        subjects: data.subjects.map(subject => ({
+          ...subject,
+          name: subject.name || "",
+          shortName: subject.shortName || "",
+          category: subject.category || "Nebenfach"
+        })),
+        assignments: data.assignments.map(assignment => ({
+          ...assignment,
+          teacherShortName: assignment.teacherShortName || "",
+          className: assignment.className || "",
+          subjectShortName: assignment.subjectShortName || "",
+          hoursPerWeek: assignment.hoursPerWeek || 1,
+          semester: assignment.semester || 1
+        }))
+      };
+      
+      setParsedData(cleanedData);
+      setEditedData(JSON.parse(JSON.stringify(cleanedData))); // Deep copy
       setPreviewDialog(true);
       toast({
         title: "Stundenplan erfolgreich analysiert",
-        description: `${data.teachers.length} Lehrer, ${data.classes.length} Klassen, ${data.subjects.length} Fächer und ${data.assignments.length} Zuweisungen gefunden.`
+        description: `${cleanedData.teachers.length} Lehrer, ${cleanedData.classes.length} Klassen, ${cleanedData.subjects.length} Fächer und ${cleanedData.assignments.length} Zuweisungen gefunden.`
       });
     },
     onError: (error: Error) => {
@@ -136,25 +166,51 @@ export function ChatGPTImport() {
   const handleImport = () => {
     if (!editedData) return;
     
-    // Convert edited data back to schedule text format for backend processing
-    const reconstructedText = reconstructScheduleText(editedData);
-    importScheduleMutation.mutate(reconstructedText);
+    // Send structured data directly to the backend instead of converting back to text
+    importStructuredData(editedData);
   };
 
-  const reconstructScheduleText = (data: ParsedScheduleData): string => {
-    // Generate a simple text format that the backend can process
-    let text = "STUNDENPLAN:\n\n";
-    
-    data.teachers.forEach(teacher => {
-      text += `${teacher.name} (${teacher.shortName})\n`;
-    });
-    
-    text += "\nZUWEISUNGEN:\n";
-    data.assignments.forEach(assignment => {
-      text += `${assignment.teacherShortName} - ${assignment.className} - ${assignment.subjectShortName} (${assignment.hoursPerWeek}h, ${assignment.semester}. Hj.)\n`;
-    });
-    
-    return text;
+  // Import structured data directly
+  const importStructuredDataMutation = useMutation({
+    mutationFn: async (data: ParsedScheduleData) => {
+      const response = await apiRequest("POST", "/api/chatgpt/import-structured", data);
+      return response.json();
+    },
+    onSuccess: (result: ImportResult) => {
+      setImportResult(result);
+      setPreviewDialog(false);
+      
+      // Invalidate cache to refresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/teachers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/subjects'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+      
+      if (result.errors.length === 0) {
+        toast({
+          title: "Import erfolgreich!",
+          description: `${result.teachers} Lehrer, ${result.classes} Klassen, ${result.subjects} Fächer und ${result.assignments} Zuweisungen importiert.`
+        });
+      } else {
+        toast({
+          title: "Import mit Fehlern abgeschlossen",
+          description: `${result.errors.length} Fehler aufgetreten. Siehe Details unten.`,
+          variant: "destructive"
+        });
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Fehler beim Import",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const importStructuredData = (data: ParsedScheduleData) => {
+    importStructuredDataMutation.mutate(data);
   };
 
   const updateEditedData = (section: keyof ParsedScheduleData, index: number, field: string, value: any) => {
@@ -533,10 +589,10 @@ MÜL (Müller) - Deutsch, Englisch
             </Button>
             <Button 
               onClick={handleImport}
-              disabled={importScheduleMutation.isPending}
+              disabled={importStructuredDataMutation.isPending}
               data-testid="button-confirm-import"
             >
-              {importScheduleMutation.isPending ? (
+              {importStructuredDataMutation.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Importiere...

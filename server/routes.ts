@@ -1988,6 +1988,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Import structured data directly (from editable preview)
+  app.post('/api/chatgpt/import-structured', isAuthenticated, async (req, res) => {
+    try {
+      const parsedData = req.body;
+      
+      // Validate that we have the required structure
+      if (!parsedData || typeof parsedData !== 'object') {
+        return res.status(400).json({ error: "Structured data is required" });
+      }
+
+      if (!parsedData.teachers || !Array.isArray(parsedData.teachers)) {
+        return res.status(400).json({ error: "teachers array is required" });
+      }
+
+      if (!parsedData.classes || !Array.isArray(parsedData.classes)) {
+        return res.status(400).json({ error: "classes array is required" });
+      }
+
+      if (!parsedData.subjects || !Array.isArray(parsedData.subjects)) {
+        return res.status(400).json({ error: "subjects array is required" });
+      }
+
+      if (!parsedData.assignments || !Array.isArray(parsedData.assignments)) {
+        return res.status(400).json({ error: "assignments array is required" });
+      }
+      
+      // Import the structured data directly
+      const importResult = await openaiScheduleService.importParsedData(parsedData);
+      
+      res.json(importResult);
+    } catch (error) {
+      console.error("Error importing structured schedule data:", error);
+      res.status(500).json({ error: "Failed to import structured data: " + (error as Error).message });
+    }
+  });
+
   // Help Bot Routes
   app.post('/api/help/ask', isAuthenticated, async (req, res) => {
     try {
