@@ -363,9 +363,9 @@ ${scheduleText}
           );
 
           if (exists) {
-            // Update existing assignment with new hours
+            // Update existing assignment with new hours  
             const updatedAssignment = {
-              hoursPerWeek: assignmentData.hoursPerWeek.toString(),
+              hoursPerWeek: assignmentData.hoursPerWeek.toString(), // Storage update braucht String
               teacherId: exists.teacherId,
               classId: exists.classId,
               subjectId: exists.subjectId,
@@ -384,7 +384,7 @@ ${scheduleText}
             classId: classObj.id,
             subjectId: subject.id,
             schoolYearId: currentSchoolYear.id,
-            hoursPerWeek: assignmentData.hoursPerWeek.toString(),
+            hoursPerWeek: assignmentData.hoursPerWeek, // Schema erwartet Number, nicht String!
             semester: semesterStr,
             teamTeachingId: null
           });
