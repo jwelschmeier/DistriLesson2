@@ -270,7 +270,10 @@ ${scheduleText}
             subjectHours: {},
             targetHoursTotal: null,
             targetHoursSemester1: null,
-            targetHoursSemester2: null
+            targetHoursSemester2: null,
+            classTeacher1Id: null,
+            classTeacher2Id: null,
+            schoolYearId: null
           });
 
           const existingClasses = await storage.getClasses();
