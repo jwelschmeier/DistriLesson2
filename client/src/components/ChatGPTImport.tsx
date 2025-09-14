@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, MessageSquare, Upload, CheckCircle, AlertCircle, Users, GraduationCap, BookOpen, Calendar, Edit } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -55,6 +55,46 @@ export function ChatGPTImport() {
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Load existing data for dropdowns
+  const { data: existingTeachers = [], isLoading: loadingTeachers } = useQuery({
+    queryKey: ['/api/teachers'],
+    enabled: previewDialog, // Only load when preview dialog is open
+    staleTime: 5 * 60 * 1000 // Cache for 5 minutes
+  });
+
+  const { data: existingClasses = [], isLoading: loadingClasses } = useQuery({
+    queryKey: ['/api/classes'],
+    enabled: previewDialog,
+    staleTime: 5 * 60 * 1000
+  });
+
+  const { data: existingSubjects = [], isLoading: loadingSubjects } = useQuery({
+    queryKey: ['/api/subjects'], 
+    enabled: previewDialog,
+    staleTime: 5 * 60 * 1000
+  });
+
+  // Type definitions for API data
+  interface Teacher {
+    id: string;
+    firstName: string;
+    lastName: string;
+    shortName: string;
+  }
+
+  interface Class {
+    id: string;
+    name: string;
+    grade: number;
+    studentCount: number;
+  }
+
+  interface Subject {
+    id: string;
+    name: string;
+    shortName: string;
+  }
 
   // Parse schedule text with ChatGPT
   const parseScheduleMutation = useMutation({
@@ -520,30 +560,93 @@ MÜL (Müller) - Deutsch, Englisch
                         <div className="grid grid-cols-3 gap-2">
                           <div>
                             <label className="text-xs font-medium text-muted-foreground">Lehrer</label>
-                            <Input 
+                            <Select
                               value={assignment.teacherShortName}
-                              onChange={(e) => updateEditedData('assignments', index, 'teacherShortName', e.target.value)}
-                              className="h-8"
-                              data-testid={`input-assignment-teacher-${index}`}
-                            />
+                              onValueChange={(value) => updateEditedData('assignments', index, 'teacherShortName', value)}
+                              disabled={loadingTeachers}
+                            >
+                              <SelectTrigger className="h-8" data-testid={`select-assignment-teacher-${index}`}>
+                                <SelectValue placeholder={loadingTeachers ? "Lädt..." : "Lehrer auswählen"} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {loadingTeachers ? (
+                                  <div className="flex items-center justify-center p-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <span className="ml-2">Lade Lehrer...</span>
+                                  </div>
+                                ) : (existingTeachers as Teacher[]).length === 0 ? (
+                                  <div className="p-2 text-sm text-muted-foreground">
+                                    Keine Lehrer in der Verwaltung gefunden
+                                  </div>
+                                ) : (
+                                  (existingTeachers as Teacher[]).map((teacher) => (
+                                    <SelectItem key={teacher.id} value={teacher.shortName}>
+                                      {teacher.shortName} - {teacher.firstName || teacher.shortName} {teacher.lastName || ''}
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div>
                             <label className="text-xs font-medium text-muted-foreground">Klasse</label>
-                            <Input 
+                            <Select
                               value={assignment.className}
-                              onChange={(e) => updateEditedData('assignments', index, 'className', e.target.value)}
-                              className="h-8"
-                              data-testid={`input-assignment-class-${index}`}
-                            />
+                              onValueChange={(value) => updateEditedData('assignments', index, 'className', value)}
+                              disabled={loadingClasses}
+                            >
+                              <SelectTrigger className="h-8" data-testid={`select-assignment-class-${index}`}>
+                                <SelectValue placeholder={loadingClasses ? "Lädt..." : "Klasse auswählen"} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {loadingClasses ? (
+                                  <div className="flex items-center justify-center p-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <span className="ml-2">Lade Klassen...</span>
+                                  </div>
+                                ) : (existingClasses as Class[]).length === 0 ? (
+                                  <div className="p-2 text-sm text-muted-foreground">
+                                    Keine Klassen in der Verwaltung gefunden
+                                  </div>
+                                ) : (
+                                  (existingClasses as Class[]).map((classItem) => (
+                                    <SelectItem key={classItem.id} value={classItem.name}>
+                                      {classItem.name} (Jg. {classItem.grade}, {classItem.studentCount} SuS)
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div>
                             <label className="text-xs font-medium text-muted-foreground">Fach</label>
-                            <Input 
+                            <Select
                               value={assignment.subjectShortName}
-                              onChange={(e) => updateEditedData('assignments', index, 'subjectShortName', e.target.value)}
-                              className="h-8"
-                              data-testid={`input-assignment-subject-${index}`}
-                            />
+                              onValueChange={(value) => updateEditedData('assignments', index, 'subjectShortName', value)}
+                              disabled={loadingSubjects}
+                            >
+                              <SelectTrigger className="h-8" data-testid={`select-assignment-subject-${index}`}>
+                                <SelectValue placeholder={loadingSubjects ? "Lädt..." : "Fach auswählen"} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {loadingSubjects ? (
+                                  <div className="flex items-center justify-center p-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <span className="ml-2">Lade Fächer...</span>
+                                  </div>
+                                ) : (existingSubjects as Subject[]).length === 0 ? (
+                                  <div className="p-2 text-sm text-muted-foreground">
+                                    Keine Fächer in der Verwaltung gefunden
+                                  </div>
+                                ) : (
+                                  (existingSubjects as Subject[]).map((subject) => (
+                                    <SelectItem key={subject.id} value={subject.shortName}>
+                                      {subject.shortName} - {subject.name}
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
