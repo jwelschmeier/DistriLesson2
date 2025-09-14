@@ -8,7 +8,8 @@ import { HelpBotButton } from "@/components/HelpBotButton";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import InvitationAccept from "@/pages/invitation-accept";
-import AdminPanel from "@/pages/admin-panel";
+import AdminUsers from "@/pages/admin-users";
+import AdminChatGPT from "@/pages/admin-chatgpt";
 import Dashboard from "@/pages/dashboard";
 import CSVImport from "@/pages/csv-import";
 import Planstellberechnung from "@/pages/planstellberechnung";
@@ -65,7 +66,10 @@ function Router() {
           
           {/* Admin-only routes */}
           {isAdmin && (
-            <Route path="/admin" component={AdminPanel} />
+            <>
+              <Route path="/admin/users" component={AdminUsers} />
+              <Route path="/admin/chatgpt" component={AdminChatGPT} />
+            </>
           )}
           
           <Route component={NotFound} />

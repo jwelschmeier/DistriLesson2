@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { BarChart3, Upload, Calculator, Users, Presentation, School, Clock, Sparkles, BookOpen, Calendar, Grid, Settings, RefreshCw, Menu, ChevronLeft, MessageSquare } from "lucide-react";
+import { BarChart3, Upload, Calculator, Users, Presentation, School, Clock, Sparkles, BookOpen, Calendar, Grid, RefreshCw, Menu, ChevronLeft, MessageSquare } from "lucide-react";
 import logoImage from "@assets/logo-removebg-preview_1757711438324.png";
 
 const navigationItems = [
@@ -22,7 +22,8 @@ const navigationItems = [
 ];
 
 const adminNavigationItems = [
-  { href: "/admin", label: "Admin-Panel", icon: Settings },
+  { href: "/admin/users", label: "Benutzer verwalten", icon: Users },
+  { href: "/admin/chatgpt", label: "ChatGPT Import", icon: MessageSquare },
 ];
 
 export function Sidebar() {
