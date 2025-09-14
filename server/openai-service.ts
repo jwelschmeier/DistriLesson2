@@ -108,21 +108,18 @@ export class OpenAIScheduleService {
   }
 
   async parseScheduleText(scheduleText: string): Promise<ParsedScheduleData> {
-    // Limit input text to prevent token issues
-    const maxInputLength = 3000;
+    // Much stricter input limit 
+    const maxInputLength = 1200;
     const trimmedText = scheduleText.length > maxInputLength 
       ? scheduleText.substring(0, maxInputLength) + "..." 
       : scheduleText;
 
-    const prompt = `Extrahiere aus diesem Stundenplan JSON-Daten:
+    const prompt = `Antwort NUR als kompaktes JSON ohne Erklärungen:
+{"teachers":[{"name":"Name","shortName":"ABC","qualifications":["D"]}],"classes":[{"name":"5a","grade":5,"studentCount":null}],"subjects":[{"name":"Deutsch","shortName":"D","category":"Hauptfach"}],"assignments":[{"teacherShortName":"ABC","className":"5a","subjectShortName":"D","hoursPerWeek":4,"semester":1}]}
 
-{"teachers":[{"name":"Name","shortName":"ABC","qualifications":["D","M"]}],"classes":[{"name":"5a","grade":5,"studentCount":null}],"subjects":[{"name":"Deutsch","shortName":"D","category":"Hauptfach"}],"assignments":[{"teacherShortName":"ABC","className":"5a","subjectShortName":"D","hoursPerWeek":4,"semester":1}]}
+Stundenplan: ${trimmedText}`;
 
-Text: ${trimmedText}`;
-
-    // Add debugging for input length
-    console.log("Input prompt length:", prompt.length, "characters");
-    console.log("Schedule text length:", scheduleText.length, "characters");
+    console.log("Input chars:", prompt.length, "Schedule chars:", scheduleText.length);
     
     try {
       const response = await openai.chat.completions.create({
@@ -133,8 +130,7 @@ Text: ${trimmedText}`;
             content: prompt
           }
         ],
-        response_format: { type: "json_object" },
-        max_tokens: 4000,
+        max_tokens: 800,
         temperature: 0
       });
 
@@ -153,7 +149,13 @@ Text: ${trimmedText}`;
         throw new Error("OpenAI response was cut off due to token limit. Versuchen Sie kürzeren Text.");
       }
 
-      const parsedData = JSON.parse(content);
+      // Extract JSON from response that might have extra text
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error("Keine gültige JSON-Struktur in der Antwort gefunden");
+      }
+      
+      const parsedData = JSON.parse(jsonMatch[0]);
       return parsedData as ParsedScheduleData;
     } catch (error) {
       console.error("OpenAI parsing error:", error);
