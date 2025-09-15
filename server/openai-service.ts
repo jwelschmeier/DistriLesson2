@@ -167,7 +167,7 @@ ${trimmedText}`;
           }
         ],
         response_format: { type: "json_object" }, // Use JSON mode as per blueprint
-        max_tokens: 3000,
+        max_completion_tokens: 3000,
         temperature: 0
       });
 
