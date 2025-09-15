@@ -155,7 +155,7 @@ ${trimmedText}`;
     
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-5", // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
+        model: "gpt-4o", // Using GPT-4o for better reliability and token handling
         messages: [
           {
             role: "system",
@@ -167,11 +167,12 @@ ${trimmedText}`;
           }
         ],
         response_format: { type: "json_object" }, // Use JSON mode as per blueprint
-        max_completion_tokens: 3000
+        max_tokens: 4000, // Using max_tokens for GPT-4o compatibility
+        temperature: 0.1 // Low temperature for consistent output
       });
 
       const content = response.choices[0].message.content;
-      console.log("OpenAI GPT-5 Response:", {
+      console.log("OpenAI Response:", {
         contentLength: content?.length || 0,
         finishReason: response.choices[0].finish_reason,
         hasContent: !!content
