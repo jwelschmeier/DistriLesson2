@@ -167,8 +167,7 @@ ${trimmedText}`;
           }
         ],
         response_format: { type: "json_object" }, // Use JSON mode as per blueprint
-        max_completion_tokens: 3000,
-        temperature: 0
+        max_completion_tokens: 3000
       });
 
       const content = response.choices[0].message.content;
