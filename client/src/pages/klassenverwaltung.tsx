@@ -17,6 +17,15 @@ import { Plus, Edit, Trash2, School, Search, Filter, Calendar } from "lucide-rea
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { insertClassSchema, type Class, type Teacher } from "@shared/schema";
+
+type Assignment = {
+  id: string;
+  teacherId: string;
+  classId: string;
+  subjectId: string;
+  hoursPerWeek: string;
+  semester: string;
+};
 import { calculateCorrectHours } from "@shared/parallel-subjects";
 import { z } from "zod";
 
@@ -55,6 +64,10 @@ export default function Klassenverwaltung() {
 
   const { data: teachers, isLoading: teachersLoading } = useQuery<Teacher[]>({
     queryKey: ["/api/teachers"],
+  });
+
+  const { data: assignments, isLoading: assignmentsLoading } = useQuery<Assignment[]>({
+    queryKey: ["/api/assignments"],
   });
 
   const classForm = useForm<ClassFormData>({
