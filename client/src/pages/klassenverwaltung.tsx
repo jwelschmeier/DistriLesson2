@@ -473,6 +473,54 @@ export default function Klassenverwaltung() {
                         />
                       </div>
 
+                      {/* Semester Target Hours */}
+                      <div className="space-y-4">
+                        <h4 className="text-sm font-medium">Zielstunden pro Halbjahr</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={classForm.control}
+                            name="targetHoursSemester1"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>1. Halbjahr</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    {...field} 
+                                    value={field.value || ""} 
+                                    type="number" 
+                                    step="0.5" 
+                                    placeholder="z.B. 15" 
+                                    data-testid="input-semester1-hours"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={classForm.control}
+                            name="targetHoursSemester2"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>2. Halbjahr</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    {...field} 
+                                    value={field.value || ""} 
+                                    type="number" 
+                                    step="0.5" 
+                                    placeholder="z.B. 15" 
+                                    data-testid="input-semester2-hours"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+
                       <div className="flex justify-end space-x-2 pt-4">
                         <Button type="button" variant="outline" onClick={() => setIsClassDialogOpen(false)}>
                           Abbrechen
