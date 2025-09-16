@@ -747,10 +747,7 @@ export default function Klassenverwaltung() {
                     return (
                       <TableRow key={classData.id} data-testid={`row-class-${classData.id}`}>
                         <TableCell className="font-medium py-2">
-                          <div className="flex items-center space-x-6">
-                            <span>{classData.name}</span>
-                            <Badge variant="outline">Jahrgang {classData.grade}</Badge>
-                          </div>
+                          <span>{classData.name}</span>
                         </TableCell>
                         <TableCell className="py-1">{classData.grade}</TableCell>
                         <TableCell className="py-1">
