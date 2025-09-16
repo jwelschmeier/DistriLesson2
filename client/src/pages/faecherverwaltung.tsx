@@ -319,16 +319,16 @@ export default function Faecherverwaltung() {
                 <TableBody>
                   {filteredSubjects.map((subject) => (
                     <TableRow key={subject.id} data-testid={`row-subject-${subject.id}`}>
-                      <TableCell className="font-medium" data-testid={`text-subject-name-${subject.id}`}>
+                      <TableCell className="font-medium py-2" data-testid={`text-subject-name-${subject.id}`}>
                         {subject.name}
                       </TableCell>
-                      <TableCell data-testid={`text-subject-shortname-${subject.id}`}>
+                      <TableCell className="py-2" data-testid={`text-subject-shortname-${subject.id}`}>
                         {subject.shortName}
                       </TableCell>
-                      <TableCell data-testid={`text-subject-category-${subject.id}`}>
+                      <TableCell className="py-2" data-testid={`text-subject-category-${subject.id}`}>
                         {getCategoryBadge(subject.category)}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <div className="flex space-x-2">
                           <Button
                             variant="outline"
