@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Sidebar } from "@/components/layout/sidebar";
 import { RefreshCw, AlertTriangle, CheckCircle, Calendar, Users, BookOpen, ArrowRight, Play, FileText, Loader2, Plus, Trash2 } from "lucide-react";
 
 type SchoolYear = {
@@ -285,9 +286,12 @@ export default function Schuljahreswechsel() {
   const canProceed = currentSchoolYear && nextSchoolYearName && newClasses.length > 0;
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-4 py-8">
-        <div className="space-y-8">
+    <div className="flex h-screen bg-background">
+      <Sidebar />
+      
+      <main className="flex-1 overflow-auto">
+        <div className="container mx-auto px-4 py-8">
+          <div className="space-y-8">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
@@ -943,6 +947,7 @@ export default function Schuljahreswechsel() {
             </div>
           )}
 
+          </div>
         </div>
       </main>
     </div>
