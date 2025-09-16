@@ -804,7 +804,7 @@ export default function Klassenverwaltung() {
                     
                     const correctHoursResult = calculateCorrectHours(totalSubjectHours, classData.grade);
                     const correctHours = typeof correctHoursResult === 'number' ? correctHoursResult : correctHoursResult.totalHours;
-                    const rawTotal = Object.values(totalSubjectHours).reduce((sum, hours) => sum + hours, 0);
+                    const actualAssignedHours = calculateActualAssignedHours(classData.id);
                     
                     const teacher1 = teachers?.find(t => t.id === classData.classTeacher1Id);
                     const teacher2 = teachers?.find(t => t.id === classData.classTeacher2Id);
@@ -823,8 +823,8 @@ export default function Klassenverwaltung() {
                         </TableCell>
                         <TableCell className="py-1">{classData.grade}</TableCell>
                         <TableCell className="py-1">
-                          <span className={`font-medium ${rawTotal !== correctHours ? 'text-orange-600' : 'text-green-600'}`}>
-                            {rawTotal} / {correctHours}
+                          <span className={`font-medium ${actualAssignedHours !== correctHours ? 'text-orange-600' : 'text-green-600'}`}>
+                            {actualAssignedHours} / {correctHours}
                           </span>
                         </TableCell>
                         <TableCell className="py-1">{teacherDisplay}</TableCell>
