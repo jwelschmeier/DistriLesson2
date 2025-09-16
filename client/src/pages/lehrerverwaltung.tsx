@@ -22,6 +22,15 @@ import { Plus, Edit, Trash2, Presentation, Search, Filter, Calendar, ChevronLeft
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { insertTeacherSchema, type Teacher, type InsertTeacher, type Subject } from "@shared/schema";
+
+type Assignment = {
+  id: string;
+  teacherId: string;
+  classId: string;
+  subjectId: string;
+  hoursPerWeek: string;
+  semester: string;
+};
 import { z } from "zod";
 
 const teacherFormSchema = insertTeacherSchema.extend({
@@ -122,6 +131,19 @@ export default function Lehrerverwaltung() {
   const { data: subjects = [], isLoading: isLoadingSubjects } = useQuery<Subject[]>({
     queryKey: ["/api/subjects"],
   });
+
+  // Load assignments to calculate actual teacher workload
+  const { data: assignments = [] } = useQuery<Assignment[]>({
+    queryKey: ["/api/assignments"],
+  });
+
+  // Calculate actual current hours per teacher from assignments
+  const calculateActualCurrentHours = (teacherId: string): number => {
+    const teacherAssignments = assignments.filter(a => a.teacherId === teacherId);
+    return teacherAssignments.reduce((sum, assignment) => {
+      return sum + parseFloat(assignment.hoursPerWeek);
+    }, 0);
+  };
 
   // Extract subject names for the form (using subject names consistently)
   const availableSubjects = subjects.map(subject => subject.name);
@@ -379,7 +401,10 @@ export default function Lehrerverwaltung() {
   const totalTeachers = teachers?.length || 0;
   const activeTeachers = teachers?.filter(t => t.isActive).length || 0;
   const averageWorkload = teachers?.length ? 
-    teachers.reduce((sum, t) => sum + (parseFloat(t.currentHours) / parseFloat(t.maxHours)), 0) / teachers.length * 100 : 0;
+    teachers.reduce((sum, t) => {
+      const actualCurrentHours = calculateActualCurrentHours(t.id);
+      return sum + (actualCurrentHours / parseFloat(t.maxHours));
+    }, 0) / teachers.length * 100 : 0;
 
   return (
     <div className="flex h-screen bg-background">
@@ -1033,7 +1058,8 @@ export default function Lehrerverwaltung() {
                     </thead>
                     <tbody className="bg-card divide-y divide-border">
                       {filteredTeachers.map((teacher) => {
-                        const workloadPercentage = (parseFloat(teacher.currentHours) / parseFloat(teacher.maxHours)) * 100;
+                        const actualCurrentHours = calculateActualCurrentHours(teacher.id);
+                        const workloadPercentage = (actualCurrentHours / parseFloat(teacher.maxHours)) * 100;
                         return (
                           <tr key={teacher.id} data-testid={`row-teacher-${teacher.id}`}>
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -1058,7 +1084,7 @@ export default function Lehrerverwaltung() {
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                              {teacher.currentHours} / {teacher.maxHours}
+                              {actualCurrentHours.toFixed(1)} / {teacher.maxHours}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
