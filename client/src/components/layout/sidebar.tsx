@@ -8,7 +8,7 @@ import logoImage from "@assets/logo-removebg-preview_1757711438324.png";
 
 const navigationItems = [
   { href: "/", label: "Dashboard", icon: BarChart3 },
-  { href: "/csv-import", label: "CSV Import", icon: Upload },
+
   { href: "/planstellberechnung", label: "Planstellberechnung", icon: Calculator },
   { href: "/lehrerplanstellen", label: "Lehrerplanstellen", icon: Users },
   { href: "/lehrerverwaltung", label: "Lehrerverwaltung", icon: Presentation },
@@ -24,6 +24,7 @@ const navigationItems = [
 const adminNavigationItems = [
   { href: "/admin/users", label: "Benutzer verwalten", icon: Users },
   { href: "/admin/chatgpt", label: "ChatGPT Import", icon: MessageSquare },
+  { href: "/csv-import", label: "CSV Import", icon: Upload },
 ];
 
 export function Sidebar() {
