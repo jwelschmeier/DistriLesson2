@@ -26,7 +26,6 @@ type Assignment = {
   hoursPerWeek: string;
   semester: string;
 };
-import { calculateCorrectHours } from "@shared/parallel-subjects";
 import { z } from "zod";
 
 const classFormSchema = insertClassSchema.extend({
@@ -51,6 +50,7 @@ export default function Klassenverwaltung() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterGrade, setFilterGrade] = useState("all");
   const [filterType, setFilterType] = useState<"all" | "klassen" | "kurse">("all");
+  const [selectedSemester, setSelectedSemester] = useState<'all' | '1' | '2'>('1'); // Default to first semester
   const [isClassDialogOpen, setIsClassDialogOpen] = useState(false);
   const [isGradeBulkEditOpen, setIsGradeBulkEditOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<Class | null>(null);
@@ -71,13 +71,29 @@ export default function Klassenverwaltung() {
   });
 
   // Calculate actual assigned hours per class from assignments
-  const calculateActualAssignedHours = (classId: string): number => {
+  // Helper function to parse German-style decimals
+  const parseNumber = (value: string | null | undefined): number | undefined => {
+    if (!value) return undefined;
+    return Number.parseFloat(String(value).replace(',', '.'));
+  };
+
+  // Check if this is a regular class (like 05A, 09B) vs differentiation course (like 09DF, 10KR1)
+  const isRegularClass = (className: string): boolean => {
+    return /^\d{2}[A-Z]$/.test(className);
+  };
+
+  // Calculate actual assigned hours, optionally filtered by semester
+  const calculateActualAssignedHours = (classId: string, semester: 'all' | '1' | '2' = 'all'): number => {
     if (!assignments) return 0;
     
-    const classAssignments = assignments.filter(a => a.classId === classId);
-    return classAssignments.reduce((sum, assignment) => {
-      const hours = Number.parseFloat(assignment.hoursPerWeek);
-      return sum + (Number.isFinite(hours) ? hours : 0);
+    const filteredAssignments = assignments.filter(a => 
+      a.classId === classId && 
+      (semester === 'all' || a.semester === semester)
+    );
+    
+    return filteredAssignments.reduce((sum, assignment) => {
+      const hours = parseNumber(assignment.hoursPerWeek);
+      return sum + (Number.isFinite(hours) ? hours || 0 : 0);
     }, 0);
   };
 
@@ -93,6 +109,28 @@ export default function Klassenverwaltung() {
       10: 34
     };
     return standardHours[grade] || 30;
+  };
+
+  // Get target hours for a class, considering semester and class type
+  const getTargetHoursForClass = (classData: any, semester: 'all' | '1' | '2' = 'all'): number => {
+    const s1 = parseNumber(classData.targetHoursSemester1);
+    const s2 = parseNumber(classData.targetHoursSemester2);
+    
+    if (semester === '1') {
+      return s1 ?? (isRegularClass(classData.name) ? getStandardHoursForGrade(classData.grade) : 0);
+    }
+    if (semester === '2') {
+      return s2 ?? (isRegularClass(classData.name) ? getStandardHoursForGrade(classData.grade) : 0);
+    }
+    
+    // For 'all' - sum both semesters if both are defined, otherwise use standard for regular classes
+    if (s1 != null && s2 != null) {
+      return s1 + s2;
+    }
+    if (isRegularClass(classData.name)) {
+      return getStandardHoursForGrade(classData.grade); // year-equivalent fallback
+    }
+    return 0;
   };
 
   const classForm = useForm<ClassFormData>({
@@ -366,11 +404,6 @@ export default function Klassenverwaltung() {
     gradeBulkEditMutation.mutate(data);
   };
 
-  // Hilfsfunktion: Unterscheidet zwischen normalen Klassen und Kursen
-  const isRegularClass = (className: string): boolean => {
-    // Normale Klassen: 05A, 06B, 07C, etc. (Jahrgang + einzelner Buchstabe)
-    return /^\d{2}[A-Z]$/.test(className);
-  };
 
   const filteredClasses = classes?.filter((classData) => {
     const matchesSearch = classData.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -705,31 +738,62 @@ export default function Klassenverwaltung() {
           </div>
 
           {/* Filter-Tabs */}
-          <div className="flex items-center space-x-2 border-b border-border">
-            <Button
-              variant={filterType === "all" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setFilterType("all")}
-              data-testid="filter-all"
-            >
-              Alle
-            </Button>
-            <Button
-              variant={filterType === "klassen" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setFilterType("klassen")}
-              data-testid="filter-klassen"
-            >
-              Klassen
-            </Button>
-            <Button
-              variant={filterType === "kurse" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setFilterType("kurse")}
-              data-testid="filter-kurse"
-            >
-              Kurse
-            </Button>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 border-b border-border">
+              <Button
+                variant={filterType === "all" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setFilterType("all")}
+                data-testid="filter-all"
+              >
+                Alle
+              </Button>
+              <Button
+                variant={filterType === "klassen" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setFilterType("klassen")}
+                data-testid="filter-klassen"
+              >
+                Klassen
+              </Button>
+              <Button
+                variant={filterType === "kurse" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setFilterType("kurse")}
+                data-testid="filter-kurse"
+              >
+                Kurse
+              </Button>
+            </div>
+            
+            {/* Semester Selector */}
+            <div className="flex items-center space-x-2">
+              <span className="text-sm font-medium">Halbjahr:</span>
+              <Button
+                variant={selectedSemester === "1" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedSemester("1")}
+                data-testid="semester-1"
+              >
+                1. HJ
+              </Button>
+              <Button
+                variant={selectedSemester === "2" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedSemester("2")}
+                data-testid="semester-2"
+              >
+                2. HJ
+              </Button>
+              <Button
+                variant={selectedSemester === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedSemester("all")}
+                data-testid="semester-all"
+              >
+                Ganz
+              </Button>
+            </div>
           </div>
 
           {/* Search and Filter */}
@@ -816,8 +880,8 @@ export default function Klassenverwaltung() {
                       }
                     }
                     
-                    const actualAssignedHours = calculateActualAssignedHours(classData.id);
-                    const correctHours = getStandardHoursForGrade(classData.grade);
+                    const actualAssignedHours = calculateActualAssignedHours(classData.id, selectedSemester);
+                    const correctHours = getTargetHoursForClass(classData, selectedSemester);
                     
                     const teacher1 = teachers?.find(t => t.id === classData.classTeacher1Id);
                     const teacher2 = teachers?.find(t => t.id === classData.classTeacher2Id);
