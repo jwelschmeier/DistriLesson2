@@ -802,9 +802,22 @@ export default function Klassenverwaltung() {
                       }
                     }
                     
+                    // Debug: Log the data to understand the issue
+                    console.log(`Class ${classData.name}:`, {
+                      subjectHours: classData.subjectHours,
+                      totalSubjectHours,
+                      grade: classData.grade
+                    });
+
                     const correctHoursResult = calculateCorrectHours(totalSubjectHours, classData.grade);
                     const correctHours = typeof correctHoursResult === 'number' ? correctHoursResult : correctHoursResult.totalHours;
                     const actualAssignedHours = calculateActualAssignedHours(classData.id);
+
+                    console.log(`Class ${classData.name} hours:`, {
+                      actualAssignedHours,
+                      correctHours,
+                      correctHoursResult
+                    });
                     
                     const teacher1 = teachers?.find(t => t.id === classData.classTeacher1Id);
                     const teacher2 = teachers?.find(t => t.id === classData.classTeacher2Id);
