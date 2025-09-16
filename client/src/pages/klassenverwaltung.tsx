@@ -746,20 +746,20 @@ export default function Klassenverwaltung() {
 
                     return (
                       <TableRow key={classData.id} data-testid={`row-class-${classData.id}`}>
-                        <TableCell className="font-medium">
+                        <TableCell className="font-medium py-2">
                           <div className="flex items-center space-x-2">
                             <span>{classData.name}</span>
                             <Badge variant="outline">Klasse {classData.grade}</Badge>
                           </div>
                         </TableCell>
-                        <TableCell>{classData.grade}</TableCell>
-                        <TableCell>
+                        <TableCell className="py-2">{classData.grade}</TableCell>
+                        <TableCell className="py-2">
                           <span className={`font-medium ${rawTotal !== correctHours ? 'text-orange-600' : 'text-green-600'}`}>
                             {rawTotal} / {correctHours}
                           </span>
                         </TableCell>
-                        <TableCell>{teacherDisplay}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="py-2">{teacherDisplay}</TableCell>
+                        <TableCell className="text-right py-2">
                           <div className="flex items-center justify-end space-x-2">
                             <Link href={`/stundenplaene?tab=class&classId=${classData.id}`}>
                               <Button
