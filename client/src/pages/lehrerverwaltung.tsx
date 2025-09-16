@@ -140,9 +140,14 @@ export default function Lehrerverwaltung() {
   // Calculate actual current hours per teacher from assignments
   const calculateActualCurrentHours = (teacherId: string): number => {
     const teacherAssignments = assignments.filter(a => a.teacherId === teacherId);
-    return teacherAssignments.reduce((sum, assignment) => {
-      return sum + parseFloat(assignment.hoursPerWeek);
+    console.log(`Debug: Teacher ${teacherId} has ${teacherAssignments.length} assignments:`, teacherAssignments);
+    const totalHours = teacherAssignments.reduce((sum, assignment) => {
+      const hours = parseFloat(assignment.hoursPerWeek);
+      console.log(`Adding ${hours} hours from assignment`, assignment);
+      return sum + hours;
     }, 0);
+    console.log(`Debug: Total calculated hours for teacher ${teacherId}: ${totalHours}`);
+    return totalHours;
   };
 
   // Extract subject names for the form (using subject names consistently)
