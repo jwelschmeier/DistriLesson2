@@ -749,7 +749,7 @@ export default function Klassenverwaltung() {
                         <TableCell className="font-medium py-2">
                           <div className="flex items-center space-x-2">
                             <span>{classData.name}</span>
-                            <Badge variant="outline">Klasse {classData.grade}</Badge>
+                            <Badge variant="outline">Jahrgang {classData.grade}</Badge>
                           </div>
                         </TableCell>
                         <TableCell className="py-1">{classData.grade}</TableCell>
