@@ -70,6 +70,17 @@ export default function Klassenverwaltung() {
     queryKey: ["/api/assignments"],
   });
 
+  // Calculate actual assigned hours per class from assignments
+  const calculateActualAssignedHours = (classId: string): number => {
+    if (!assignments) return 0;
+    
+    const classAssignments = assignments.filter(a => a.classId === classId);
+    return classAssignments.reduce((sum, assignment) => {
+      const hours = Number.parseFloat(assignment.hoursPerWeek);
+      return sum + (Number.isFinite(hours) ? hours : 0);
+    }, 0);
+  };
+
   const classForm = useForm<ClassFormData>({
     resolver: zodResolver(classFormSchema),
     defaultValues: {
