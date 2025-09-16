@@ -82,29 +82,17 @@ export default function Klassenverwaltung() {
   };
 
   // Calculate target hours from actual assigned subjects instead of empty subjectHours
-  const calculateTargetHoursFromAssignments = (classId: string, grade: number): number => {
-    if (!assignments) return 0;
-    
-    const classAssignments = assignments.filter(a => a.classId === classId);
-    
-    // Get unique subjects assigned to this class
-    const subjectIds = Array.from(new Set(classAssignments.map(a => a.subjectId)));
-    
-    // Create a subjects map - we'll use 1 as placeholder since calculateCorrectHours
-    // mainly needs to know which subjects exist, not their exact hours
-    const subjectHours: Record<string, number> = {};
-    subjectIds.forEach(subjectId => {
-      subjectHours[subjectId] = 1; // Placeholder - the function will calculate correct hours
-    });
-
-    if (Object.keys(subjectHours).length === 0) {
-      // Fallback to standard hours by grade if no assignments
-      const standardHours: Record<number, number> = {5: 28, 6: 30, 7: 32, 8: 33, 9: 32, 10: 34};
-      return standardHours[grade] || 30;
-    }
-
-    const correctHoursResult = calculateCorrectHours(subjectHours, grade);
-    return typeof correctHoursResult === 'number' ? correctHoursResult : correctHoursResult.totalHours;
+  // Use standard curriculum hours per grade level
+  const getStandardHoursForGrade = (grade: number): number => {
+    const standardHours: Record<number, number> = {
+      5: 28,
+      6: 30, 
+      7: 32,
+      8: 33,
+      9: 32,
+      10: 34
+    };
+    return standardHours[grade] || 30;
   };
 
   const classForm = useForm<ClassFormData>({
@@ -829,7 +817,7 @@ export default function Klassenverwaltung() {
                     }
                     
                     const actualAssignedHours = calculateActualAssignedHours(classData.id);
-                    const correctHours = calculateTargetHoursFromAssignments(classData.id, classData.grade);
+                    const correctHours = getStandardHoursForGrade(classData.grade);
                     
                     const teacher1 = teachers?.find(t => t.id === classData.classTeacher1Id);
                     const teacher2 = teachers?.find(t => t.id === classData.classTeacher2Id);
