@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -676,22 +677,23 @@ export default function Klassenverwaltung() {
             </div>
           </div>
 
-          {/* Classes Grid */}
+          {/* Classes List */}
           {classesLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, index) => (
-                <Card key={index} className="animate-pulse">
-                  <CardHeader>
-                    <div className="h-6 bg-muted rounded w-3/4"></div>
-                  </CardHeader>
-                  <CardContent>
+            <div className="animate-pulse">
+              <div className="rounded-md border">
+                <div className="border-b p-4">
+                  <div className="h-4 bg-muted rounded w-full"></div>
+                </div>
+                {[...Array(6)].map((_, index) => (
+                  <div key={index} className="border-b p-4">
                     <div className="space-y-2">
-                      <div className="h-4 bg-muted rounded w-1/2"></div>
-                      <div className="h-4 bg-muted rounded w-2/3"></div>
+                      <div className="h-4 bg-muted rounded w-1/4"></div>
+                      <div className="h-4 bg-muted rounded w-1/6"></div>
+                      <div className="h-4 bg-muted rounded w-1/3"></div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                  </div>
+                ))}
+              </div>
             </div>
           ) : filteredClasses.length === 0 ? (
             <div className="text-center py-12">
@@ -705,71 +707,63 @@ export default function Klassenverwaltung() {
               </p>
             </div>
           ) : (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredClasses.map((classData) => {
-                  return (
-                    <Card key={classData.id} className="hover:shadow-md transition-shadow" data-testid={`card-class-${classData.id}`}>
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg">{classData.name}</CardTitle>
-                          <Badge variant="light">Klasse {classData.grade}</Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Jahrgangsstufe:</span>
-                            <span className="font-medium">{classData.grade}</span>
-                          </div>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Klasse</TableHead>
+                    <TableHead>Jahrgangsstufe</TableHead>
+                    <TableHead>Wochenstunden</TableHead>
+                    <TableHead>Klassenlehrer</TableHead>
+                    <TableHead className="text-right">Aktionen</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredClasses.map((classData) => {
+                    // Convert semester-based subjectHours to total hours for calculation
+                    const totalSubjectHours: Record<string, number> = {};
+                    for (const [subject, semesterHours] of Object.entries(classData.subjectHours || {})) {
+                      if (typeof semesterHours === 'object' && semesterHours !== null) {
+                        totalSubjectHours[subject] = (Number(semesterHours['1']) || 0) + (Number(semesterHours['2']) || 0);
+                      } else {
+                        totalSubjectHours[subject] = Number(semesterHours) || 0;
+                      }
+                    }
+                    
+                    const correctHoursResult = calculateCorrectHours(totalSubjectHours, classData.grade);
+                    const correctHours = typeof correctHoursResult === 'number' ? correctHoursResult : correctHoursResult.totalHours;
+                    const rawTotal = Object.values(totalSubjectHours).reduce((sum, hours) => sum + hours, 0);
+                    
+                    const teacher1 = teachers?.find(t => t.id === classData.classTeacher1Id);
+                    const teacher2 = teachers?.find(t => t.id === classData.classTeacher2Id);
+                    
+                    let teacherDisplay = "Nicht zugewiesen";
+                    if (teacher1 && teacher2) {
+                      teacherDisplay = `${teacher1.shortName}, ${teacher2.shortName}`;
+                    } else if (teacher1) {
+                      teacherDisplay = teacher1.shortName;
+                    }
 
-                          {(() => {
-                            // Convert semester-based subjectHours to total hours for calculation
-                            const totalSubjectHours: Record<string, number> = {};
-                            for (const [subject, semesterHours] of Object.entries(classData.subjectHours || {})) {
-                              if (typeof semesterHours === 'object' && semesterHours !== null) {
-                                totalSubjectHours[subject] = (Number(semesterHours['1']) || 0) + (Number(semesterHours['2']) || 0);
-                              } else {
-                                totalSubjectHours[subject] = Number(semesterHours) || 0;
-                              }
-                            }
-                            
-                            const correctHoursResult = calculateCorrectHours(totalSubjectHours, classData.grade);
-                            const correctHours = typeof correctHoursResult === 'number' ? correctHoursResult : correctHoursResult.totalHours;
-                            const rawTotal = Object.values(totalSubjectHours).reduce((sum, hours) => sum + hours, 0);
-                            
-                            return (
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground">Wochenstunden:</span>
-                                <span className={`font-medium ${rawTotal !== correctHours ? 'text-orange-600' : 'text-green-600'}`}>
-                                  {rawTotal} / {correctHours}
-                                </span>
-                              </div>
-                            );
-                          })()}
-
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Klassenlehrer:</span>
-                            <span className="font-medium">
-                              {(() => {
-                                const teacher1 = teachers?.find(t => t.id === classData.classTeacher1Id);
-                                const teacher2 = teachers?.find(t => t.id === classData.classTeacher2Id);
-                                
-                                if (teacher1 && teacher2) {
-                                  return `${teacher1.shortName}, ${teacher2.shortName}`;
-                                } else if (teacher1) {
-                                  return teacher1.shortName;
-                                } else {
-                                  return "Nicht zugewiesen";
-                                }
-                              })()}
-                            </span>
+                    return (
+                      <TableRow key={classData.id} data-testid={`row-class-${classData.id}`}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center space-x-2">
+                            <span>{classData.name}</span>
+                            <Badge variant="outline">Klasse {classData.grade}</Badge>
                           </div>
-                          
-                          <div className="flex items-center justify-end space-x-2 pt-3 border-t">
+                        </TableCell>
+                        <TableCell>{classData.grade}</TableCell>
+                        <TableCell>
+                          <span className={`font-medium ${rawTotal !== correctHours ? 'text-orange-600' : 'text-green-600'}`}>
+                            {rawTotal} / {correctHours}
+                          </span>
+                        </TableCell>
+                        <TableCell>{teacherDisplay}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end space-x-2">
                             <Link href={`/stundenplaene?tab=class&classId=${classData.id}`}>
                               <Button
-                                variant="outline"
+                                variant="ghost"
                                 size="sm"
                                 data-testid={`button-view-schedule-${classData.id}`}
                               >
@@ -777,7 +771,7 @@ export default function Klassenverwaltung() {
                               </Button>
                             </Link>
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="sm"
                               onClick={() => handleEditClass(classData)}
                               data-testid={`button-edit-class-${classData.id}`}
@@ -785,7 +779,7 @@ export default function Klassenverwaltung() {
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="sm"
                               onClick={() => handleDeleteClass(classData.id)}
                               data-testid={`button-delete-class-${classData.id}`}
@@ -793,12 +787,12 @@ export default function Klassenverwaltung() {
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
           )}
         </div>
