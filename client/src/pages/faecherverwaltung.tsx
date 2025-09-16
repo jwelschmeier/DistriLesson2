@@ -310,10 +310,10 @@ export default function Faecherverwaltung() {
               <Table data-testid="table-subjects">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Fachname</TableHead>
-                    <TableHead>Kürzel</TableHead>
-                    <TableHead>Kategorie</TableHead>
-                    <TableHead>Aktionen</TableHead>
+                    <TableHead className="w-1/3">Fachname</TableHead>
+                    <TableHead className="w-16">Kürzel</TableHead>
+                    <TableHead className="w-32">Kategorie</TableHead>
+                    <TableHead className="w-20">Aktionen</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
