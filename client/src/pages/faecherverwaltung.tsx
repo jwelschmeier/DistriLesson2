@@ -322,13 +322,13 @@ export default function Faecherverwaltung() {
                       <TableCell className="font-medium py-2" data-testid={`text-subject-name-${subject.id}`}>
                         {subject.name}
                       </TableCell>
-                      <TableCell className="py-2" data-testid={`text-subject-shortname-${subject.id}`}>
+                      <TableCell className="py-1" data-testid={`text-subject-shortname-${subject.id}`}>
                         {subject.shortName}
                       </TableCell>
-                      <TableCell className="py-2" data-testid={`text-subject-category-${subject.id}`}>
+                      <TableCell className="py-1" data-testid={`text-subject-category-${subject.id}`}>
                         {getCategoryBadge(subject.category)}
                       </TableCell>
-                      <TableCell className="py-2">
+                      <TableCell className="py-1  ">
                         <div className="flex space-x-2">
                           <Button
                             variant="outline"
