@@ -424,6 +424,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Alias for frontend compatibility - bulk-edit endpoint
+  app.post("/api/classes/bulk-edit", async (req, res) => {
+    try {
+      // Validate request body
+      const validatedData = gradeBulkUpdateSchema.parse(req.body);
+      const { grade, targetHoursTotal, targetHoursSemester1, targetHoursSemester2 } = validatedData;
+      
+      // Get all classes for the specified grade
+      const allClasses = await storage.getClasses();
+      const classesToUpdate = allClasses.filter(c => c.grade === grade);
+      
+      if (classesToUpdate.length === 0) {
+        return res.status(404).json({ 
+          error: `Keine Klassen für Jahrgangsstufe ${grade} gefunden.` 
+        });
+      }
+      
+      let updatedCount = 0;
+      
+      // Update each class in the grade
+      for (const classData of classesToUpdate) {
+        // Create properly typed update data
+        const updateData: Partial<{
+          targetHoursTotal: string | null;
+          targetHoursSemester1: string | null;
+          targetHoursSemester2: string | null;
+        }> = {};
+        
+        // Convert empty strings to null for consistent handling
+        if (targetHoursTotal !== undefined) {
+          updateData.targetHoursTotal = targetHoursTotal === "" ? null : targetHoursTotal;
+        }
+        if (targetHoursSemester1 !== undefined) {
+          updateData.targetHoursSemester1 = targetHoursSemester1 === "" ? null : targetHoursSemester1;
+        }
+        if (targetHoursSemester2 !== undefined) {
+          updateData.targetHoursSemester2 = targetHoursSemester2 === "" ? null : targetHoursSemester2;
+        }
+        
+        if (Object.keys(updateData).length > 0) {
+          await storage.updateClass(classData.id, updateData);
+          updatedCount++;
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        updatedCount,
+        message: `${updatedCount} Klassen der Jahrgangsstufe ${grade} wurden aktualisiert.`
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: "Ungültige Eingabedaten", 
+          details: error.errors 
+        });
+      }
+      console.error("Error bulk updating classes:", error);
+      res.status(500).json({ error: "Failed to bulk update classes" });
+    }
+  });
+
   // Subjects routes
   app.get("/api/subjects", async (req, res) => {
     try {
