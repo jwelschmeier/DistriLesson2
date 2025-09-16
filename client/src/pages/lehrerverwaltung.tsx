@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -140,14 +140,10 @@ export default function Lehrerverwaltung() {
   // Calculate actual current hours per teacher from assignments
   const calculateActualCurrentHours = (teacherId: string): number => {
     const teacherAssignments = assignments.filter(a => a.teacherId === teacherId);
-    console.log(`Debug: Teacher ${teacherId} has ${teacherAssignments.length} assignments:`, teacherAssignments);
-    const totalHours = teacherAssignments.reduce((sum, assignment) => {
-      const hours = parseFloat(assignment.hoursPerWeek);
-      console.log(`Adding ${hours} hours from assignment`, assignment);
-      return sum + hours;
+    return teacherAssignments.reduce((sum, assignment) => {
+      const hours = Number.parseFloat(assignment.hoursPerWeek);
+      return sum + (Number.isFinite(hours) ? hours : 0);
     }, 0);
-    console.log(`Debug: Total calculated hours for teacher ${teacherId}: ${totalHours}`);
-    return totalHours;
   };
 
   // Extract subject names for the form (using subject names consistently)
@@ -173,6 +169,14 @@ export default function Lehrerverwaltung() {
       isActive: true,
     },
   });
+
+  // Update form currentHours when assignments or editingTeacher changes
+  useEffect(() => {
+    if (editingTeacher && isDialogOpen && assignments.length > 0) {
+      const actualHours = calculateActualCurrentHours(editingTeacher.id);
+      form.setValue('currentHours', actualHours.toString(), { shouldDirty: false });
+    }
+  }, [assignments, editingTeacher, isDialogOpen, form]);
 
   const createMutation = useMutation({
     mutationFn: async (data: TeacherFormData) => {
@@ -261,6 +265,7 @@ export default function Lehrerverwaltung() {
   const handleEdit = (teacher: Teacher) => {
     setEditingTeacher(teacher);
 
+    const actualCurrentHours = calculateActualCurrentHours(teacher.id);
     form.reset({
       firstName: teacher.firstName,
       lastName: teacher.lastName,
@@ -269,8 +274,8 @@ export default function Lehrerverwaltung() {
       email: teacher.email || "",
       dateOfBirth: teacher.dateOfBirth || "",
       subjects: teacher.subjects,
-      maxHours: teacher.maxHours,
-      currentHours: teacher.currentHours,
+      maxHours: teacher.maxHours?.toString() || "25",
+      currentHours: actualCurrentHours.toString(),
       notes: teacher.notes || "",
       qualifications: teacher.qualifications,
       reductionHours: teacher.reductionHours || {
@@ -335,6 +340,7 @@ export default function Lehrerverwaltung() {
   const navigateToTeacher = (teacher: Teacher) => {
     setEditingTeacher(teacher);
     
+    const actualCurrentHours = calculateActualCurrentHours(teacher.id);
     // Form mit den Daten des neuen Lehrers füllen
     form.reset({
       firstName: teacher.firstName,
@@ -346,7 +352,7 @@ export default function Lehrerverwaltung() {
       personnelNumber: teacher.personnelNumber || "",
       dateOfBirth: teacher.dateOfBirth || "",
       maxHours: teacher.maxHours?.toString() || "25",
-      currentHours: teacher.currentHours?.toString() || "0",
+      currentHours: actualCurrentHours.toString(),
       notes: teacher.notes || "",
       isActive: teacher.isActive,
       reductionHours: {
