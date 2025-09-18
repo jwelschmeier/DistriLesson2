@@ -604,18 +604,6 @@ export default function PlanstellberechnungPage() {
               />
             </div>
 
-            {/* F26: 0 */}
-            <div className="grid grid-cols-2 gap-4 items-center">
-              <Label className="text-sm">0</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={planstellenData.nullWert || 0}
-                onChange={(e) => handleInputChange('nullWert', parseFloat(e.target.value))}
-                className="bg-gray-50 border-gray-300"
-                data-testid="input-null-wert"
-              />
-            </div>
 
             {/* === FREIE EINGABEZEILEN (VOR SUMME) === */}
             <div className="bg-gray-50 p-2 rounded-lg mt-6">
