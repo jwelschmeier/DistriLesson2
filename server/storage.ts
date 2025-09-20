@@ -159,6 +159,7 @@ export interface IStorage {
   createSubject(subject: InsertSubject): Promise<Subject>;
   updateSubject(id: string, subject: Partial<InsertSubject>): Promise<Subject>;
   deleteSubject(id: string): Promise<void>;
+  cleanupOrphanedSubjectReferences(): Promise<void>;
 
   // Assignments
   getAssignments(): Promise<Assignment[]>;
@@ -595,6 +596,53 @@ export class DatabaseStorage implements IStorage {
 
     // Finally, delete the subject itself (assignments will be cascade deleted automatically)
     await db.delete(subjects).where(eq(subjects.id, id));
+  }
+
+  async cleanupOrphanedSubjectReferences(): Promise<void> {
+    // Get all existing subject short names and names
+    const allSubjects = await this.getSubjects();
+    const validSubjectRefs = new Set([
+      ...allSubjects.map(s => s.id),
+      ...allSubjects.map(s => s.shortName),
+      ...allSubjects.map(s => s.name)
+    ]);
+
+    // Clean up teachers
+    const allTeachers = await db.select().from(teachers);
+    for (const teacher of allTeachers) {
+      const cleanedSubjects = teacher.subjects.filter(
+        (subjectRef: string) => validSubjectRefs.has(subjectRef)
+      );
+      
+      if (cleanedSubjects.length !== teacher.subjects.length) {
+        await db
+          .update(teachers)
+          .set({ subjects: cleanedSubjects })
+          .where(eq(teachers.id, teacher.id));
+      }
+    }
+
+    // Clean up classes
+    const allClasses = await db.select().from(classes);
+    for (const classRecord of allClasses) {
+      const subjectHours = { ...classRecord.subjectHours };
+      let hasChanges = false;
+
+      // Remove any keys that don't match valid subject references
+      for (const key in subjectHours) {
+        if (!validSubjectRefs.has(key)) {
+          delete subjectHours[key];
+          hasChanges = true;
+        }
+      }
+
+      if (hasChanges) {
+        await db
+          .update(classes)
+          .set({ subjectHours })
+          .where(eq(classes.id, classRecord.id));
+      }
+    }
   }
 
   // Assignments

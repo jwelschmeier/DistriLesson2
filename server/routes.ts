@@ -531,6 +531,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/subjects/cleanup-orphaned", async (req, res) => {
+    try {
+      await storage.cleanupOrphanedSubjectReferences();
+      res.json({ message: "Orphaned subject references cleaned up successfully" });
+    } catch (error) {
+      console.error("Error cleaning up orphaned subject references:", error);
+      res.status(500).json({ error: "Failed to cleanup orphaned subject references" });
+    }
+  });
+
   // Initialize default subjects
   app.post("/api/subjects/init-defaults", async (req, res) => {
     try {
