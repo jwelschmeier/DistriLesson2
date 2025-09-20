@@ -147,6 +147,13 @@ export default function Stundenplaene() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      // Close the dialog and reset selections
+      setTeamTeachingDialog({
+        isOpen: false,
+        assignmentId: null,
+        availableTeachers: [],
+        selectedTeacherIds: new Set(),
+      });
       toast({
         title: "Erfolg",
         description: "Teamteaching wurde erfolgreich erstellt.",
@@ -283,10 +290,12 @@ export default function Stundenplaene() {
     isOpen: boolean;
     assignmentId: string | null;
     availableTeachers: Teacher[];
+    selectedTeacherIds: Set<string>;
   }>({
     isOpen: false,
     assignmentId: null,
     availableTeachers: [],
+    selectedTeacherIds: new Set(),
   });
 
   // Handle URL query parameters for deep linking
@@ -1657,6 +1666,7 @@ export default function Stundenplaene() {
                                             isOpen: true,
                                             assignmentId: assignment.id,
                                             availableTeachers: qualifiedTeachers,
+                                            selectedTeacherIds: new Set(),
                                           });
                                         }}
                                         variant="outline"
@@ -1738,7 +1748,7 @@ export default function Stundenplaene() {
         {/* Team Teaching Dialog */}
         <Dialog 
           open={teamTeachingDialog.isOpen} 
-          onOpenChange={(open) => setTeamTeachingDialog(prev => ({ ...prev, isOpen: open }))}
+          onOpenChange={(open) => setTeamTeachingDialog(prev => ({ ...prev, isOpen: open, selectedTeacherIds: new Set() }))}
         >
           <DialogContent>
             <DialogHeader>
@@ -1750,46 +1760,83 @@ export default function Stundenplaene() {
             
             <div className="space-y-3">
               <div className="max-h-60 overflow-y-auto">
-                {teamTeachingDialog.availableTeachers.map((teacher) => (
-                  <div 
-                    key={teacher.id} 
-                    className="flex items-center justify-between p-3 border rounded hover:bg-muted/50"
-                  >
-                    <div>
-                      <div className="font-medium">
-                        {teacher.firstName} {teacher.lastName} ({teacher.shortName})
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {getAvailableHours(teacher.id, 0, selectedSemester === 'all' ? undefined : selectedSemester)}h verfügbar
+                {teamTeachingDialog.availableTeachers.map((teacher) => {
+                  const isSelected = teamTeachingDialog.selectedTeacherIds.has(teacher.id);
+                  return (
+                    <div 
+                      key={teacher.id} 
+                      className={`flex items-center justify-between p-3 border rounded cursor-pointer transition-colors ${
+                        isSelected 
+                          ? 'bg-primary/10 border-primary' 
+                          : 'hover:bg-muted/50'
+                      }`}
+                      onClick={() => {
+                        setTeamTeachingDialog(prev => {
+                          const newSelectedIds = new Set(prev.selectedTeacherIds);
+                          if (isSelected) {
+                            newSelectedIds.delete(teacher.id);
+                          } else {
+                            newSelectedIds.add(teacher.id);
+                          }
+                          return { ...prev, selectedTeacherIds: newSelectedIds };
+                        });
+                      }}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {}} // Controlled by parent onClick
+                          className="h-4 w-4 text-primary"
+                          data-testid={`checkbox-coteacher-${teacher.id}`}
+                        />
+                        <div>
+                          <div className="font-medium">
+                            {teacher.firstName} {teacher.lastName} ({teacher.shortName})
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {getAvailableHours(teacher.id, 0, selectedSemester === 'all' ? undefined : selectedSemester)}h verfügbar
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <Button
-                      onClick={() => {
-                        if (teamTeachingDialog.assignmentId) {
-                          createTeamTeachingMutation.mutate({
-                            assignmentId: teamTeachingDialog.assignmentId,
-                            teacherIds: [teacher.id],
-                          });
-                        }
-                      }}
-                      disabled={createTeamTeachingMutation.isPending}
-                      size="sm"
-                      data-testid={`button-select-coteacher-${teacher.id}`}
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Hinzufügen
-                    </Button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
             
             <DialogFooter>
               <Button 
                 variant="outline" 
-                onClick={() => setTeamTeachingDialog(prev => ({ ...prev, isOpen: false }))}
+                onClick={() => setTeamTeachingDialog(prev => ({ ...prev, isOpen: false, selectedTeacherIds: new Set() }))}
+                data-testid="button-cancel-team-teaching"
               >
                 Abbrechen
+              </Button>
+              <Button
+                onClick={() => {
+                  const selectedIds = Array.from(teamTeachingDialog.selectedTeacherIds);
+                  if (teamTeachingDialog.assignmentId && selectedIds.length > 0) {
+                    createTeamTeachingMutation.mutate({
+                      assignmentId: teamTeachingDialog.assignmentId,
+                      teacherIds: selectedIds,
+                    });
+                  }
+                }}
+                disabled={teamTeachingDialog.selectedTeacherIds.size === 0 || createTeamTeachingMutation.isPending}
+                data-testid="button-save-team-teaching"
+              >
+                {createTeamTeachingMutation.isPending ? (
+                  <>
+                    <Clock className="h-4 w-4 mr-2 animate-spin" />
+                    Speichern...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Speichern ({teamTeachingDialog.selectedTeacherIds.size})
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
