@@ -539,6 +539,61 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteSubject(id: string): Promise<void> {
+    // First, get the subject details to know which identifier to remove from teachers/classes
+    const subjectToDelete = await this.getSubject(id);
+    if (!subjectToDelete) {
+      throw new Error("Subject not found");
+    }
+
+    // Clean up teachers: remove this subject from their subjects arrays
+    const allTeachers = await db.select().from(teachers);
+    for (const teacher of allTeachers) {
+      const updatedSubjects = teacher.subjects.filter(
+        (subjectRef: string) => 
+          subjectRef !== id && 
+          subjectRef !== subjectToDelete.shortName && 
+          subjectRef !== subjectToDelete.name
+      );
+      
+      // Only update if the subjects array changed
+      if (updatedSubjects.length !== teacher.subjects.length) {
+        await db
+          .update(teachers)
+          .set({ subjects: updatedSubjects })
+          .where(eq(teachers.id, teacher.id));
+      }
+    }
+
+    // Clean up classes: remove this subject from their subjectHours objects
+    const allClasses = await db.select().from(classes);
+    for (const classRecord of allClasses) {
+      const subjectHours = { ...classRecord.subjectHours };
+      let hasChanges = false;
+
+      // Remove subject by various possible identifiers
+      if (subjectHours[id]) {
+        delete subjectHours[id];
+        hasChanges = true;
+      }
+      if (subjectHours[subjectToDelete.shortName]) {
+        delete subjectHours[subjectToDelete.shortName];
+        hasChanges = true;
+      }
+      if (subjectHours[subjectToDelete.name]) {
+        delete subjectHours[subjectToDelete.name];
+        hasChanges = true;
+      }
+
+      // Only update if the subjectHours object changed
+      if (hasChanges) {
+        await db
+          .update(classes)
+          .set({ subjectHours })
+          .where(eq(classes.id, classRecord.id));
+      }
+    }
+
+    // Finally, delete the subject itself (assignments will be cascade deleted automatically)
     await db.delete(subjects).where(eq(subjects.id, id));
   }
 
