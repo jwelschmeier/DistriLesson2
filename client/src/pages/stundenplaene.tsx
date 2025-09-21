@@ -1356,37 +1356,31 @@ export default function Stundenplaene() {
                                       if (!semesterData) return null;
 
                                       return (
-                                        <div key={semester} className="flex items-center justify-between text-xs">
-                                          <span className="text-muted-foreground">
-                                            {semester}. HJ:
+                                        <div key={semester} className="flex items-center text-xs">
+                                          <span className="text-muted-foreground w-8">
+                                            {semester}.HJ
                                           </span>
-                                          <div className="flex items-center space-x-1">
-                                            <Badge variant={semesterData.totalHours > 0 ? "default" : "secondary"} className="text-xs px-1.5 py-0.5">
-                                              {semesterData.totalHours}h
-                                            </Badge>
-                                            <div className="flex -space-x-1">
-                                              {semesterData.teachers.slice(0, 3).map((teacher, index) => (
-                                                <div 
-                                                  key={index} 
-                                                  className="w-4 h-4 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center border border-background"
-                                                  title={`${teacher.name} (${teacher.hours}h)${teacher.isTeamTeaching ? ' - Team' : ''}`}
-                                                >
-                                                  <span className="text-[8px] font-medium">
-                                                    {teacher.shortName.charAt(0)}
-                                                  </span>
-                                                </div>
-                                              ))}
-                                              {semesterData.teachers.length > 3 && (
-                                                <div 
-                                                  className="w-4 h-4 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center border border-background"
-                                                  title={`+${semesterData.teachers.length - 3} weitere`}
-                                                >
-                                                  <span className="text-[8px] font-medium">
-                                                    +{semesterData.teachers.length - 3}
-                                                  </span>
-                                                </div>
-                                              )}
-                                            </div>
+                                          <Badge variant={semesterData.totalHours > 0 ? "default" : "secondary"} className="text-xs px-1 py-0.5 mr-2">
+                                            {semesterData.totalHours}h
+                                          </Badge>
+                                          <div className="flex items-center space-x-0.5 flex-1 min-w-0">
+                                            {semesterData.teachers.slice(0, 2).map((teacher, index) => (
+                                              <div 
+                                                key={index} 
+                                                className="bg-blue-100 dark:bg-blue-900 rounded px-1 py-0.5 text-[10px] font-medium border"
+                                                title={`${teacher.name} (${teacher.hours}h)${teacher.isTeamTeaching ? ' - Team' : ''}`}
+                                              >
+                                                {teacher.shortName}
+                                              </div>
+                                            ))}
+                                            {semesterData.teachers.length > 2 && (
+                                              <div 
+                                                className="bg-gray-100 dark:bg-gray-800 rounded px-1 py-0.5 text-[10px] font-medium border"
+                                                title={`+${semesterData.teachers.length - 2} weitere: ${semesterData.teachers.slice(2).map(t => t.shortName).join(', ')}`}
+                                              >
+                                                +{semesterData.teachers.length - 2}
+                                              </div>
+                                            )}
                                           </div>
                                         </div>
                                       );
