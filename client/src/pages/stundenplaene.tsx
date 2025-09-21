@@ -1356,7 +1356,7 @@ export default function Stundenplaene() {
                                       if (!semesterData) return null;
 
                                       return (
-                                        <div key={semester} className="flex items-center text-xs">
+                                        <div key={semester} className="flex items-center justify-center text-xs">
                                           <span className="text-muted-foreground w-8">
                                             {semester}.HJ
                                           </span>
