@@ -1341,11 +1341,11 @@ export default function Stundenplaene() {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
                               {Object.entries(groupedAssignments).map(([subjectId, data]) => (
                                 <div key={subjectId} className="border rounded p-2 bg-muted/20">
-                                  <div className="flex items-center justify-between mb-1">
-                                    <Badge variant="light" className="text-xs px-2 py-0.5">
+                                  <div className="flex flex-col items-center mb-1 space-y-1">
+                                    <div className="bg-gray-100 dark:bg-gray-800 rounded px-1 py-0.5 text-[10px] font-medium border">
                                       {data.subjectShortName}
-                                    </Badge>
-                                    <div className="text-xs text-muted-foreground truncate ml-1">
+                                    </div>
+                                    <div className="text-xs text-muted-foreground text-center">
                                       {data.subjectName}
                                     </div>
                                   </div>
