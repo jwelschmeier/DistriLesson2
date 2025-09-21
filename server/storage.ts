@@ -163,6 +163,11 @@ export interface IStorage {
 
   // Assignments
   getAssignments(): Promise<Assignment[]>;
+  getAssignmentsWithRelations(): Promise<(Assignment & {
+    _teacher?: { shortName: string; firstName: string; lastName: string } | null;
+    _class?: { name: string; grade: number } | null;
+    _subject?: { name: string; shortName: string; category: string } | null;
+  })[]>;
   getAssignment(id: string): Promise<Assignment | undefined>;
   createAssignment(assignment: InsertAssignment): Promise<Assignment>;
   updateAssignment(id: string, assignment: Partial<InsertAssignment>): Promise<Assignment>;
@@ -645,9 +650,75 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Assignments
+  // Assignments - Optimized with JOIN to avoid N+1 problem
   async getAssignments(): Promise<Assignment[]> {
-    return await db.select().from(assignments).orderBy(desc(assignments.createdAt));
+    return await db
+      .select()
+      .from(assignments)
+      .orderBy(desc(assignments.createdAt));
+  }
+
+  // Optimized method with pre-loaded related data for frontend performance
+  async getAssignmentsWithRelations(): Promise<(Assignment & {
+    _teacher?: { shortName: string; firstName: string; lastName: string } | null;
+    _class?: { name: string; grade: number } | null;
+    _subject?: { name: string; shortName: string; category: string } | null;
+  })[]> {
+    const result = await db
+      .select({
+        // Assignment fields
+        id: assignments.id,
+        teacherId: assignments.teacherId,
+        classId: assignments.classId,
+        subjectId: assignments.subjectId,
+        hoursPerWeek: assignments.hoursPerWeek,
+        semester: assignments.semester,
+        isOptimized: assignments.isOptimized,
+        teamTeachingId: assignments.teamTeachingId,
+        schoolYearId: assignments.schoolYearId,
+        createdAt: assignments.createdAt,
+        // Related data to avoid N+1 queries
+        teacherShortName: teachers.shortName,
+        teacherFirstName: teachers.firstName,
+        teacherLastName: teachers.lastName,
+        className: classes.name,
+        classGrade: classes.grade,
+        subjectName: subjects.name,
+        subjectShortName: subjects.shortName,
+        subjectCategory: subjects.category,
+      })
+      .from(assignments)
+      .leftJoin(teachers, eq(assignments.teacherId, teachers.id))
+      .leftJoin(classes, eq(assignments.classId, classes.id))
+      .leftJoin(subjects, eq(assignments.subjectId, subjects.id))
+      .orderBy(desc(assignments.createdAt));
+
+    return result.map(row => ({
+      id: row.id,
+      teacherId: row.teacherId,
+      classId: row.classId,
+      subjectId: row.subjectId,
+      hoursPerWeek: row.hoursPerWeek,
+      semester: row.semester,
+      isOptimized: row.isOptimized,
+      teamTeachingId: row.teamTeachingId,
+      schoolYearId: row.schoolYearId,
+      createdAt: row.createdAt,
+      _teacher: row.teacherShortName ? {
+        shortName: row.teacherShortName,
+        firstName: row.teacherFirstName,
+        lastName: row.teacherLastName,
+      } : null,
+      _class: row.className ? {
+        name: row.className,
+        grade: row.classGrade,
+      } : null,
+      _subject: row.subjectName ? {
+        name: row.subjectName,
+        shortName: row.subjectShortName,
+        category: row.subjectCategory,
+      } : null,
+    }));
   }
 
   async getAssignment(id: string): Promise<Assignment | undefined> {
