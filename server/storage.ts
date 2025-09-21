@@ -769,51 +769,58 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(assignments).where(eq(assignments.schoolYearId, schoolYearId));
   }
 
-  // Team Teaching Operations
+  // Team Teaching Operations - Optimized with bulk operations
   async createTeamTeaching(baseAssignmentId: string, teacherIds: string[]): Promise<Assignment[]> {
-    // Get the base assignment
-    const baseAssignment = await this.getAssignment(baseAssignmentId);
-    if (!baseAssignment) {
-      throw new Error("Base assignment not found");
-    }
-
-    // Generate a new team teaching ID if none exists
-    const teamTeachingId = baseAssignment.teamTeachingId || randomUUID();
-    
-    // Update the base assignment with team teaching ID if it doesn't have one
-    if (!baseAssignment.teamTeachingId) {
-      await this.updateAssignment(baseAssignmentId, { teamTeachingId });
-    }
-
-    // Create new assignments for each additional teacher
-    const newAssignments: Assignment[] = [];
-    for (const teacherId of teacherIds) {
-      // Check if this teacher already has an assignment for this team
-      const existingAssignments = await db.select().from(assignments)
-        .where(eq(assignments.teamTeachingId, teamTeachingId));
-      
-      const teacherAlreadyInTeam = existingAssignments.some(a => a.teacherId === teacherId);
-      if (teacherAlreadyInTeam) {
-        continue; // Skip if teacher is already in this team
+    // Single transaction for all operations
+    return await db.transaction(async (tx) => {
+      // Get the base assignment
+      const [baseAssignment] = await tx.select().from(assignments).where(eq(assignments.id, baseAssignmentId));
+      if (!baseAssignment) {
+        throw new Error("Base assignment not found");
       }
 
-      const newAssignment: InsertAssignment = {
-        teacherId,
-        classId: baseAssignment.classId,
-        subjectId: baseAssignment.subjectId,
-        hoursPerWeek: baseAssignment.hoursPerWeek,
-        semester: baseAssignment.semester as "1" | "2",
-        isOptimized: false,
-        teamTeachingId,
-        schoolYearId: baseAssignment.schoolYearId
-      };
+      // Generate a new team teaching ID if none exists
+      const teamTeachingId = baseAssignment.teamTeachingId || randomUUID();
+      
+      // Update the base assignment with team teaching ID if it doesn't have one
+      if (!baseAssignment.teamTeachingId) {
+        await tx.update(assignments)
+          .set({ teamTeachingId })
+          .where(eq(assignments.id, baseAssignmentId));
+      }
 
-      const [created] = await db.insert(assignments).values(newAssignment).returning();
-      newAssignments.push(created);
-    }
+      // Get all existing assignments for this team in one query
+      const existingAssignments = await tx.select()
+        .from(assignments)
+        .where(eq(assignments.teamTeachingId, teamTeachingId));
+      
+      const existingTeacherIds = new Set(existingAssignments.map(a => a.teacherId));
+      
+      // Filter out teachers already in the team
+      const newTeacherIds = teacherIds.filter(teacherId => !existingTeacherIds.has(teacherId));
+      
+      if (newTeacherIds.length > 0) {
+        // Bulk insert all new assignments in one query
+        const newAssignments: InsertAssignment[] = newTeacherIds.map(teacherId => ({
+          teacherId,
+          classId: baseAssignment.classId,
+          subjectId: baseAssignment.subjectId,
+          hoursPerWeek: baseAssignment.hoursPerWeek,
+          semester: baseAssignment.semester as "1" | "2",
+          isOptimized: false,
+          teamTeachingId,
+          schoolYearId: baseAssignment.schoolYearId
+        }));
 
-    // Return all assignments in the team teaching group
-    return await this.getTeamTeachingGroup(teamTeachingId);
+        await tx.insert(assignments).values(newAssignments);
+      }
+
+      // Return all assignments in the team teaching group
+      return await tx.select()
+        .from(assignments)
+        .where(eq(assignments.teamTeachingId, teamTeachingId))
+        .orderBy(assignments.createdAt);
+    });
   }
 
   async getTeamTeachingGroup(teamTeachingId: string): Promise<Assignment[]> {
