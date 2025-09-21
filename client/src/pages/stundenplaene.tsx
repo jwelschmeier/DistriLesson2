@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Calendar, Clock, Users, BookOpen, Presentation, School, GraduationCap, Save, Trash2, Plus } from "lucide-react";
+import { Calendar, Clock, Users, BookOpen, Presentation, School, GraduationCap, Save, Trash2, Plus, Edit, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { type Teacher, type Class, type Subject, type Assignment } from "@shared/schema";
@@ -31,6 +31,7 @@ export default function Stundenplaene() {
   const [activeTab, setActiveTab] = useState<string>("teacher");
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>("");
   const [selectedClassId, setSelectedClassId] = useState<string>("");
+  const [isEditMode, setIsEditMode] = useState(false);
   const [selectedSemester, setSelectedSemester] = useState<'all' | '1' | '2'>('all');
   
   // State for editable table
@@ -1276,22 +1277,169 @@ export default function Stundenplaene() {
                     </Card>
                   )}
 
+                  {/* Compact Assignment Overview */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <BookOpen className="mr-2 text-primary" />
+                        Stundenübersicht nach Fächern
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {(() => {
+                          // Group assignments by subject and semester
+                          const groupedAssignments: Record<string, {
+                            subjectName: string;
+                            subjectShortName: string;
+                            semesters: Record<string, {
+                              totalHours: number;
+                              teachers: { name: string; shortName: string; hours: number; isTeamTeaching: boolean }[];
+                              assignments: typeof classAssignments;
+                            }>;
+                          }> = {};
+
+                          classAssignments.forEach(assignment => {
+                            const subjectId = assignment.subject?.id || 'unknown';
+                            const subjectName = assignment.subject?.name || 'Unbekannt';
+                            const subjectShortName = assignment.subject?.shortName || '??';
+                            const semester = assignment.semester || '1';
+                            const hours = parseFloat(assignment.hoursPerWeek) || 0;
+                            const teacherName = assignment.teacher ? 
+                              `${assignment.teacher.firstName} ${assignment.teacher.lastName}` : 
+                              'Unbekannt';
+                            const teacherShortName = assignment.teacher?.shortName || '??';
+                            const isTeamTeaching = !!assignment.teamTeachingId;
+
+                            if (!groupedAssignments[subjectId]) {
+                              groupedAssignments[subjectId] = {
+                                subjectName,
+                                subjectShortName,
+                                semesters: {}
+                              };
+                            }
+
+                            if (!groupedAssignments[subjectId].semesters[semester]) {
+                              groupedAssignments[subjectId].semesters[semester] = {
+                                totalHours: 0,
+                                teachers: [],
+                                assignments: []
+                              };
+                            }
+
+                            groupedAssignments[subjectId].semesters[semester].totalHours += hours;
+                            groupedAssignments[subjectId].semesters[semester].teachers.push({
+                              name: teacherName,
+                              shortName: teacherShortName,
+                              hours,
+                              isTeamTeaching
+                            });
+                            groupedAssignments[subjectId].semesters[semester].assignments.push(assignment);
+                          });
+
+                          return Object.entries(groupedAssignments).map(([subjectId, data]) => (
+                            <div key={subjectId} className="border rounded-lg p-4 bg-muted/30">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center space-x-2">
+                                  <Badge variant="light" className="text-base px-3 py-1">
+                                    {data.subjectShortName}
+                                  </Badge>
+                                  <span className="font-medium text-foreground">{data.subjectName}</span>
+                                </div>
+                              </div>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {['1', '2'].map(semester => {
+                                  const semesterData = data.semesters[semester];
+                                  if (!semesterData) return null;
+
+                                  return (
+                                    <div key={semester} className="bg-background rounded-lg p-3 border">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <span className="font-medium text-sm">
+                                          {semester === '1' ? '1. Halbjahr' : '2. Halbjahr'}
+                                        </span>
+                                        <Badge variant={semesterData.totalHours > 0 ? "default" : "secondary"}>
+                                          {semesterData.totalHours}h
+                                        </Badge>
+                                      </div>
+                                      
+                                      <div className="space-y-1">
+                                        {semesterData.teachers.map((teacher, index) => (
+                                          <div key={index} className="flex items-center justify-between text-sm">
+                                            <div className="flex items-center space-x-2">
+                                              <div className="w-5 h-5 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                                                <span className="text-xs font-medium">
+                                                  {teacher.shortName}
+                                                </span>
+                                              </div>
+                                              <span className="text-foreground">{teacher.name}</span>
+                                              {teacher.isTeamTeaching && (
+                                                <Badge variant="outline" className="text-xs">
+                                                  <Users className="h-3 w-3 mr-1" />
+                                                  Team
+                                                </Badge>
+                                              )}
+                                            </div>
+                                            <span className="text-muted-foreground">{teacher.hours}h</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ));
+                        })()}
+                        
+                        {classAssignments.length === 0 && (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                            <p>Noch keine Stundenverteilung vorhanden</p>
+                            <p className="text-sm">Verwenden Sie die Tabelle unten, um Zuweisungen zu erstellen</p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
                   {/* Class Assignments Table */}
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center justify-between">
                         <span>Stundenplan für Klasse {selectedClass.name}</span>
-                        {selectedClassAssignments.size > 0 && (
+                        <div className="flex items-center space-x-2">
                           <Button
-                            variant="destructive"
+                            variant={isEditMode ? "default" : "outline"}
                             size="sm"
-                            onClick={() => openBulkDeleteDialog('class')}
-                            data-testid="button-bulk-delete-class"
+                            onClick={() => setIsEditMode(!isEditMode)}
+                            data-testid="button-toggle-edit-mode"
                           >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            {selectedClassAssignments.size} ausgewählte löschen
+                            {isEditMode ? (
+                              <>
+                                <Eye className="h-4 w-4 mr-2" />
+                                Ansicht
+                              </>
+                            ) : (
+                              <>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Bearbeiten
+                              </>
+                            )}
                           </Button>
-                        )}
+                          {selectedClassAssignments.size > 0 && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => openBulkDeleteDialog('class')}
+                              data-testid="button-bulk-delete-class"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              {selectedClassAssignments.size} ausgewählte löschen
+                            </Button>
+                          )}
+                        </div>
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
