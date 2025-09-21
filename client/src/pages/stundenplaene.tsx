@@ -1448,21 +1448,25 @@ export default function Stundenplaene() {
                         <div className="flex justify-between items-center">
                           <p className="text-sm text-muted-foreground">
                             {classAssignments.length} Zuweisung{classAssignments.length !== 1 ? 'en' : ''}
+                            {!isEditMode && <span className="ml-2 text-blue-600 dark:text-blue-400">• Ansichtsmodus</span>}
+                            {isEditMode && <span className="ml-2 text-orange-600 dark:text-orange-400">• Bearbeitungsmodus</span>}
                           </p>
-                          <Button
-                            onClick={() => setNewAssignment({
-                              teacherId: '',
-                              subjectId: '',
-                              hoursPerWeek: 1,
-                              semester: '1',
-                            })}
-                            disabled={!!newAssignment}
-                            size="sm"
-                            data-testid="button-add-assignment"
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Neue Zuordnung
-                          </Button>
+                          {isEditMode && (
+                            <Button
+                              onClick={() => setNewAssignment({
+                                teacherId: '',
+                                subjectId: '',
+                                hoursPerWeek: 1,
+                                semester: '1',
+                              })}
+                              disabled={!!newAssignment}
+                              size="sm"
+                              data-testid="button-add-assignment"
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Neue Zuordnung
+                            </Button>
+                          )}
                         </div>
 
                         <Table data-testid="table-class-assignments">
@@ -1484,7 +1488,7 @@ export default function Stundenplaene() {
                           </TableHeader>
                           <TableBody>
                             {/* New Assignment Row */}
-                            {newAssignment && (
+                            {newAssignment && isEditMode && (
                               <TableRow data-testid="row-new-assignment">
                                 <TableCell>
                                   {/* Empty cell for checkbox column in new assignment row */}
@@ -1600,18 +1604,23 @@ export default function Stundenplaene() {
                             {classAssignments.map((assignment) => (
                               <TableRow key={assignment.id} data-testid={`row-class-assignment-${assignment.id}`}>
                                 <TableCell>
-                                  <Checkbox
-                                    checked={selectedClassAssignments.has(assignment.id)}
-                                    onCheckedChange={() => toggleClassAssignmentSelection(assignment.id)}
-                                    data-testid={`checkbox-class-assignment-${assignment.id}`}
-                                  />
+                                  {isEditMode ? (
+                                    <Checkbox
+                                      checked={selectedClassAssignments.has(assignment.id)}
+                                      onCheckedChange={() => toggleClassAssignmentSelection(assignment.id)}
+                                      data-testid={`checkbox-class-assignment-${assignment.id}`}
+                                    />
+                                  ) : (
+                                    <div className="w-4"></div>
+                                  )}
                                 </TableCell>
                                 <TableCell>
-                                  <Select
-                                    value={getEffectiveValue(assignment, 'teacherId') as string}
-                                    onValueChange={(value) => updateEditedAssignment(assignment.id, 'teacherId', value)}
-                                    data-testid={`select-teacher-${assignment.id}`}
-                                  >
+                                  {isEditMode ? (
+                                    <Select
+                                      value={getEffectiveValue(assignment, 'teacherId') as string}
+                                      onValueChange={(value) => updateEditedAssignment(assignment.id, 'teacherId', value)}
+                                      data-testid={`select-teacher-${assignment.id}`}
+                                    >
                                     <SelectTrigger className="w-full">
                                       <SelectValue>
                                         <div className="flex items-center space-x-2">
@@ -1666,14 +1675,37 @@ export default function Stundenplaene() {
                                         });
                                       })()}
                                     </SelectContent>
-                                  </Select>
+                                    </Select>
+                                  ) : (
+                                    <div className="flex items-center space-x-2">
+                                      <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                                        <span className="text-black dark:text-white text-xs font-medium">
+                                          {assignment.teacher?.shortName || '??'}
+                                        </span>
+                                      </div>
+                                      <div className="flex flex-col">
+                                        <span className="text-sm">
+                                          {assignment.teacher ? 
+                                            `${assignment.teacher.firstName} ${assignment.teacher.lastName}` : 
+                                            'Unbekannt'}
+                                        </span>
+                                        {isTeamTeaching(assignment) && (
+                                          <Badge variant="light" className="text-xs mt-1 w-fit">
+                                            <Users className="h-3 w-3 mr-1" />
+                                            Team: {getTeamTeachersDisplay(assignment)}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
                                 </TableCell>
                                 <TableCell>
-                                  <Select
-                                    value={getEffectiveValue(assignment, 'subjectId') as string}
-                                    onValueChange={(value) => updateEditedAssignment(assignment.id, 'subjectId', value)}
-                                    data-testid={`select-subject-${assignment.id}`}
-                                  >
+                                  {isEditMode ? (
+                                    <Select
+                                      value={getEffectiveValue(assignment, 'subjectId') as string}
+                                      onValueChange={(value) => updateEditedAssignment(assignment.id, 'subjectId', value)}
+                                      data-testid={`select-subject-${assignment.id}`}
+                                    >
                                     <SelectTrigger className="w-full">
                                       <SelectValue>
                                         <Badge variant="light">
@@ -1750,39 +1782,55 @@ export default function Stundenplaene() {
                                       })()}
                                     </SelectContent>
                                   </Select>
+                                  ) : (
+                                    <Badge variant="light">
+                                      {assignment.subject?.shortName || assignment.subject?.name || 'Unbekannt'}
+                                    </Badge>
+                                  )}
                                 </TableCell>
                                 <TableCell>
-                                  <Input
-                                    type="number"
-                                    min="1"
-                                    max="40"
-                                    value={parseFloat(getEffectiveValue(assignment, 'hoursPerWeek') as string)}
-                                    onChange={(e) => updateEditedAssignment(assignment.id, 'hoursPerWeek', parseInt(e.target.value) || 1)}
-                                    data-testid={`input-hours-${assignment.id}`}
-                                    className="w-20"
-                                  />
+                                  {isEditMode ? (
+                                    <Input
+                                      type="number"
+                                      min="1"
+                                      max="40"
+                                      value={parseFloat(getEffectiveValue(assignment, 'hoursPerWeek') as string)}
+                                      onChange={(e) => updateEditedAssignment(assignment.id, 'hoursPerWeek', parseInt(e.target.value) || 1)}
+                                      data-testid={`input-hours-${assignment.id}`}
+                                      className="w-20"
+                                    />
+                                  ) : (
+                                    <span className="font-medium">{assignment.hoursPerWeek}h</span>
+                                  )}
                                 </TableCell>
                                 <TableCell>
-                                  <Select
-                                    value={getEffectiveValue(assignment, 'semester') as string}
-                                    onValueChange={(value: "1" | "2") => updateEditedAssignment(assignment.id, 'semester', value)}
-                                    data-testid={`select-semester-${assignment.id}`}
-                                  >
-                                    <SelectTrigger className="w-24">
-                                      <SelectValue>
-                                        <Badge variant="light">
-                                          {assignment.semester === "1" ? "1. HJ" : "2. HJ"}
-                                        </Badge>
-                                      </SelectValue>
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="1">1. HJ</SelectItem>
-                                      <SelectItem value="2">2. HJ</SelectItem>
-                                    </SelectContent>
-                                  </Select>
+                                  {isEditMode ? (
+                                    <Select
+                                      value={getEffectiveValue(assignment, 'semester') as string}
+                                      onValueChange={(value: "1" | "2") => updateEditedAssignment(assignment.id, 'semester', value)}
+                                      data-testid={`select-semester-${assignment.id}`}
+                                    >
+                                      <SelectTrigger className="w-24">
+                                        <SelectValue>
+                                          <Badge variant="light">
+                                            {assignment.semester === "1" ? "1. HJ" : "2. HJ"}
+                                          </Badge>
+                                        </SelectValue>
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="1">1. HJ</SelectItem>
+                                        <SelectItem value="2">2. HJ</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  ) : (
+                                    <Badge variant="light">
+                                      {assignment.semester === "1" ? "1. HJ" : "2. HJ"}
+                                    </Badge>
+                                  )}
                                 </TableCell>
                                 <TableCell>
-                                  <div className="flex space-x-2">
+                                  {isEditMode && (
+                                    <div className="flex space-x-2">
                                     {hasChanges(assignment.id) && (
                                       <>
                                         <Button
@@ -1865,7 +1913,8 @@ export default function Stundenplaene() {
                                         </AlertDialogFooter>
                                       </AlertDialogContent>
                                     </AlertDialog>
-                                  </div>
+                                    </div>
+                                  )}
                                 </TableCell>
                               </TableRow>
                             ))}
