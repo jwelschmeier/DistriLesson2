@@ -3,7 +3,9 @@ import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from "ws";
 import * as schema from "@shared/schema";
 
+// Optimize connection handling for performance
 neonConfig.webSocketConstructor = ws;
+neonConfig.fetchConnectionCache = true; // Enable connection caching for better performance
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
