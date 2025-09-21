@@ -1340,7 +1340,7 @@ export default function Stundenplaene() {
                           return (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
                               {Object.entries(groupedAssignments).map(([subjectId, data]) => (
-                                <div key={subjectId} className="border rounded p-2 bg-muted/20">
+                                <div key={subjectId} className="border rounded px-1.5 py-1 bg-muted/20">
                                   <div className="flex flex-col items-center mb-1 space-y-1">
                                     <div className="bg-gray-100 dark:bg-gray-800 rounded px-1 py-0.5 text-[10px] font-medium border">
                                       {data.subjectShortName}
