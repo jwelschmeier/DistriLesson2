@@ -89,6 +89,9 @@ export const assignments = pgTable("assignments", {
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
   teamTeachingIndex: index("team_teaching_idx").on(table.teamTeachingId),
+  teacherYearIndex: index("idx_assignments_teacher_year").on(table.teacherId, table.schoolYearId),
+  classYearIndex: index("idx_assignments_class_year").on(table.classId, table.schoolYearId),
+  schoolYearIndex: index("idx_assignments_year").on(table.schoolYearId),
 }));
 
 export const planstellenScenarios = pgTable("planstellen_scenarios", {
