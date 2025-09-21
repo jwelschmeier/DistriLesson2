@@ -1337,60 +1337,65 @@ export default function Stundenplaene() {
                             groupedAssignments[subjectId].semesters[semester].assignments.push(assignment);
                           });
 
-                          return Object.entries(groupedAssignments).map(([subjectId, data]) => (
-                            <div key={subjectId} className="border rounded-lg p-4 bg-muted/30">
-                              <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center space-x-2">
-                                  <Badge variant="light" className="text-base px-3 py-1">
-                                    {data.subjectShortName}
-                                  </Badge>
-                                  <span className="font-medium text-foreground">{data.subjectName}</span>
-                                </div>
-                              </div>
-                              
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {['1', '2'].map(semester => {
-                                  const semesterData = data.semesters[semester];
-                                  if (!semesterData) return null;
+                          return (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+                              {Object.entries(groupedAssignments).map(([subjectId, data]) => (
+                                <div key={subjectId} className="border rounded p-2 bg-muted/20">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <Badge variant="light" className="text-xs px-2 py-0.5">
+                                      {data.subjectShortName}
+                                    </Badge>
+                                    <div className="text-xs text-muted-foreground truncate ml-1">
+                                      {data.subjectName}
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="space-y-1">
+                                    {['1', '2'].map(semester => {
+                                      const semesterData = data.semesters[semester];
+                                      if (!semesterData) return null;
 
-                                  return (
-                                    <div key={semester} className="bg-background rounded-lg p-3 border">
-                                      <div className="flex items-center justify-between mb-2">
-                                        <span className="font-medium text-sm">
-                                          {semester === '1' ? '1. Halbjahr' : '2. Halbjahr'}
-                                        </span>
-                                        <Badge variant={semesterData.totalHours > 0 ? "default" : "secondary"}>
-                                          {semesterData.totalHours}h
-                                        </Badge>
-                                      </div>
-                                      
-                                      <div className="space-y-1">
-                                        {semesterData.teachers.map((teacher, index) => (
-                                          <div key={index} className="flex items-center justify-between text-sm">
-                                            <div className="flex items-center space-x-2">
-                                              <div className="w-5 h-5 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                                                <span className="text-xs font-medium">
-                                                  {teacher.shortName}
-                                                </span>
-                                              </div>
-                                              <span className="text-foreground">{teacher.name}</span>
-                                              {teacher.isTeamTeaching && (
-                                                <Badge variant="outline" className="text-xs">
-                                                  <Users className="h-3 w-3 mr-1" />
-                                                  Team
-                                                </Badge>
+                                      return (
+                                        <div key={semester} className="flex items-center justify-between text-xs">
+                                          <span className="text-muted-foreground">
+                                            {semester}. HJ:
+                                          </span>
+                                          <div className="flex items-center space-x-1">
+                                            <Badge variant={semesterData.totalHours > 0 ? "default" : "secondary"} className="text-xs px-1.5 py-0.5">
+                                              {semesterData.totalHours}h
+                                            </Badge>
+                                            <div className="flex -space-x-1">
+                                              {semesterData.teachers.slice(0, 3).map((teacher, index) => (
+                                                <div 
+                                                  key={index} 
+                                                  className="w-4 h-4 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center border border-background"
+                                                  title={`${teacher.name} (${teacher.hours}h)${teacher.isTeamTeaching ? ' - Team' : ''}`}
+                                                >
+                                                  <span className="text-[8px] font-medium">
+                                                    {teacher.shortName.charAt(0)}
+                                                  </span>
+                                                </div>
+                                              ))}
+                                              {semesterData.teachers.length > 3 && (
+                                                <div 
+                                                  className="w-4 h-4 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center border border-background"
+                                                  title={`+${semesterData.teachers.length - 3} weitere`}
+                                                >
+                                                  <span className="text-[8px] font-medium">
+                                                    +{semesterData.teachers.length - 3}
+                                                  </span>
+                                                </div>
                                               )}
                                             </div>
-                                            <span className="text-muted-foreground">{teacher.hours}h</span>
                                           </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              ))}
                             </div>
-                          ));
+                          );
                         })()}
                         
                         {classAssignments.length === 0 && (
