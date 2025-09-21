@@ -1356,32 +1356,30 @@ export default function Stundenplaene() {
                                       if (!semesterData) return null;
 
                                       return (
-                                        <div key={semester} className="flex items-center justify-center text-xs">
-                                          <span className="text-muted-foreground w-8">
+                                        <div key={semester} className="flex items-center justify-center space-x-1 text-xs">
+                                          <span className="text-muted-foreground text-[10px]">
                                             {semester}.HJ
                                           </span>
-                                          <Badge variant={semesterData.totalHours > 0 ? "default" : "secondary"} className="text-xs px-1 py-0.5 mr-2">
+                                          <div className="bg-blue-100 dark:bg-blue-900 rounded px-1 py-0.5 text-[10px] font-medium border">
                                             {semesterData.totalHours}h
-                                          </Badge>
-                                          <div className="flex items-center space-x-0.5 flex-1 min-w-0">
-                                            {semesterData.teachers.slice(0, 2).map((teacher, index) => (
-                                              <div 
-                                                key={index} 
-                                                className="bg-blue-100 dark:bg-blue-900 rounded px-1 py-0.5 text-[10px] font-medium border"
-                                                title={`${teacher.name} (${teacher.hours}h)${teacher.isTeamTeaching ? ' - Team' : ''}`}
-                                              >
-                                                {teacher.shortName}
-                                              </div>
-                                            ))}
-                                            {semesterData.teachers.length > 2 && (
-                                              <div 
-                                                className="bg-gray-100 dark:bg-gray-800 rounded px-1 py-0.5 text-[10px] font-medium border"
-                                                title={`+${semesterData.teachers.length - 2} weitere: ${semesterData.teachers.slice(2).map(t => t.shortName).join(', ')}`}
-                                              >
-                                                +{semesterData.teachers.length - 2}
-                                              </div>
-                                            )}
                                           </div>
+                                          {semesterData.teachers.slice(0, 2).map((teacher, index) => (
+                                            <div 
+                                              key={index} 
+                                              className="bg-gray-100 dark:bg-gray-800 rounded px-1 py-0.5 text-[10px] font-medium border"
+                                              title={`${teacher.name} (${teacher.hours}h)${teacher.isTeamTeaching ? ' - Team' : ''}`}
+                                            >
+                                              {teacher.shortName}
+                                            </div>
+                                          ))}
+                                          {semesterData.teachers.length > 2 && (
+                                            <div 
+                                              className="bg-gray-100 dark:bg-gray-800 rounded px-1 py-0.5 text-[10px] font-medium border"
+                                              title={`+${semesterData.teachers.length - 2} weitere: ${semesterData.teachers.slice(2).map(t => t.shortName).join(', ')}`}
+                                            >
+                                              +{semesterData.teachers.length - 2}
+                                            </div>
+                                          )}
                                         </div>
                                       );
                                     })}
