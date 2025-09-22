@@ -1,0 +1,36 @@
+# (Dein Workflow – Beispiel:)
+name: Deploy to Webspace
+on:
+  push:
+    branches: [ "main" ]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create .env from secrets
+        run: |
+          {
+            echo "DB_HOST=${{ secrets.DB_HOST }}"
+            echo "DB_PORT=${{ secrets.DB_PORT }}"
+            echo "DB_USER=${{ secrets.DB_USER }}"
+            echo "DB_PASS=${{ secrets.DB_PASS }}"
+            echo "DB_NAME=${{ secrets.DB_NAME }}"
+          } > .env
+      - name: FTP Deploy (SFTP)
+        uses: SamKirkland/FTP-Deploy-Action@v4
+        with:
+          server: ${{ vars.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: "sftp"
+          port: 22
+          local-dir: ${{ vars.LOCAL_DIR || '.' }}
+          server-dir: ${{ vars.FTP_SERVER_DIR || 'htdocs/' }}
+          dangerous-clean-slate: true
+          exclude: |
+            **/.git*
+            **/.github/**
+            **/node_modules/**
+            **/.replit
+            **/replit.nix
