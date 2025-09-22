@@ -2,7 +2,7 @@ name: Deploy to Webspace (SSH)
 
 on:
   push:
-    branches: [ "main" ]   # ggf. auf "master" ändern
+    branches: [ "main" ]
 
 jobs:
   deploy:
@@ -11,14 +11,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Dateien via SSH/rsync synchronisieren (SFTP/SSH, Port 22)
       - name: Sync files (SFTP/SSH)
         uses: SamKirkland/web-deploy@v1
         with:
-          target-server: ${{ vars.TARGET_SERVER }}
-          remote-user: ${{ vars.REMOTE_USER }}
+          target-server: home33661130.1and1-data.host
+          remote-user: p8158542
           private-ssh-key: ${{ secrets.SSH_KEY }}
           ssh-port: 22
-          destination-path: ${{ vars.DEST_PATH }}
-          # Zum Testen ohne Änderungen:
+          destination-path: ~/htdocs/
+          # Zum Testen erst dry-run einschalten (optional):
           # rsync-options: --dry-run
