@@ -1,36 +1,24 @@
-# (Dein Workflow – Beispiel:)
-name: Deploy to Webspace
+name: Deploy to Webspace (SSH)
+
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main" ]   # ggf. auf "master" ändern
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Create .env from secrets
-        run: |
-          {
-            echo "DB_HOST=${{ secrets.DB_HOST }}"
-            echo "DB_PORT=${{ secrets.DB_PORT }}"
-            echo "DB_USER=${{ secrets.DB_USER }}"
-            echo "DB_PASS=${{ secrets.DB_PASS }}"
-            echo "DB_NAME=${{ secrets.DB_NAME }}"
-          } > .env
-      - name: FTP Deploy (SFTP)
-        uses: SamKirkland/FTP-Deploy-Action@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Dateien via SSH/rsync synchronisieren (SFTP/SSH, Port 22)
+      - name: Sync files (SFTP/SSH)
+        uses: SamKirkland/web-deploy@v1
         with:
-          server: ${{ vars.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: "sftp"
-          port: 22
-          local-dir: ${{ vars.LOCAL_DIR || '.' }}
-          server-dir: ${{ vars.FTP_SERVER_DIR || 'htdocs/' }}
-          dangerous-clean-slate: true
-          exclude: |
-            **/.git*
-            **/.github/**
-            **/node_modules/**
-            **/.replit
-            **/replit.nix
+          target-server: ${{ vars.TARGET_SERVER }}
+          remote-user: ${{ vars.REMOTE_USER }}
+          private-ssh-key: ${{ secrets.SSH_KEY }}
+          ssh-port: 22
+          destination-path: ${{ vars.DEST_PATH }}
+          # Zum Testen ohne Änderungen:
+          # rsync-options: --dry-run
