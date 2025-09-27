@@ -727,7 +727,7 @@ export default function PlanstellberechnungPage() {
             </div>
 
             {/* === ZUSÄTZLICHE STELLEN === */}
-            <div className="bg-teal-50 p-2 rounded-lg mt-6">
+            <div className="bg-teal-50 dark:bg-teal-950/30 p-2 rounded-lg mt-6">
               <h3 className="font-bold text-center">Zusätzliche Stellen</h3>
             </div>
 
@@ -745,7 +745,7 @@ export default function PlanstellberechnungPage() {
             </div>
 
             {/* === STELLENBESETZUNG === */}
-            <div className="bg-cyan-50 p-2 rounded-lg mt-6">
+            <div className="bg-cyan-50 dark:bg-cyan-950/30 p-2 rounded-lg mt-6">
               <h3 className="font-bold text-center">Stellenbesetzung</h3>
             </div>
 
@@ -791,15 +791,15 @@ export default function PlanstellberechnungPage() {
             <Separator className="border-t-2" />
 
             {/* SUMME STELLENBESETZUNG F41 */}
-            <div className="grid grid-cols-2 gap-4 items-center bg-cyan-50 p-4 rounded-lg border-2 border-cyan-300">
+            <div className="grid grid-cols-2 gap-4 items-center bg-cyan-50 dark:bg-cyan-950/30 p-4 rounded-lg border-2 border-cyan-300 dark:border-cyan-800">
               <Label className="text-sm font-bold">Summe Stellenbesetzung</Label>
-              <div className="p-3 bg-cyan-100 border border-cyan-400 rounded text-right font-mono text-lg font-bold" data-testid="display-summe-stellenbesetzung">
+              <div className="p-3 bg-cyan-100 dark:bg-cyan-900/40 border border-cyan-400 dark:border-cyan-700 rounded text-right font-mono text-lg font-bold" data-testid="display-summe-stellenbesetzung">
                 {summeStellenbesetzung.toFixed(2)}
               </div>
             </div>
 
             {/* === PERSONALAUSSTATTUNG === */}
-            <div className="bg-indigo-50 p-2 rounded-lg mt-6">
+            <div className="bg-indigo-50 dark:bg-indigo-950/30 p-2 rounded-lg mt-6">
               <h3 className="font-bold text-center">Personalausstattung</h3>
             </div>
 
@@ -845,9 +845,9 @@ export default function PlanstellberechnungPage() {
             <Separator className="border-t-2" />
 
             {/* SUMME PERSONALAUSSTATTUNG F47 */}
-            <div className="grid grid-cols-2 gap-4 items-center bg-indigo-50 p-4 rounded-lg border-2 border-indigo-300">
+            <div className="grid grid-cols-2 gap-4 items-center bg-indigo-50 dark:bg-indigo-950/30 p-4 rounded-lg border-2 border-indigo-300 dark:border-indigo-800">
               <Label className="text-sm font-bold">Summe Personalausstattung</Label>
-              <div className="p-3 bg-indigo-100 border border-indigo-400 rounded text-right font-mono text-lg font-bold" data-testid="display-summe-personalausstattung">
+              <div className="p-3 bg-indigo-100 dark:bg-indigo-900/40 border border-indigo-400 dark:border-indigo-700 rounded text-right font-mono text-lg font-bold" data-testid="display-summe-personalausstattung">
                 {summePersonalausstattung.toFixed(2)}
               </div>
             </div>
@@ -876,9 +876,9 @@ export default function PlanstellberechnungPage() {
             </div>
 
             {/* DIFFERENZ SOLL-IST F51 */}
-            <div className="grid grid-cols-2 gap-4 items-center bg-blue-50 p-4 rounded-lg border-2 border-blue-300">
+            <div className="grid grid-cols-2 gap-4 items-center bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg border-2 border-blue-300 dark:border-blue-800">
               <Label className="text-sm font-bold">Differenz Soll-Ist</Label>
-              <div className="p-3 bg-blue-100 border border-blue-400 rounded text-right font-mono text-lg font-bold" data-testid="display-differenz-soll-ist">
+              <div className="p-3 bg-blue-100 dark:bg-blue-900/40 border border-blue-400 dark:border-blue-700 rounded text-right font-mono text-lg font-bold" data-testid="display-differenz-soll-ist">
                 {differenzSollIst.toFixed(2)}
               </div>
             </div>
@@ -1040,7 +1040,7 @@ export default function PlanstellberechnungPage() {
             </div>
 
             {/* === KLASSENBILDUNG === */}
-            <div className="bg-green-50 p-2 rounded-lg mt-6">
+            <div className="bg-green-50 dark:bg-green-950/30 p-2 rounded-lg mt-6">
               <h3 className="font-bold text-center">Klassenbildung</h3>
             </div>
 
@@ -1319,7 +1319,7 @@ export default function PlanstellberechnungPage() {
                 <Separator />
 
                 {/* Statistik Unterrichtsstunden */}
-                <div className="bg-blue-50 p-2 rounded-lg">
+                <div className="bg-blue-50 dark:bg-blue-950/30 p-2 rounded-lg">
                   <h3 className="font-bold text-center">Statistik Unterrichtsstunden</h3>
                 </div>
 
