@@ -21,16 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, Presentation, Search, Filter, Calendar, ChevronLeft, ChevronRight, User } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
-import { insertTeacherSchema, type Teacher, type InsertTeacher, type Subject } from "@shared/schema";
-
-type Assignment = {
-  id: string;
-  teacherId: string;
-  classId: string;
-  subjectId: string;
-  hoursPerWeek: string;
-  semester: string;
-};
+import { insertTeacherSchema, type Teacher, type InsertTeacher, type Subject, type Assignment } from "@shared/schema";
 import { z } from "zod";
 
 const teacherFormSchema = insertTeacherSchema.extend({
@@ -137,13 +128,35 @@ export default function Lehrerverwaltung() {
     queryKey: ["/api/assignments"],
   });
 
-  // Calculate actual current hours per teacher from assignments
+  // Calculate actual current hours per teacher from assignments with team teaching support
   const calculateActualCurrentHours = (teacherId: string): number => {
     const teacherAssignments = assignments.filter(a => a.teacherId === teacherId);
-    return teacherAssignments.reduce((sum, assignment) => {
+    
+    // Group assignments to prevent double-counting of team teaching hours
+    const processedAssignments = new Map<string, { hours: number }>();
+    
+    teacherAssignments.forEach(assignment => {
       const hours = Number.parseFloat(assignment.hoursPerWeek);
-      return sum + (Number.isFinite(hours) ? hours : 0);
-    }, 0);
+      
+      // Skip 0-hour assignments as they're often placeholders
+      if (!Number.isFinite(hours) || hours <= 0) return;
+      
+      // For team teaching, we need to count the hours for each teacher individually
+      // but avoid double-counting within the same teacher's workload
+      const groupKey = assignment.teamTeachingId 
+        ? `team-${assignment.teamTeachingId}-${assignment.classId}-${assignment.subjectId}-${assignment.semester}-${assignment.teacherId}`
+        : `individual-${assignment.classId}-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
+      
+      const existing = processedAssignments.get(groupKey);
+      
+      // Keep the assignment with maximum hours (handles duplicates)
+      if (!existing || hours > existing.hours) {
+        processedAssignments.set(groupKey, { hours: hours });
+      }
+    });
+    
+    // Sum up all processed hours
+    return Array.from(processedAssignments.values()).reduce((sum, processed) => sum + processed.hours, 0);
   };
 
   // Extract subject names for the form (using subject names consistently)

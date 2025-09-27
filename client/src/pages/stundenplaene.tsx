@@ -405,15 +405,44 @@ export default function Stundenplaene() {
     return filtered;
   }, [extendedAssignments, selectedClassId, selectedSemester]);
 
-  // Calculate teacher summary statistics
+  // Calculate teacher summary statistics with team teaching support
   const teacherSummary = useMemo(() => {
-    const totalHours = teacherAssignments.reduce((sum, assignment) => sum + parseFloat(assignment.hoursPerWeek), 0);
-    const s1Hours = teacherAssignments
-      .filter(assignment => assignment.semester === "1")
-      .reduce((sum, assignment) => sum + parseFloat(assignment.hoursPerWeek), 0);
-    const s2Hours = teacherAssignments
-      .filter(assignment => assignment.semester === "2")
-      .reduce((sum, assignment) => sum + parseFloat(assignment.hoursPerWeek), 0);
+    // Use the same grouping logic as teacherWorkloadBySemester for consistency
+    const processedAssignments = new Map<string, { hours: number; semester: string }>();
+    
+    teacherAssignments.forEach(assignment => {
+      const hours = parseFloat(assignment.hoursPerWeek);
+      
+      // Skip 0-hour assignments as they're often placeholders
+      if (hours <= 0) return;
+      
+      // For team teaching, we need to count the hours for each teacher individually
+      // but avoid double-counting within the same teacher's workload
+      const groupKey = assignment.teamTeachingId 
+        ? `team-${assignment.teamTeachingId}-${assignment.classId}-${assignment.subjectId}-${assignment.semester}-${assignment.teacherId}`
+        : `individual-${assignment.classId}-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
+      
+      const existing = processedAssignments.get(groupKey);
+      
+      // Keep the assignment with maximum hours (handles duplicates)
+      if (!existing || hours > existing.hours) {
+        processedAssignments.set(groupKey, {
+          hours: hours,
+          semester: assignment.semester
+        });
+      }
+    });
+    
+    // Calculate semester hours from processed assignments
+    const s1Hours = Array.from(processedAssignments.values())
+      .filter(a => a.semester === "1")
+      .reduce((sum, a) => sum + a.hours, 0);
+      
+    const s2Hours = Array.from(processedAssignments.values())
+      .filter(a => a.semester === "2")
+      .reduce((sum, a) => sum + a.hours, 0);
+    
+    const totalHours = s1Hours + s2Hours;
     
     return { totalHours, s1Hours, s2Hours };
   }, [teacherAssignments]);
