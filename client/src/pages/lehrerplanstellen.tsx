@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Users, TrendingUp, TrendingDown, AlertTriangle, CheckCircle } from "lucide-react";
+import { type Assignment } from "@shared/schema";
 
 interface Teacher {
   id: string;
@@ -42,6 +43,51 @@ export default function Lehrerplanstellen() {
     queryKey: ["/api/teachers"],
   });
 
+  const { data: assignments = [], isLoading: assignmentsLoading } = useQuery<Assignment[]>({
+    queryKey: ["/api/assignments"],
+  });
+
+  // Calculate actual current hours for a teacher based on assignments
+  const calculateActualCurrentHours = (teacherId: string): number => {
+    const teacherAssignments = assignments.filter(a => a.teacherId === teacherId);
+    
+    // Group assignments to prevent double-counting of team teaching hours
+    const processedAssignments = new Map<string, { hours: number; semester: string }>();
+    
+    teacherAssignments.forEach(assignment => {
+      const hours = Number.parseFloat(assignment.hoursPerWeek);
+      
+      // Skip 0-hour assignments as they're often placeholders
+      if (!Number.isFinite(hours) || hours <= 0) return;
+      
+      // For team teaching, we need to count the hours for each teacher individually
+      // but avoid double-counting within the same teacher's workload
+      const groupKey = assignment.teamTeachingId 
+        ? `team-${assignment.teamTeachingId}-${assignment.classId}-${assignment.subjectId}-${assignment.semester}-${assignment.teacherId}`
+        : `individual-${assignment.classId}-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
+      
+      const existing = processedAssignments.get(groupKey);
+      
+      // Keep the assignment with maximum hours (handles duplicates)
+      if (!existing || hours > existing.hours) {
+        processedAssignments.set(groupKey, { hours: hours, semester: assignment.semester });
+      }
+    });
+    
+    // Calculate semester hours separately
+    const s1Hours = Array.from(processedAssignments.values())
+      .filter(p => p.semester === "1")
+      .reduce((sum, p) => sum + p.hours, 0);
+      
+    const s2Hours = Array.from(processedAssignments.values())
+      .filter(p => p.semester === "2")
+      .reduce((sum, p) => sum + p.hours, 0);
+    
+    // Return the maximum of the two semesters (teacher's weekly workload)
+    // This matches the logic in stundenplaene.tsx
+    return Math.max(s1Hours, s2Hours);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "good": return "text-green-600";
@@ -71,8 +117,13 @@ export default function Lehrerplanstellen() {
 
   const totalTeachers = teachers?.length || 0;
   const activeTeachers = teachers?.filter(t => t.isActive).length || 0;
+  
+  // Calculate workload with the actual calculated hours
   const averageWorkload = teachers?.length ? 
-    teachers.reduce((sum, t) => sum + (t.currentHours / t.maxHours), 0) / teachers.length * 100 : 0;
+    teachers.reduce((sum, t) => {
+      const actualHours = calculateActualCurrentHours(t.id);
+      return sum + (actualHours / t.maxHours);
+    }, 0) / teachers.length * 100 : 0;
 
   const goodSupplied = mockPlanstellenOverview.filter(p => p.status === "good").length;
   const warnings = mockPlanstellenOverview.filter(p => p.status === "warning").length;
@@ -247,7 +298,7 @@ export default function Lehrerplanstellen() {
               <CardTitle>Lehrkräfte nach Fächern</CardTitle>
             </CardHeader>
             <CardContent>
-              {teachersLoading ? (
+              {teachersLoading || assignmentsLoading ? (
                 <div className="text-center py-8">Lade Lehrerdaten...</div>
               ) : !teachers || teachers.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
@@ -280,7 +331,8 @@ export default function Lehrerplanstellen() {
                     </thead>
                     <tbody className="bg-card divide-y divide-border">
                       {teachers.map((teacher) => {
-                        const workloadPercentage = (teacher.currentHours / teacher.maxHours) * 100;
+                        const actualCurrentHours = calculateActualCurrentHours(teacher.id);
+                        const workloadPercentage = (actualCurrentHours / teacher.maxHours) * 100;
                         return (
                           <tr key={teacher.id} data-testid={`row-teacher-${teacher.id}`}>
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -306,7 +358,7 @@ export default function Lehrerplanstellen() {
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                              {teacher.currentHours} / {teacher.maxHours}
+                              {actualCurrentHours.toFixed(1)} / {teacher.maxHours}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
