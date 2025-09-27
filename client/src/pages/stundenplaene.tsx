@@ -407,14 +407,14 @@ export default function Stundenplaene() {
 
   // Calculate teacher summary statistics
   const teacherSummary = useMemo(() => {
-    const totalHours = teacherAssignments.reduce((sum, assignment) => sum + parseFloat(assignment.hoursPerWeek), 0);
     const s1Hours = teacherAssignments
       .filter(assignment => assignment.semester === "1")
       .reduce((sum, assignment) => sum + parseFloat(assignment.hoursPerWeek), 0);
     const s2Hours = teacherAssignments
       .filter(assignment => assignment.semester === "2")
       .reduce((sum, assignment) => sum + parseFloat(assignment.hoursPerWeek), 0);
-    
+    const totalHours = Math.max(s1Hours, s2Hours);
+
     return { totalHours, s1Hours, s2Hours };
   }, [teacherAssignments]);
 
@@ -543,7 +543,7 @@ export default function Stundenplaene() {
       } else if (assignment.semester === "2") {
         current["2"] += parseFloat(assignment.hoursPerWeek);
       }
-      current.total = current["1"] + current["2"];
+      current.total = Math.max(current["1"], current["2"]);
       
       workloadMap.set(teacherId, current);
     });

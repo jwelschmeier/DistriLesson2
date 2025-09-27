@@ -116,7 +116,7 @@ export default function MasterStundenplan() {
         .filter(a => a.semester === "2")
         .reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
       
-      const totalHours = semester1Hours + semester2Hours;
+      const totalHours = Math.max(semester1Hours, semester2Hours);
       const maxHours = parseFloat(teacher.maxHours);
       const utilizationPercent = maxHours > 0 ? (totalHours / maxHours) * 100 : 0;
       const isOverloaded = totalHours > maxHours;
