@@ -122,7 +122,8 @@ export default function Lehrerplanstellen() {
   const averageWorkload = teachers?.length ? 
     teachers.reduce((sum, t) => {
       const actualHours = calculateActualCurrentHours(t.id);
-      return sum + (actualHours / t.maxHours);
+      const maxHours = Number(t.maxHours) || 0;
+      return sum + (maxHours > 0 ? actualHours / maxHours : 0);
     }, 0) / teachers.length * 100 : 0;
 
   const goodSupplied = mockPlanstellenOverview.filter(p => p.status === "good").length;
@@ -332,7 +333,8 @@ export default function Lehrerplanstellen() {
                     <tbody className="bg-card divide-y divide-border">
                       {teachers.map((teacher) => {
                         const actualCurrentHours = calculateActualCurrentHours(teacher.id);
-                        const workloadPercentage = (actualCurrentHours / teacher.maxHours) * 100;
+                        const maxHours = Number(teacher.maxHours) || 0;
+                        const workloadPercentage = maxHours > 0 ? (actualCurrentHours / maxHours) * 100 : 0;
                         return (
                           <tr key={teacher.id} data-testid={`row-teacher-${teacher.id}`}>
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -358,7 +360,7 @@ export default function Lehrerplanstellen() {
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                              {actualCurrentHours.toFixed(1)} / {teacher.maxHours}
+                              {actualCurrentHours.toFixed(1)} / {maxHours.toFixed(1)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
