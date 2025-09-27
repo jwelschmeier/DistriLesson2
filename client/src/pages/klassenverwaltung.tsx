@@ -900,9 +900,33 @@ export default function Klassenverwaltung() {
                         </TableCell>
                         <TableCell className="py-1">{classData.grade}</TableCell>
                         <TableCell className="py-1">
-                          <span className={`font-medium ${actualAssignedHours !== correctHours ? 'text-orange-600' : 'text-green-600'}`}>
-                            {actualAssignedHours} / {correctHours}
-                          </span>
+                          <div className="space-y-1">
+                            <span className={`font-medium ${actualAssignedHours !== correctHours ? 'text-orange-600' : 'text-green-600'}`}>
+                              {actualAssignedHours} / {correctHours}
+                            </span>
+                            {(() => {
+                              const openHours = correctHours - actualAssignedHours;
+                              if (openHours > 0) {
+                                return (
+                                  <div className="text-xs text-orange-600 font-medium" data-testid={`open-hours-${classData.id}`}>
+                                    Noch {openHours}h offen
+                                  </div>
+                                );
+                              } else if (openHours < 0) {
+                                return (
+                                  <div className="text-xs text-red-600 font-medium" data-testid={`over-hours-${classData.id}`}>
+                                    {Math.abs(openHours)}h über Ziel
+                                  </div>
+                                );
+                              } else {
+                                return (
+                                  <div className="text-xs text-green-600 font-medium" data-testid={`complete-hours-${classData.id}`}>
+                                    Vollständig zugewiesen
+                                  </div>
+                                );
+                              }
+                            })()}
+                          </div>
                         </TableCell>
                         <TableCell className="py-1">{teacherDisplay}</TableCell>
                         <TableCell className="text-right py-1">
