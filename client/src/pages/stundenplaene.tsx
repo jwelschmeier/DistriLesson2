@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Calendar, Clock, Users, BookOpen, Presentation, School, Save, Trash2, Plus, Edit, Eye, AlertTriangle } from "lucide-react";
+import { Calendar, Clock, Users, BookOpen, Presentation, School, GraduationCap, Save, Trash2, Plus, Edit, Eye, AlertTriangle } from "lucide-react";
 import { insertAssignmentSchema, type InsertAssignment } from "@shared/schema";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
@@ -966,7 +966,113 @@ export default function Stundenplaene() {
 
               {selectedTeacher && (
                 <>
-                  {/* Teacher Summary Cards */}
+                  {/* Assignment Overview Statistics */}
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
+                    <Card data-testid="card-teacher-total-assignments">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-muted-foreground text-xs font-medium">Zuweisungen</p>
+                            <p className="text-2xl font-bold text-foreground" data-testid="text-teacher-total-assignments">
+                              {teacherAssignments.length}
+                            </p>
+                          </div>
+                          <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+                            <BookOpen className="text-indigo-600 text-sm" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card data-testid="card-teacher-subjects">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-muted-foreground text-xs font-medium">Fächer</p>
+                            <p className="text-2xl font-bold text-foreground" data-testid="text-teacher-subjects">
+                              {new Set(teacherAssignments.map(a => a.subjectId)).size}
+                            </p>
+                          </div>
+                          <div className="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center">
+                            <BookOpen className="text-cyan-600 text-sm" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card data-testid="card-teacher-classes">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-muted-foreground text-xs font-medium">Klassen</p>
+                            <p className="text-2xl font-bold text-foreground" data-testid="text-teacher-classes">
+                              {new Set(teacherAssignments.map(a => a.classId)).size}
+                            </p>
+                          </div>
+                          <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center">
+                            <School className="text-teal-600 text-sm" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card data-testid="card-teacher-conflicts">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-muted-foreground text-xs font-medium">Konflikte</p>
+                            <p className="text-2xl font-bold text-foreground" data-testid="text-teacher-conflicts">
+                              {(() => {
+                                const conflicts = teacherAssignments.filter(assignment => {
+                                  const teacher = teachers?.find(t => t.id === assignment.teacherId);
+                                  const subject = subjects?.find(s => s.id === assignment.subjectId);
+                                  
+                                  if (!teacher || !subject) return false;
+                                  
+                                  // Check qualification
+                                  const teacherSubjects = teacher.subjects.flatMap(subjectString => 
+                                    subjectString.split(',').map(s => s.trim().toUpperCase())
+                                  );
+                                  const subjectShortName = subject.shortName.trim().toUpperCase();
+                                  if (!teacherSubjects.includes(subjectShortName)) return true;
+                                  
+                                  // Check overload
+                                  const semesterAssignments = teacherAssignments.filter(a => a.semester === assignment.semester);
+                                  const semesterHours = semesterAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
+                                  return semesterHours > parseFloat(teacher.maxHours);
+                                });
+                                return conflicts.length;
+                              })()}
+                            </p>
+                          </div>
+                          <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                            <AlertTriangle className="text-red-600 text-sm" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card data-testid="card-teacher-workload">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-muted-foreground text-xs font-medium">Auslastung</p>
+                            <p className="text-2xl font-bold text-foreground" data-testid="text-teacher-workload">
+                              {Math.round(((teacherSummary.s1Hours + teacherSummary.s2Hours) / (2 * parseFloat(selectedTeacher?.maxHours || "25"))) * 100)}%
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {(teacherSummary.s1Hours + teacherSummary.s2Hours).toFixed(1)} / {(2 * parseFloat(selectedTeacher?.maxHours || "25")).toFixed(1)}h
+                            </p>
+                          </div>
+                          <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                            <Users className="text-emerald-600 text-sm" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Teacher Hourly Summary Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                     <Card data-testid="card-teacher-max-hours">
                       <CardContent className="p-4">
@@ -1106,7 +1212,42 @@ export default function Stundenplaene() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {teacherAssignments.map((assignment) => (
+                            {teacherAssignments.map((assignment) => {
+                              // Calculate conflict status for this assignment
+                              const getAssignmentConflictStatus = () => {
+                                const teacher = teachers?.find(t => t.id === assignment.teacherId);
+                                const subject = subjects?.find(s => s.id === assignment.subjectId);
+                                
+                                if (!teacher || !subject) return null;
+                                
+                                // Check qualification
+                                const teacherSubjects = teacher.subjects.flatMap(subjectString => 
+                                  subjectString.split(',').map(s => s.trim().toUpperCase())
+                                );
+                                const subjectShortName = subject.shortName.trim().toUpperCase();
+                                if (!teacherSubjects.includes(subjectShortName)) {
+                                  return { type: "error", message: "Keine Qualifikation" };
+                                }
+                                
+                                // Check semester workload
+                                const semesterAssignments = teacherAssignments.filter(a => a.semester === assignment.semester);
+                                const semesterHours = semesterAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
+                                const maxHours = parseFloat(teacher.maxHours);
+                                
+                                if (semesterHours > maxHours) {
+                                  return { type: "error", message: `Überbelastung ${assignment.semester}.HJ` };
+                                }
+                                
+                                if (semesterHours > maxHours * 0.9) {
+                                  return { type: "warning", message: `Hohe Belastung ${assignment.semester}.HJ` };
+                                }
+                                
+                                return { type: "success", message: "OK" };
+                              };
+
+                              const conflictStatus = getAssignmentConflictStatus();
+
+                              return (
                               <TableRow key={assignment.id} data-testid={`row-teacher-assignment-${assignment.id}`}>
                                 <TableCell>
                                   <Checkbox
@@ -1128,6 +1269,29 @@ export default function Stundenplaene() {
                                   <Badge variant="light">
                                     {assignment.semester === "1" ? "1. HJ" : "2. HJ"}
                                   </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {conflictStatus && (
+                                    <div className="flex items-center">
+                                      {conflictStatus.type === "error" && (
+                                        <AlertTriangle className="w-4 h-4 text-red-500 mr-1" />
+                                      )}
+                                      {conflictStatus.type === "warning" && (
+                                        <AlertTriangle className="w-4 h-4 text-orange-500 mr-1" />
+                                      )}
+                                      {conflictStatus.type === "success" && (
+                                        <div className="w-4 h-4 rounded-full bg-green-500 mr-1"></div>
+                                      )}
+                                      <Badge 
+                                        variant={
+                                          conflictStatus.type === "error" ? "destructive" :
+                                          conflictStatus.type === "warning" ? "light" : "light"
+                                        }
+                                      >
+                                        {conflictStatus.message}
+                                      </Badge>
+                                    </div>
+                                  )}
                                 </TableCell>
                                 <TableCell className="text-center">
                                   <AlertDialog>
@@ -1167,7 +1331,8 @@ export default function Stundenplaene() {
                                   </AlertDialog>
                                 </TableCell>
                               </TableRow>
-                            ))}
+                            );
+                            })}
                           </TableBody>
                         </Table>
                       )}
