@@ -282,6 +282,7 @@ export default function PlanstellberechnungPage() {
                     <Input
                       value={planstellenData.schulname}
                       onChange={(e) => handleInputChange('schulname', e.target.value)}
+                      className="bg-background border-border"
                       data-testid="input-schulname"
                     />
                   </div>
@@ -290,6 +291,7 @@ export default function PlanstellberechnungPage() {
                     <Input
                       value={planstellenData.schuljahr}
                       onChange={(e) => handleInputChange('schuljahr', e.target.value)}
+                      className="bg-background border-border"
                       data-testid="input-schuljahr"
                     />
                   </div>
@@ -1072,7 +1074,7 @@ export default function PlanstellberechnungPage() {
             </div>
 
             {/* === STATISTIK UNTERRICHTSSTUNDEN === */}
-            <div className="bg-blue-50 p-2 rounded-lg mt-6">
+            <div className="bg-blue-50 dark:bg-blue-950/30 p-2 rounded-lg mt-6">
               <h3 className="font-bold text-center">Statistik Unterrichtsstunden</h3>
             </div>
 
@@ -1105,7 +1107,7 @@ export default function PlanstellberechnungPage() {
             {/* Abweichung Unterrichtsstunden */}
             <div className="grid grid-cols-2 gap-4 items-center">
               <Label className="text-sm">Abweichung Unterrichtsstunden</Label>
-              <div className="p-3 bg-blue-100 border border-blue-400 rounded text-right font-mono text-lg font-bold" data-testid="display-abweichung-unterrichtsstunden">
+              <div className="p-3 bg-blue-100 dark:bg-blue-900/40 border border-blue-400 dark:border-blue-700 rounded text-right font-mono text-lg font-bold" data-testid="display-abweichung-unterrichtsstunden">
                 {abweichungUnterrichtsstunden}
               </div>
             </div>
@@ -1141,9 +1143,9 @@ export default function PlanstellberechnungPage() {
                     data-testid="input-vorhandene-planstellen"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4 items-center bg-blue-50 p-4 rounded-lg border-2 border-blue-300">
+                <div className="grid grid-cols-2 gap-4 items-center bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg border-2 border-blue-300 dark:border-blue-800">
                   <Label className="text-sm font-bold">Differenz Soll-Ist</Label>
-                  <div className={`p-3 border rounded text-right font-mono text-lg font-bold ${differenzSollIst >= 0 ? 'bg-green-100 border-green-400' : 'bg-red-100 border-red-400'}`} data-testid="display-differenz-soll-ist">
+                  <div className={`p-3 border rounded text-right font-mono text-lg font-bold ${differenzSollIst >= 0 ? 'bg-green-100 dark:bg-green-900/40 border-green-400 dark:border-green-700' : 'bg-red-100 dark:bg-red-900/40 border-red-400 dark:border-red-700'}`} data-testid="display-differenz-soll-ist">
                     {differenzSollIst >= 0 ? '+' : ''}{differenzSollIst.toFixed(2)}
                   </div>
                 </div>
@@ -1208,7 +1210,7 @@ export default function PlanstellberechnungPage() {
             </AccordionTrigger>
             <AccordionContent>
               <CardContent className="space-y-4">
-                <div className="bg-indigo-50 p-2 rounded-lg">
+                <div className="bg-indigo-50 dark:bg-indigo-950/30 p-2 rounded-lg">
                   <h3 className="font-bold text-center">Schulleiterpauschal-Berechnung</h3>
                 </div>
                 
@@ -1252,14 +1254,14 @@ export default function PlanstellberechnungPage() {
 
                 <div className="grid grid-cols-2 gap-4 items-center">
                   <Label className="text-sm font-medium">geänderte und abgerundete Schulleiterpauschal</Label>
-                  <div className="p-3 bg-indigo-100 border border-indigo-400 rounded text-right font-mono text-lg font-bold" data-testid="display-geaenderte-schulleiterpauschal">
+                  <div className="p-3 bg-indigo-100 dark:bg-indigo-900/40 border border-indigo-400 dark:border-indigo-700 rounded text-right font-mono text-lg font-bold" data-testid="display-geaenderte-schulleiterpauschal">
                     {geaenderteSchulleiterpauschal}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 items-center">
                   <Label className="text-sm font-medium">geänderte und aufgerundete Stellvertreterpauschal</Label>
-                  <div className="p-3 bg-indigo-100 border border-indigo-400 rounded text-right font-mono text-lg font-bold" data-testid="display-geaenderte-stellvertreterpauschal">
+                  <div className="p-3 bg-indigo-100 dark:bg-indigo-900/40 border border-indigo-400 dark:border-indigo-700 rounded text-right font-mono text-lg font-bold" data-testid="display-geaenderte-stellvertreterpauschal">
                     {geaenderteStellvertreterpauschal}
                   </div>
                 </div>
@@ -1284,7 +1286,7 @@ export default function PlanstellberechnungPage() {
               <CardContent className="space-y-6">
                 
                 {/* Klassenbildung */}
-                <div className="bg-green-50 p-2 rounded-lg">
+                <div className="bg-green-50 dark:bg-green-950/30 p-2 rounded-lg">
                   <h3 className="font-bold text-center">Klassenbildung</h3>
                 </div>
 
@@ -1345,9 +1347,9 @@ export default function PlanstellberechnungPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 items-center bg-blue-50 p-4 rounded-lg border-2 border-blue-300">
+                <div className="grid grid-cols-2 gap-4 items-center bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg border-2 border-blue-300 dark:border-blue-800">
                   <Label className="text-sm font-bold">Abweichung Unterrichtsstunden</Label>
-                  <div className="p-3 bg-blue-100 border border-blue-400 rounded text-right font-mono text-lg font-bold" data-testid="display-abweichung-unterrichtsstunden">
+                  <div className="p-3 bg-blue-100 dark:bg-blue-900/40 border border-blue-400 dark:border-blue-700 rounded text-right font-mono text-lg font-bold" data-testid="display-abweichung-unterrichtsstunden">
                     {abweichungUnterrichtsstunden}
                   </div>
                 </div>
