@@ -6,7 +6,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { Button } from "@/components/ui/button";
 import { BarChart3, Upload, Calculator, Users, Presentation, School, Clock, Sparkles, BookOpen, Calendar, Grid, RefreshCw, Menu, ChevronLeft, MessageSquare, Moon, Sun } from "lucide-react";
 import logoImage from "@assets/logo-removebg-preview_1757711438324.png";
-import logoImageDark from "@assets/ChatGPT Image 27. Sept. 2025, 20_28_41_1758997742898.png";
+import logoImageDark from "@assets/ChatGPT_Image_27._Sept._2025__20_28_41-removebg-preview_1758998077210.png";
 
 const navigationItems = [
   { href: "/", label: "Dashboard", icon: BarChart3 },
