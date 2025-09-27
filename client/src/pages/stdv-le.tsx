@@ -62,6 +62,47 @@ export default function StdvLe() {
     queryKey: ["/api/assignments"],
   });
 
+  // Calculate actual current hours for a teacher based on assignments
+  const calculateActualCurrentHours = (teacherId: string): number => {
+    const teacherAssignments = assignments?.filter(a => a.teacherId === teacherId) || [];
+    
+    // Group assignments to prevent double-counting of team teaching hours
+    const processedAssignments = new Map<string, { hours: number; semester: string }>();
+    
+    teacherAssignments.forEach(assignment => {
+      const hours = Number.parseFloat(assignment.hoursPerWeek);
+      
+      // Skip 0-hour assignments as they're often placeholders
+      if (!Number.isFinite(hours) || hours <= 0) return;
+      
+      // For team teaching, we need to count the hours for each teacher individually
+      // but avoid double-counting within the same teacher's workload
+      const groupKey = assignment.teamTeachingId 
+        ? `team-${assignment.teamTeachingId}-${assignment.classId}-${assignment.subjectId}-${assignment.semester}-${assignment.teacherId}`
+        : `individual-${assignment.classId}-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
+      
+      const existing = processedAssignments.get(groupKey);
+      
+      // Keep the assignment with maximum hours (handles duplicates)
+      if (!existing || hours > existing.hours) {
+        processedAssignments.set(groupKey, { hours: hours, semester: assignment.semester });
+      }
+    });
+    
+    // Calculate semester hours separately
+    const s1Hours = Array.from(processedAssignments.values())
+      .filter(p => p.semester === "1")
+      .reduce((sum, p) => sum + p.hours, 0);
+      
+    const s2Hours = Array.from(processedAssignments.values())
+      .filter(p => p.semester === "2")
+      .reduce((sum, p) => sum + p.hours, 0);
+    
+    // Return the maximum of the two semesters (teacher's weekly workload)
+    // This matches the logic in stundenplaene.tsx and lehrerverwaltung.tsx
+    return Math.max(s1Hours, s2Hours);
+  };
+
   const form = useForm<AssignmentFormData>({
     resolver: zodResolver(assignmentFormSchema),
     defaultValues: {
@@ -676,6 +717,11 @@ export default function StdvLe() {
                                       "Unbekannt"
                                     }
                                   </div>
+                                  {assignment.teacher && (
+                                    <div className="text-sm text-muted-foreground">
+                                      {calculateActualCurrentHours(assignment.teacher.id).toFixed(1)} / {Number(assignment.teacher.maxHours).toFixed(1)} Std.
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </td>
