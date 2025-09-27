@@ -1306,7 +1306,7 @@ export default function Stundenplaene() {
                             const semester = assignment.semester || '1';
                             const hours = parseFloat(assignment.hoursPerWeek) || 0;
                             const teacherName = assignment.teacher ? 
-                              `${assignment.teacher.firstName} ${assignment.teacher.lastName}` : 
+                              `${assignment.teacher.lastName}, ${assignment.teacher.firstName}` : 
                               'Unbekannt';
                             const teacherShortName = assignment.teacher?.shortName || '??';
                             const isTeamTeaching = !!assignment.teamTeachingId;
@@ -1629,7 +1629,7 @@ export default function Stundenplaene() {
                                           <div className="flex flex-col">
                                             <span className="text-sm">
                                               {assignment.teacher ? 
-                                                `${assignment.teacher.firstName} ${assignment.teacher.lastName}` : 
+                                                `${assignment.teacher.lastName}, ${assignment.teacher.firstName}` : 
                                                 'Unbekannt'}
                                             </span>
                                             {isTeamTeaching(assignment) && (
@@ -1683,7 +1683,7 @@ export default function Stundenplaene() {
                                       <div className="flex flex-col">
                                         <span className="text-sm">
                                           {assignment.teacher ? 
-                                            `${assignment.teacher.firstName} ${assignment.teacher.lastName}` : 
+                                            `${assignment.teacher.lastName}, ${assignment.teacher.firstName}` : 
                                             'Unbekannt'}
                                         </span>
                                         {isTeamTeaching(assignment) && (
