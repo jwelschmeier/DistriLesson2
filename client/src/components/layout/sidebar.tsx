@@ -18,7 +18,6 @@ const navigationItems = [
   { href: "/faecherverwaltung", label: "Fächerverwaltung", icon: BookOpen },
   { href: "/stundenplaene", label: "Stundenpläne", icon: Calendar },
   { href: "/master-stundenplan", label: "Master-Stundenplan", icon: Grid },
-  { href: "/stdv-le", label: "StdV-Le", icon: Clock },
   { href: "/stdv-kl-optimum", label: "StdV-Kl-Optimum", icon: Sparkles },
   { href: "/schuljahreswechsel", label: "Schuljahreswechsel", icon: RefreshCw },
 ];
