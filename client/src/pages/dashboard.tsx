@@ -20,8 +20,44 @@ interface Teacher {
   lastName: string;
   shortName: string;
   subjects: string[];
-  currentHours: number;
-  maxHours: number;
+  currentHours: string;
+  maxHours: string;
+  personnelNumber?: string;
+  email?: string;
+  dateOfBirth?: string;
+  qualifications: string[];
+  reductionHours: {
+    AE?: number;
+    BA?: number;
+    SL?: number;
+    SO?: number;
+    LK?: number;
+    SB?: number;
+    VG?: number;
+  };
+  notes?: string;
+  isActive: boolean;
+  createdAt?: string;
+}
+
+interface Assignment {
+  id: string;
+  teacherId: string;
+  classId: string;
+  subjectId: string;
+  hoursPerWeek: string;
+  semester: string;
+  teamTeachingId?: string;
+  isOptimized: boolean;
+  teacher?: Teacher;
+  class?: {
+    id: string;
+    name: string;
+  };
+  subject?: {
+    id: string;
+    name: string;
+  };
 }
 
 interface SubjectStaffing {
@@ -54,6 +90,51 @@ export default function Dashboard() {
   const { data: teachers, isLoading: teachersLoading } = useQuery<Teacher[]>({
     queryKey: ["/api/teachers"],
   });
+
+  const { data: assignments } = useQuery<Assignment[]>({
+    queryKey: ["/api/assignments"],
+  });
+
+  // Calculate actual current hours for a teacher based on assignments
+  const calculateActualCurrentHours = (teacherId: string): number => {
+    const teacherAssignments = assignments?.filter(a => a.teacherId === teacherId) || [];
+    
+    // Group assignments to prevent double-counting of team teaching hours
+    const processedAssignments = new Map<string, { hours: number; semester: string }>();
+    
+    teacherAssignments.forEach(assignment => {
+      const hours = Number.parseFloat(assignment.hoursPerWeek);
+      
+      // Skip 0-hour assignments as they're often placeholders
+      if (!Number.isFinite(hours) || hours <= 0) return;
+      
+      // For team teaching, we need to count the hours for each teacher individually
+      // but avoid double-counting within the same teacher's workload
+      const groupKey = assignment.teamTeachingId 
+        ? `team-${assignment.teamTeachingId}-${assignment.classId}-${assignment.subjectId}-${assignment.semester}-${assignment.teacherId}`
+        : `individual-${assignment.classId}-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
+      
+      const existing = processedAssignments.get(groupKey);
+      
+      // Keep the assignment with maximum hours (handles duplicates)
+      if (!existing || hours > existing.hours) {
+        processedAssignments.set(groupKey, { hours: hours, semester: assignment.semester });
+      }
+    });
+    
+    // Calculate semester hours separately
+    const s1Hours = Array.from(processedAssignments.values())
+      .filter(p => p.semester === "1")
+      .reduce((sum, p) => sum + p.hours, 0);
+      
+    const s2Hours = Array.from(processedAssignments.values())
+      .filter(p => p.semester === "2")
+      .reduce((sum, p) => sum + p.hours, 0);
+    
+    // Return the maximum of the two semesters (teacher's weekly workload)
+    // This matches the logic in stundenplaene.tsx and lehrerverwaltung.tsx
+    return Math.max(s1Hours, s2Hours);
+  };
 
   const getWorkloadStatus = (current: number, max: number) => {
     const percentage = (current / max) * 100;
@@ -286,7 +367,9 @@ export default function Dashboard() {
                     </thead>
                     <tbody className="bg-card divide-y divide-border">
                       {teachers?.slice(0, 5).map((teacher) => {
-                        const workloadPercentage = (teacher.currentHours / teacher.maxHours) * 100;
+                        const actualCurrentHours = calculateActualCurrentHours(teacher.id);
+                        const maxHours = Number.parseFloat(teacher.maxHours) || 25;
+                        const workloadPercentage = (actualCurrentHours / maxHours) * 100;
                         return (
                           <tr key={teacher.id} data-testid={`row-teacher-${teacher.id}`}>
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -300,7 +383,9 @@ export default function Dashboard() {
                                   <div className="text-sm font-medium text-foreground">
                                     {teacher.firstName} {teacher.lastName}
                                   </div>
-                                  <div className="text-sm text-muted-foreground">{teacher.id}</div>
+                                  <div className="text-sm text-muted-foreground" data-testid={`text-teacher-hours-${teacher.id}`}>
+                                    {actualCurrentHours.toFixed(1)} / {maxHours.toFixed(1)} Std.
+                                  </div>
                                 </div>
                               </div>
                             </td>
@@ -312,7 +397,7 @@ export default function Dashboard() {
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                              {teacher.currentHours} / {teacher.maxHours}
+                              {actualCurrentHours.toFixed(1)} / {maxHours.toFixed(1)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
@@ -326,7 +411,7 @@ export default function Dashboard() {
                               <Badge 
                                 variant={workloadPercentage > 100 ? "destructive" : "light"}
                               >
-                                {getWorkloadStatus(teacher.currentHours, teacher.maxHours)}
+                                {getWorkloadStatus(actualCurrentHours, maxHours)}
                               </Badge>
                             </td>
                           </tr>
