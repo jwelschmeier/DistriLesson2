@@ -867,7 +867,7 @@ export default function Stundenplaene() {
                       <SelectContent>
                         {teachers?.map((teacher) => (
                           <SelectItem key={teacher.id} value={teacher.id}>
-                            {teacher.firstName} {teacher.lastName} ({teacher.shortName})
+                            {teacher.lastName}, {teacher.firstName} ({teacher.shortName})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1512,7 +1512,7 @@ export default function Stundenplaene() {
                                           return (
                                             <SelectItem key={teacher.id} value={teacher.id}>
                                               <div className="flex items-center justify-between w-full">
-                                                <span>{teacher.firstName} {teacher.lastName} ({teacher.shortName})</span>
+                                                <span>{teacher.lastName}, {teacher.firstName} ({teacher.shortName})</span>
                                                 <span className="text-xs text-muted-foreground ml-2">
                                                   {availableHours}h verfügbar
                                                 </span>
@@ -1662,7 +1662,7 @@ export default function Stundenplaene() {
                                           return (
                                             <SelectItem key={teacher.id} value={teacher.id}>
                                               <div className="flex items-center justify-between w-full">
-                                                <span>{teacher.firstName} {teacher.lastName} ({teacher.shortName})</span>
+                                                <span>{teacher.lastName}, {teacher.firstName} ({teacher.shortName})</span>
                                                 <span className="text-xs text-muted-foreground ml-2">
                                                   {availableHours}h verfügbar
                                                 </span>
@@ -1986,7 +1986,7 @@ export default function Stundenplaene() {
                         />
                         <div>
                           <div className="font-medium">
-                            {teacher.firstName} {teacher.lastName} ({teacher.shortName})
+                            {teacher.lastName}, {teacher.firstName} ({teacher.shortName})
                           </div>
                           <div className="text-sm text-muted-foreground">
                             {getAvailableHours(teacher.id, 0, selectedSemester === 'all' ? undefined : selectedSemester)}h verfügbar
