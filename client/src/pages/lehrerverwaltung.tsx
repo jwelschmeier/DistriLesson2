@@ -129,11 +129,12 @@ export default function Lehrerverwaltung() {
   });
 
   // Calculate actual current hours per teacher from assignments with team teaching support
+  // Uses same logic as stundenplaene.tsx - max of semester hours to prevent double-counting
   const calculateActualCurrentHours = (teacherId: string): number => {
     const teacherAssignments = assignments.filter(a => a.teacherId === teacherId);
     
     // Group assignments to prevent double-counting of team teaching hours
-    const processedAssignments = new Map<string, { hours: number }>();
+    const processedAssignments = new Map<string, { hours: number; semester: string }>();
     
     teacherAssignments.forEach(assignment => {
       const hours = Number.parseFloat(assignment.hoursPerWeek);
@@ -151,12 +152,22 @@ export default function Lehrerverwaltung() {
       
       // Keep the assignment with maximum hours (handles duplicates)
       if (!existing || hours > existing.hours) {
-        processedAssignments.set(groupKey, { hours: hours });
+        processedAssignments.set(groupKey, { hours: hours, semester: assignment.semester });
       }
     });
     
-    // Sum up all processed hours
-    return Array.from(processedAssignments.values()).reduce((sum, processed) => sum + processed.hours, 0);
+    // Calculate semester hours separately
+    const s1Hours = Array.from(processedAssignments.values())
+      .filter(p => p.semester === "1")
+      .reduce((sum, p) => sum + p.hours, 0);
+      
+    const s2Hours = Array.from(processedAssignments.values())
+      .filter(p => p.semester === "2")
+      .reduce((sum, p) => sum + p.hours, 0);
+    
+    // Return the maximum of the two semesters (teacher's weekly workload)
+    // This matches the logic in stundenplaene.tsx
+    return Math.max(s1Hours, s2Hours);
   };
 
   // Extract subject names for the form (using subject names consistently)
