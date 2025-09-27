@@ -213,7 +213,7 @@ export default function PlanstellberechnungPage() {
         {/* Header */}
         <header className="bg-card border-b border-border px-6 py-4">
           <div className="flex items-center gap-2">
-            <Calculator className="h-6 w-6 text-blue-600" />
+            <Calculator className="h-6 w-6 text-blue-600 dark:text-blue-400" />
             <div>
               <h2 className="text-2xl font-semibold text-foreground">Planstellenberechnung</h2>
               <p className="text-muted-foreground">Detaillierte Stellenberechnung für deutsche Schulen</p>
@@ -225,36 +225,36 @@ export default function PlanstellberechnungPage() {
         <div className="p-6 space-y-6">
 
       {/* Sticky Summary Area */}
-      <Card className="sticky top-4 z-10 shadow-lg border-2 border-blue-200 bg-blue-50">
+      <Card className="sticky top-4 z-10 shadow-lg border-2 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/50">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-blue-600" />
+            <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             Übersicht - Wichtige Ergebnisse
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
-              <div className="text-sm text-gray-600">Stellenbedarf insgesamt</div>
-              <div className="text-xl font-bold text-blue-700" data-testid="summary-stellenbedarf-gesamt">
+              <div className="text-sm text-muted-foreground">Stellenbedarf insgesamt</div>
+              <div className="text-xl font-bold text-blue-700 dark:text-blue-300" data-testid="summary-stellenbedarf-gesamt">
                 {stellenbedarfGesamt.toFixed(2)}
               </div>
             </div>
             <div className="text-center">
-              <div className="text-sm text-gray-600">Vorhandene Planstellen</div>
-              <div className="text-xl font-bold text-green-700" data-testid="summary-vorhandene-planstellen">
+              <div className="text-sm text-muted-foreground">Vorhandene Planstellen</div>
+              <div className="text-xl font-bold text-green-700 dark:text-green-300" data-testid="summary-vorhandene-planstellen">
                 {(planstellenData.vorhandenePlanstellen || 0).toFixed(2)}
               </div>
             </div>
             <div className="text-center">
-              <div className="text-sm text-gray-600">Differenz Soll-Ist</div>
-              <div className={`text-xl font-bold ${differenzSollIst >= 0 ? 'text-green-700' : 'text-red-700'}`} data-testid="summary-differenz-soll-ist">
+              <div className="text-sm text-muted-foreground">Differenz Soll-Ist</div>
+              <div className={`text-xl font-bold ${differenzSollIst >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`} data-testid="summary-differenz-soll-ist">
                 {differenzSollIst >= 0 ? '+' : ''}{differenzSollIst.toFixed(2)}
               </div>
             </div>
             <div className="text-center">
-              <div className="text-sm text-gray-600">Grundbedarf</div>
-              <div className="text-xl font-bold text-purple-700" data-testid="summary-grundbedarf">
+              <div className="text-sm text-muted-foreground">Grundbedarf</div>
+              <div className="text-xl font-bold text-purple-700 dark:text-purple-300" data-testid="summary-grundbedarf">
                 {summeGrundbedarf.toFixed(2)}
               </div>
             </div>
@@ -270,7 +270,7 @@ export default function PlanstellberechnungPage() {
           <Card>
             <AccordionTrigger className="px-6 py-4 hover:no-underline">
               <div className="flex items-center gap-3">
-                <School className="h-5 w-5 text-blue-600" />
+                <School className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 <span className="text-lg font-semibold">Grunddaten</span>
               </div>
             </AccordionTrigger>
@@ -304,9 +304,9 @@ export default function PlanstellberechnungPage() {
           <Card>
             <AccordionTrigger className="px-6 py-4 hover:no-underline">
               <div className="flex items-center gap-3">
-                <Calculator className="h-5 w-5 text-green-600" />
+                <Calculator className="h-5 w-5 text-green-600 dark:text-green-400" />
                 <span className="text-lg font-semibold">Stellenbedarf-Berechnung</span>
-                <div className="ml-auto text-sm text-gray-600">
+                <div className="ml-auto text-sm text-muted-foreground">
                   Gesamt: {stellenbedarfGesamt.toFixed(2)}
                 </div>
               </div>
@@ -315,7 +315,7 @@ export default function PlanstellberechnungPage() {
               <CardContent className="space-y-6">
                 
                 {/* Tabellen-Header */}
-                <div className="grid grid-cols-2 gap-4 items-center font-bold text-sm bg-gray-100 p-4 rounded-lg">
+                <div className="grid grid-cols-2 gap-4 items-center font-bold text-sm bg-muted/50 dark:bg-muted/20 p-4 rounded-lg">
                   <Label className="text-center">Bezeichnung</Label>
                   <Label className="text-center">Wert</Label>
                 </div>
@@ -323,7 +323,7 @@ export default function PlanstellberechnungPage() {
                 <div className="space-y-3">
                   
                   {/* === 1. GRUNDBEDARF === */}
-                  <div className="bg-blue-50 p-2 rounded-lg">
+                  <div className="bg-blue-50 dark:bg-blue-950/30 p-2 rounded-lg">
                     <h3 className="font-bold text-center">1. Grundbedarf</h3>
                   </div>
 
@@ -335,7 +335,7 @@ export default function PlanstellberechnungPage() {
                       step="1"
                       value={planstellenData.schuelerzahlStand}
                       onChange={(e) => handleInputChange('schuelerzahlStand', parseFloat(e.target.value))}
-                      className="bg-yellow-50 border-yellow-300"
+                      className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                       data-testid="input-schuelerzahl"
                     />
                   </div>
@@ -348,7 +348,7 @@ export default function PlanstellberechnungPage() {
                       step="0.01"
                       value={planstellenData.schuelerLehrerrelation}
                       onChange={(e) => handleInputChange('schuelerLehrerrelation', parseFloat(e.target.value))}
-                      className="bg-yellow-50 border-yellow-300"
+                      className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                       data-testid="input-schuelerrelation"
                     />
                   </div>
@@ -358,7 +358,7 @@ export default function PlanstellberechnungPage() {
                   {/* F5: Quotient der zwei Größen: (BERECHNET) */}
                   <div className="grid grid-cols-2 gap-4 items-center">
                     <Label className="text-sm font-medium">Quotient der zwei Größen:</Label>
-                    <div className={`p-2 border rounded text-right font-mono ${isValidForCalculation ? 'bg-cyan-50 border-cyan-200' : 'bg-red-50 border-red-300'}`} data-testid="display-f5">
+                    <div className={`p-2 border rounded text-right font-mono ${isValidForCalculation ? 'bg-cyan-50 dark:bg-cyan-950/30 border-cyan-200 dark:border-cyan-800' : 'bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-800'}`} data-testid="display-f5">
                       {isValidForCalculation ? quotient.toFixed(8) : 'Division durch 0'}
                     </div>
                   </div>
@@ -366,7 +366,7 @@ export default function PlanstellberechnungPage() {
                   {/* F6: Quotient abgeschnitten nach 2. Dezimalstelle (BERECHNET) */}
                   <div className="grid grid-cols-2 gap-4 items-center">
                     <Label className="text-sm font-medium">Quotient nach der 2. Dezimale abgeschnitten</Label>
-                    <div className={`p-2 border rounded text-right font-mono ${isValidForCalculation ? 'bg-cyan-50 border-cyan-200' : 'bg-red-50 border-red-300'}`} data-testid="display-f6">
+                    <div className={`p-2 border rounded text-right font-mono ${isValidForCalculation ? 'bg-cyan-50 dark:bg-cyan-950/30 border-cyan-200 dark:border-cyan-800' : 'bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-800'}`} data-testid="display-f6">
                       {isValidForCalculation ? quotientAbgeschnitten.toFixed(2) : '0.00'}
                     </div>
                   </div>
@@ -374,7 +374,7 @@ export default function PlanstellberechnungPage() {
                   {/* F7: abgerundet auf halbe bzw. ganze Dezimale (BERECHNET) */}
                   <div className="grid grid-cols-2 gap-4 items-center">
                     <Label className="text-sm font-medium">abgerundet auf halbe bzw. ganze Dezimale:</Label>
-                    <div className={`p-2 border rounded text-right font-mono ${isValidForCalculation ? 'bg-cyan-50 border-cyan-200' : 'bg-red-50 border-red-300'}`} data-testid="display-f7">
+                    <div className={`p-2 border rounded text-right font-mono ${isValidForCalculation ? 'bg-cyan-50 dark:bg-cyan-950/30 border-cyan-200 dark:border-cyan-800' : 'bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-800'}`} data-testid="display-f7">
                       {isValidForCalculation ? abgerundet.toFixed(1) : '0.0'}
                     </div>
                   </div>
@@ -389,7 +389,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.abzugLehramtsanwaerter}
                 onChange={(e) => handleInputChange('abzugLehramtsanwaerter', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-abzug-lehramtsanwaerter"
               />
             </div>
@@ -402,7 +402,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.rundung}
                 onChange={(e) => handleInputChange('rundung', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-rundung"
               />
             </div>
@@ -410,15 +410,15 @@ export default function PlanstellberechnungPage() {
             <Separator className="border-t-2" />
 
             {/* F10: Summe Grundbedarf (BERECHNET) */}
-            <div className="grid grid-cols-2 gap-4 items-center bg-green-50 p-4 rounded-lg border-2 border-green-300">
+            <div className="grid grid-cols-2 gap-4 items-center bg-green-50 dark:bg-green-950/30 p-4 rounded-lg border-2 border-green-300 dark:border-green-800">
               <Label className="text-sm font-bold">Summe Grundbedarf</Label>
-              <div className="p-3 bg-green-100 border border-green-400 rounded text-right font-mono text-lg font-bold" data-testid="display-f10">
+              <div className="p-3 bg-green-100 dark:bg-green-900/40 border border-green-400 dark:border-green-700 rounded text-right font-mono text-lg font-bold" data-testid="display-f10">
                 {summeGrundbedarf.toFixed(2)}
               </div>
             </div>
 
             {/* === AUSGLEICHSBEDARF === */}
-            <div className="bg-orange-50 p-2 rounded-lg mt-6">
+            <div className="bg-orange-50 dark:bg-orange-950/30 p-2 rounded-lg mt-6">
               <h3 className="font-bold text-center">Ausgleichsbedarf</h3>
             </div>
 
@@ -430,7 +430,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.fachleiter || 0}
                 onChange={(e) => handleInputChange('fachleiter', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-fachleiter"
               />
             </div>
@@ -443,7 +443,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.personalrat || 0}
                 onChange={(e) => handleInputChange('personalrat', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-personalrat"
               />
             </div>
@@ -456,7 +456,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.schulleitungsentlastungFortbildung || 0}
                 onChange={(e) => handleInputChange('schulleitungsentlastungFortbildung', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-schulleitungsentlastung"
               />
             </div>
@@ -469,7 +469,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.ausbauLeitungszeit || 0}
                 onChange={(e) => handleInputChange('ausbauLeitungszeit', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-ausbau-leitungszeit"
               />
             </div>
@@ -482,7 +482,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.rueckgabeVorgriffstunde || 0}
                 onChange={(e) => handleInputChange('rueckgabeVorgriffstunde', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-rueckgabe-vorgriffstunde"
               />
             </div>
@@ -495,7 +495,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.digitalisierungsbeauftragter || 0}
                 onChange={(e) => handleInputChange('digitalisierungsbeauftragter', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-digitalisierungsbeauftragter"
               />
             </div>
@@ -508,7 +508,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.fortbildungQualifMedienDS || 0}
                 onChange={(e) => handleInputChange('fortbildungQualifMedienDS', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-fortbildung-qualif"
               />
             </div>
@@ -521,7 +521,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.fachberaterSchulaufsicht || 0}
                 onChange={(e) => handleInputChange('fachberaterSchulaufsicht', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-fachberater-schulaufsicht"
               />
             </div>
@@ -534,7 +534,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.wechselndeAusgleichsbedarfe || 0}
                 onChange={(e) => handleInputChange('wechselndeAusgleichsbedarfe', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-wechselnde-ausgleichsbedarfe"
               />
             </div>
@@ -547,7 +547,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.praxissemesterInSchule || 0}
                 onChange={(e) => handleInputChange('praxissemesterInSchule', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-praxissemester-schule"
               />
             </div>
@@ -560,7 +560,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.zusaetzlicheAusfallvertretung || 0}
                 onChange={(e) => handleInputChange('zusaetzlicheAusfallvertretung', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-zusaetzliche-ausfallvertretung"
               />
             </div>
@@ -573,7 +573,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.entlastungLehrertaetigkeit || 0}
                 onChange={(e) => handleInputChange('entlastungLehrertaetigkeit', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-entlastung-lehrertaetigkeit"
               />
             </div>
@@ -586,7 +586,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.entlastungLVOCO || 0}
                 onChange={(e) => handleInputChange('entlastungLVOCO', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-entlastung-lvoco"
               />
             </div>
@@ -599,14 +599,14 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.ermaessigungenweitere || 0}
                 onChange={(e) => handleInputChange('ermaessigungenweitere', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-ermaessigungen-weitere"
               />
             </div>
 
 
             {/* === FREIE EINGABEZEILEN (VOR SUMME) === */}
-            <div className="bg-gray-50 p-2 rounded-lg mt-6">
+            <div className="bg-muted/50 dark:bg-muted/20 p-2 rounded-lg mt-6">
               <h3 className="font-bold text-center">Freie Eingabezeilen</h3>
             </div>
 
@@ -616,7 +616,7 @@ export default function PlanstellberechnungPage() {
                 type="text"
                 value={planstellenData.freieZeile1Label || ""}
                 onChange={(e) => handleInputChange('freieZeile1Label', e.target.value)}
-                className="bg-gray-100 border-gray-300"
+                className="bg-muted/50 dark:bg-muted/20 border-muted dark:border-muted"
                 placeholder="Bezeichnung eingeben..."
                 data-testid="input-freie-zeile1-label"
               />
@@ -625,7 +625,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.freieZeile1Wert || 0}
                 onChange={(e) => handleInputChange('freieZeile1Wert', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-freie-zeile1-wert"
               />
             </div>
@@ -636,7 +636,7 @@ export default function PlanstellberechnungPage() {
                 type="text"
                 value={planstellenData.freieZeile2Label || ""}
                 onChange={(e) => handleInputChange('freieZeile2Label', e.target.value)}
-                className="bg-gray-100 border-gray-300"
+                className="bg-muted/50 dark:bg-muted/20 border-muted dark:border-muted"
                 placeholder="Bezeichnung eingeben..."
                 data-testid="input-freie-zeile2-label"
               />
@@ -645,7 +645,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.freieZeile2Wert || 0}
                 onChange={(e) => handleInputChange('freieZeile2Wert', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-freie-zeile2-wert"
               />
             </div>
@@ -653,15 +653,15 @@ export default function PlanstellberechnungPage() {
             <Separator className="border-t-2" />
 
             {/* Summe Ausgleichsbedarf (BERECHNET) */}
-            <div className="grid grid-cols-2 gap-4 items-center bg-orange-50 p-4 rounded-lg border-2 border-orange-300">
+            <div className="grid grid-cols-2 gap-4 items-center bg-orange-50 dark:bg-orange-950/30 p-4 rounded-lg border-2 border-orange-300 dark:border-orange-800">
               <Label className="text-sm font-bold">Summe Ausgleichsbedarf</Label>
-              <div className="p-3 bg-orange-100 border border-orange-400 rounded text-right font-mono text-lg font-bold" data-testid="display-summe-ausgleichsbedarf">
+              <div className="p-3 bg-orange-100 dark:bg-orange-900/40 border border-orange-400 dark:border-orange-700 rounded text-right font-mono text-lg font-bold" data-testid="display-summe-ausgleichsbedarf">
                 {summeAusgleichsbedarf.toFixed(2)}
               </div>
             </div>
 
             {/* === MEHRBEDARFE (umbenannt von "Weitere Bereiche") === */}
-            <div className="bg-purple-50 p-2 rounded-lg mt-6">
+            <div className="bg-purple-50 dark:bg-purple-950/30 p-2 rounded-lg mt-6">
               <h3 className="font-bold text-center">Mehrbedarfe</h3>
             </div>
 
@@ -673,7 +673,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.praktischePhilosophieIslamkunde || 0}
                 onChange={(e) => handleInputChange('praktischePhilosophieIslamkunde', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-praktische-philosophie"
               />
             </div>
@@ -686,7 +686,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.paedagogischeUebermittagsbetreuung || 0}
                 onChange={(e) => handleInputChange('paedagogischeUebermittagsbetreuung', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-paedagogische-betreuung"
               />
             </div>
@@ -699,7 +699,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.integrationDurchBildung || 0}
                 onChange={(e) => handleInputChange('integrationDurchBildung', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-integration-bildung"
               />
             </div>
@@ -707,9 +707,9 @@ export default function PlanstellberechnungPage() {
             <Separator className="border-t-2" />
 
             {/* SUMME MEHRBEDARFE (umbenannt) */}
-            <div className="grid grid-cols-2 gap-4 items-center bg-purple-50 p-4 rounded-lg border-2 border-purple-300">
+            <div className="grid grid-cols-2 gap-4 items-center bg-purple-50 dark:bg-purple-950/30 p-4 rounded-lg border-2 border-purple-300 dark:border-purple-800">
               <Label className="text-sm font-bold">Summe Mehrbedarfe</Label>
-              <div className="p-3 bg-purple-100 border border-purple-400 rounded text-right font-mono text-lg font-bold" data-testid="display-summe-weitere">
+              <div className="p-3 bg-purple-100 dark:bg-purple-900/40 border border-purple-400 dark:border-purple-700 rounded text-right font-mono text-lg font-bold" data-testid="display-summe-weitere">
                 {summeWeitereBereiche.toFixed(2)}
               </div>
             </div>
@@ -717,9 +717,9 @@ export default function PlanstellberechnungPage() {
             <Separator className="border-t-4" />
 
             {/* GRUNDBEDARF GESAMT F34 */}
-            <div className="grid grid-cols-2 gap-4 items-center bg-red-50 p-4 rounded-lg border-2 border-red-300">
+            <div className="grid grid-cols-2 gap-4 items-center bg-red-50 dark:bg-red-950/30 p-4 rounded-lg border-2 border-red-300 dark:border-red-800">
               <Label className="text-sm font-bold">Grundbedarf (Summe aus Grundbedarf, Ausgleichsbedarf, Mehrbedarf)</Label>
-              <div className="p-3 bg-red-100 border border-red-400 rounded text-right font-mono text-lg font-bold" data-testid="display-grundbedarf-gesamt">
+              <div className="p-3 bg-red-100 dark:bg-red-900/40 border border-red-400 dark:border-red-700 rounded text-right font-mono text-lg font-bold" data-testid="display-grundbedarf-gesamt">
                 {grundbedarfGesamt.toFixed(2)}
               </div>
             </div>
@@ -737,7 +737,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.gegenUAusfallIndFoerderung || 0}
                 onChange={(e) => handleInputChange('gegenUAusfallIndFoerderung', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-gegen-ausfall-foerderung"
               />
             </div>
@@ -755,7 +755,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.teilzeitBlockmodellAnsparphase || 0}
                 onChange={(e) => handleInputChange('teilzeitBlockmodellAnsparphase', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-teilzeit-blockmodell"
               />
             </div>
@@ -768,7 +768,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.kapitalisierungPaedUebermittag || 0}
                 onChange={(e) => handleInputChange('kapitalisierungPaedUebermittag', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-kapitalisierung-uebermittag"
               />
             </div>
@@ -781,7 +781,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.abzugKapitalisierungUebermittag || 0}
                 onChange={(e) => handleInputChange('abzugKapitalisierungUebermittag', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-abzug-kapitalisierung"
               />
             </div>
@@ -809,7 +809,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.beurlaubungElternzeit || 0}
                 onChange={(e) => handleInputChange('beurlaubungElternzeit', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-beurlaubung-elternzeit"
               />
             </div>
@@ -822,7 +822,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.ersatzeinstellungElternzeit || 0}
                 onChange={(e) => handleInputChange('ersatzeinstellungElternzeit', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-ersatzeinstellung-elternzeit"
               />
             </div>
@@ -835,7 +835,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.aborungZugangAnderes || 0}
                 onChange={(e) => handleInputChange('aborungZugangAnderes', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-abornung-zugang"
               />
             </div>
@@ -853,9 +853,9 @@ export default function PlanstellberechnungPage() {
             <Separator className="border-t-4" />
 
             {/* STELLENBEDARF (STELLEN-SOLL) INSGESAMT F48 */}
-            <div className="grid grid-cols-2 gap-4 items-center bg-red-50 p-4 rounded-lg border-2 border-red-300 mt-6">
+            <div className="grid grid-cols-2 gap-4 items-center bg-red-50 dark:bg-red-950/30 p-4 rounded-lg border-2 border-red-300 dark:border-red-800 mt-6">
               <Label className="text-sm font-bold text-lg">Stellenbedarf (Stellen-Soll) insgesamt</Label>
-              <div className="p-4 bg-red-100 border border-red-400 rounded text-right font-mono text-xl font-bold" data-testid="display-stellenbedarf-gesamt">
+              <div className="p-4 bg-red-100 dark:bg-red-900/40 border border-red-400 dark:border-red-700 rounded text-right font-mono text-xl font-bold" data-testid="display-stellenbedarf-gesamt">
                 {stellenbedarfGesamt.toFixed(2)}
               </div>
             </div>
@@ -868,7 +868,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.vorhandenePlanstellen || 0}
                 onChange={(e) => handleInputChange('vorhandenePlanstellen', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-vorhandene-planstellen"
               />
             </div>
@@ -882,14 +882,14 @@ export default function PlanstellberechnungPage() {
             </div>
 
             {/* === BERECHNUNG DER ERMÄSSIGUNGSSTUNDEN (KOLLEGIUM) === */}
-            <div className="bg-purple-50 p-2 rounded-lg mt-6">
+            <div className="bg-purple-50 dark:bg-purple-950/30 p-2 rounded-lg mt-6">
               <h3 className="font-bold text-center">Berechnung der Ermäßigungsstunden (Kollegium)</h3>
             </div>
 
             {/* Grundstellenbedarf * 0,5 */}
             <div className="grid grid-cols-2 gap-4 items-center">
               <Label className="text-sm">Grundstellenbedarf * 0,5:</Label>
-              <div className="p-3 bg-gray-100 border border-gray-400 rounded text-right font-mono text-lg" data-testid="display-grundstellenbedarf-halbe">
+              <div className="p-3 bg-muted/50 dark:bg-muted/20 border border-muted dark:border-muted rounded text-right font-mono text-lg" data-testid="display-grundstellenbedarf-halbe">
                 {grundstellenbedarfHalbe.toFixed(3)}
               </div>
             </div>
@@ -897,13 +897,13 @@ export default function PlanstellberechnungPage() {
             {/* Entlastungsstunden (Kollegium) gerundet 0 Dezimalen */}
             <div className="grid grid-cols-2 gap-4 items-center">
               <Label className="text-sm">Entlastungsstunden (Kollegium) gerundet 0 Dezimalen:</Label>
-              <div className="p-3 bg-purple-100 border border-purple-400 rounded text-right font-mono text-lg font-bold" data-testid="display-entlastungsstunden-gerundet">
+              <div className="p-3 bg-purple-100 dark:bg-purple-900/40 border border-purple-400 dark:border-purple-700 rounded text-right font-mono text-lg font-bold" data-testid="display-entlastungsstunden-gerundet">
                 {entlastungsstundenGerundet}
               </div>
             </div>
 
             {/* === BERECHNUNG SCHULLEITERPAUSCHAL === */}
-            <div className="bg-orange-50 p-2 rounded-lg mt-6">
+            <div className="bg-orange-50 dark:bg-orange-950/30 p-2 rounded-lg mt-6">
               <h3 className="font-bold text-center">Berechnung Schulleiterpauschal</h3>
             </div>
 
@@ -915,7 +915,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.grundpauschal || 9}
                 onChange={(e) => handleInputChange('grundpauschal', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-grundpauschal"
               />
             </div>
@@ -923,7 +923,7 @@ export default function PlanstellberechnungPage() {
             {/* zusätzl. Entlastung (abhängig v. Stellenanzahl) */}
             <div className="grid grid-cols-2 gap-4 items-center">
               <Label className="text-sm">zusätzl. Entlastung (abhängig v. Stellenanzahl)</Label>
-              <div className="p-3 bg-gray-100 border border-gray-400 rounded text-right font-mono text-lg" data-testid="display-zusaetzliche-entlastung">
+              <div className="p-3 bg-muted/50 dark:bg-muted/20 border border-muted dark:border-muted rounded text-right font-mono text-lg" data-testid="display-zusaetzliche-entlastung">
                 {zusaetzlicheEntlastungStellenzahl.toFixed(2)}
               </div>
             </div>
@@ -936,7 +936,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.schulleiterentlastungFortbildung || 0.04}
                 onChange={(e) => handleInputChange('schulleiterentlastungFortbildung', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-schulleiterentlastung-fortbildung"
               />
             </div>
@@ -949,7 +949,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.ausbauLeitungszeitSchulleiter || 0.12}
                 onChange={(e) => handleInputChange('ausbauLeitungszeitSchulleiter', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-ausbau-leitungszeit-schulleiter"
               />
             </div>
@@ -959,7 +959,7 @@ export default function PlanstellberechnungPage() {
             {/* Anzahl 44-46 in Stunden */}
             <div className="grid grid-cols-2 gap-4 items-center">
               <Label className="text-sm">Anzahl 44-46 in Stunden</Label>
-              <div className="p-3 bg-gray-100 border border-gray-400 rounded text-right font-mono text-lg" data-testid="display-anzahl-stunden-schulleitung">
+              <div className="p-3 bg-muted/50 dark:bg-muted/20 border border-muted dark:border-muted rounded text-right font-mono text-lg" data-testid="display-anzahl-stunden-schulleitung">
                 {anzahlStundenSchulleitung.toFixed(2)}
               </div>
             </div>
@@ -967,7 +967,7 @@ export default function PlanstellberechnungPage() {
             {/* Entlastungsstd. (Schulleitung) gerundet 2 Dezimalen */}
             <div className="grid grid-cols-2 gap-4 items-center">
               <Label className="text-sm">Entlastungsstd. (Schulleitung) gerundet 2 Dezimalen</Label>
-              <div className="p-3 bg-orange-100 border border-orange-400 rounded text-right font-mono text-lg font-bold" data-testid="display-entlastung-schulleitung-gerundet">
+              <div className="p-3 bg-orange-100 dark:bg-orange-900/40 border border-orange-400 dark:border-orange-700 rounded text-right font-mono text-lg font-bold" data-testid="display-entlastung-schulleitung-gerundet">
                 {entlastungsstundenSchulleitungGerundet.toFixed(2)}
               </div>
             </div>
@@ -980,7 +980,7 @@ export default function PlanstellberechnungPage() {
                 step="1"
                 value={planstellenData.schulleiterDreiViertel || 18}
                 onChange={(e) => handleInputChange('schulleiterDreiViertel', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-schulleiter-drei-viertel"
               />
             </div>
@@ -988,7 +988,7 @@ export default function PlanstellberechnungPage() {
             {/* Stellvertreter 2/5 (abgerundet) */}
             <div className="grid grid-cols-2 gap-4 items-center">
               <Label className="text-sm">Stellvertreter 2/5 (abgerundet)</Label>
-              <div className="p-3 bg-gray-100 border border-gray-400 rounded text-right font-mono text-lg" data-testid="display-stellvertreter-zwei-viertel">
+              <div className="p-3 bg-muted/50 dark:bg-muted/20 border border-muted dark:border-muted rounded text-right font-mono text-lg" data-testid="display-stellvertreter-zwei-viertel">
                 {stellvertreterZweiViertel}
               </div>
             </div>
@@ -1001,7 +1001,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.ausbauLeitungszeitStellvertreter || 0.11}
                 onChange={(e) => handleInputChange('ausbauLeitungszeitStellvertreter', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-ausbau-leitungszeit-stellvertreter"
               />
             </div>
@@ -1014,7 +1014,7 @@ export default function PlanstellberechnungPage() {
                 step="0.01"
                 value={planstellenData.minusEntlastungStundenplanarbeit || 0}
                 onChange={(e) => handleInputChange('minusEntlastungStundenplanarbeit', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-minus-entlastung-stundenplan"
               />
             </div>
@@ -1024,7 +1024,7 @@ export default function PlanstellberechnungPage() {
             {/* geänderte und abgerundete Schulleiterpauschal */}
             <div className="grid grid-cols-2 gap-4 items-center">
               <Label className="text-sm">geänderte und abgerundete Schulleiterpauschal</Label>
-              <div className="p-3 bg-orange-100 border border-orange-400 rounded text-right font-mono text-lg font-bold" data-testid="display-geaenderte-schulleiterpauschal">
+              <div className="p-3 bg-orange-100 dark:bg-orange-900/40 border border-orange-400 dark:border-orange-700 rounded text-right font-mono text-lg font-bold" data-testid="display-geaenderte-schulleiterpauschal">
                 {geaenderteSchulleiterpauschal}
               </div>
             </div>
@@ -1032,7 +1032,7 @@ export default function PlanstellberechnungPage() {
             {/* geänderte und aufgerundete Stellvertreterpauschal */}
             <div className="grid grid-cols-2 gap-4 items-center">
               <Label className="text-sm">geänderte und aufgerundete Stellvertreterpauschal</Label>
-              <div className="p-3 bg-orange-100 border border-orange-400 rounded text-right font-mono text-lg font-bold" data-testid="display-geaenderte-stellvertreterpauschal">
+              <div className="p-3 bg-orange-100 dark:bg-orange-900/40 border border-orange-400 dark:border-orange-700 rounded text-right font-mono text-lg font-bold" data-testid="display-geaenderte-stellvertreterpauschal">
                 {geaenderteStellvertreterpauschal}
               </div>
             </div>
@@ -1045,7 +1045,7 @@ export default function PlanstellberechnungPage() {
             {/* Sollklassenzahl */}
             <div className="grid grid-cols-2 gap-4 items-center">
               <Label className="text-sm">Sollklassenzahl</Label>
-              <div className="p-3 bg-gray-100 border border-gray-400 rounded text-right font-mono text-lg" data-testid="display-sollklassenzahl">
+              <div className="p-3 bg-muted/50 dark:bg-muted/20 border border-muted dark:border-muted rounded text-right font-mono text-lg" data-testid="display-sollklassenzahl">
                 {sollklassenzahl.toFixed(1)}
               </div>
             </div>
@@ -1058,7 +1058,7 @@ export default function PlanstellberechnungPage() {
                 step="0.1"
                 value={planstellenData.istklassenzahl || 17.0}
                 onChange={(e) => handleInputChange('istklassenzahl', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-istklassenzahl"
               />
             </div>
@@ -1066,7 +1066,7 @@ export default function PlanstellberechnungPage() {
             {/* Abweichung Klassenanzahl */}
             <div className="grid grid-cols-2 gap-4 items-center">
               <Label className="text-sm">Abweichung Klassenanzahl</Label>
-              <div className="p-3 bg-green-100 border border-green-400 rounded text-right font-mono text-lg font-bold" data-testid="display-abweichung-klassenanzahl">
+              <div className="p-3 bg-green-100 dark:bg-green-900/40 border border-green-400 dark:border-green-700 rounded text-right font-mono text-lg font-bold" data-testid="display-abweichung-klassenanzahl">
                 {abweichungKlassenbildung.toFixed(1)}
               </div>
             </div>
@@ -1084,7 +1084,7 @@ export default function PlanstellberechnungPage() {
                 step="1"
                 value={planstellenData.verfuegbareUnterrichtsstunden || 0}
                 onChange={(e) => handleInputChange('verfuegbareUnterrichtsstunden', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-verfuegbare-unterrichtsstunden"
               />
             </div>
@@ -1097,7 +1097,7 @@ export default function PlanstellberechnungPage() {
                 step="1"
                 value={planstellenData.unterrichtssollNachKuerzung || 0}
                 onChange={(e) => handleInputChange('unterrichtssollNachKuerzung', parseFloat(e.target.value))}
-                className="bg-yellow-50 border-yellow-300"
+                className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                 data-testid="input-unterrichtssoll-nach-kuerzung"
               />
             </div>
@@ -1137,7 +1137,7 @@ export default function PlanstellberechnungPage() {
                     step="0.01"
                     value={planstellenData.vorhandenePlanstellen || 0}
                     onChange={(e) => handleInputChange('vorhandenePlanstellen', parseFloat(e.target.value))}
-                    className="bg-yellow-50 border-yellow-300"
+                    className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                     data-testid="input-vorhandene-planstellen"
                   />
                 </div>
@@ -1173,19 +1173,19 @@ export default function PlanstellberechnungPage() {
                     step="0.1"
                     value={planstellenData.grundstellenbedarfFaktor || 0.5}
                     onChange={(e) => handleInputChange('grundstellenbedarfFaktor', parseFloat(e.target.value))}
-                    className="bg-yellow-50 border-yellow-300"
+                    className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                     data-testid="input-grundstellenbedarf-faktor"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4 items-center">
                   <Label className="text-sm font-medium">Grundstellenbedarf * Faktor</Label>
-                  <div className="p-2 border rounded text-right font-mono bg-cyan-50 border-cyan-200" data-testid="display-grundstellenbedarf-halbe">
+                  <div className="p-2 border rounded text-right font-mono bg-cyan-50 dark:bg-cyan-950/30 border-cyan-200 dark:border-cyan-800" data-testid="display-grundstellenbedarf-halbe">
                     {grundstellenbedarfHalbe.toFixed(2)}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4 items-center bg-orange-50 p-4 rounded-lg border-2 border-orange-300">
+                <div className="grid grid-cols-2 gap-4 items-center bg-orange-50 dark:bg-orange-950/30 p-4 rounded-lg border-2 border-orange-300 dark:border-orange-800">
                   <Label className="text-sm font-bold">Entlastungsstunden (Kollegium) gerundet</Label>
-                  <div className="p-3 bg-orange-100 border border-orange-400 rounded text-right font-mono text-lg font-bold" data-testid="display-entlastungsstunden-gerundet">
+                  <div className="p-3 bg-orange-100 dark:bg-orange-900/40 border border-orange-400 dark:border-orange-700 rounded text-right font-mono text-lg font-bold" data-testid="display-entlastungsstunden-gerundet">
                     {entlastungsstundenGerundet}
                   </div>
                 </div>
@@ -1219,7 +1219,7 @@ export default function PlanstellberechnungPage() {
                     step="1"
                     value={planstellenData.grundpauschal || 9}
                     onChange={(e) => handleInputChange('grundpauschal', parseFloat(e.target.value))}
-                    className="bg-yellow-50 border-yellow-300"
+                    className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                     data-testid="input-grundpauschal"
                   />
                 </div>
@@ -1231,7 +1231,7 @@ export default function PlanstellberechnungPage() {
                     step="1"
                     value={planstellenData.schulleiterDreiViertel || 18}
                     onChange={(e) => handleInputChange('schulleiterDreiViertel', parseFloat(e.target.value))}
-                    className="bg-yellow-50 border-yellow-300"
+                    className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                     data-testid="input-schulleiter-drei-viertel"
                   />
                 </div>
@@ -1243,7 +1243,7 @@ export default function PlanstellberechnungPage() {
                     step="0.01"
                     value={planstellenData.minusEntlastungStundenplanarbeit || 0}
                     onChange={(e) => handleInputChange('minusEntlastungStundenplanarbeit', parseFloat(e.target.value))}
-                    className="bg-yellow-50 border-yellow-300"
+                    className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                     data-testid="input-minus-entlastung-stundenplanarbeit"
                   />
                 </div>
@@ -1290,7 +1290,7 @@ export default function PlanstellberechnungPage() {
 
                 <div className="grid grid-cols-2 gap-4 items-center">
                   <Label className="text-sm font-medium">Sollklassenzahl</Label>
-                  <div className="p-3 bg-gray-100 border border-gray-400 rounded text-right font-mono text-lg" data-testid="display-sollklassenzahl">
+                  <div className="p-3 bg-muted/50 dark:bg-muted/20 border border-muted dark:border-muted rounded text-right font-mono text-lg" data-testid="display-sollklassenzahl">
                     {sollklassenzahl.toFixed(1)}
                   </div>
                 </div>
@@ -1302,14 +1302,14 @@ export default function PlanstellberechnungPage() {
                     step="0.1"
                     value={planstellenData.istklassenzahl || 17.0}
                     onChange={(e) => handleInputChange('istklassenzahl', parseFloat(e.target.value))}
-                    className="bg-yellow-50 border-yellow-300"
+                    className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                     data-testid="input-istklassenzahl"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 items-center bg-green-50 p-4 rounded-lg border-2 border-green-300">
+                <div className="grid grid-cols-2 gap-4 items-center bg-green-50 dark:bg-green-950/30 p-4 rounded-lg border-2 border-green-300 dark:border-green-800">
                   <Label className="text-sm font-bold">Abweichung Klassenanzahl</Label>
-                  <div className="p-3 bg-green-100 border border-green-400 rounded text-right font-mono text-lg font-bold" data-testid="display-abweichung-klassenanzahl">
+                  <div className="p-3 bg-green-100 dark:bg-green-900/40 border border-green-400 dark:border-green-700 rounded text-right font-mono text-lg font-bold" data-testid="display-abweichung-klassenanzahl">
                     {abweichungKlassenbildung.toFixed(1)}
                   </div>
                 </div>
@@ -1328,7 +1328,7 @@ export default function PlanstellberechnungPage() {
                     step="1"
                     value={planstellenData.verfuegbareUnterrichtsstunden || 0}
                     onChange={(e) => handleInputChange('verfuegbareUnterrichtsstunden', parseFloat(e.target.value))}
-                    className="bg-yellow-50 border-yellow-300"
+                    className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                     data-testid="input-verfuegbare-unterrichtsstunden"
                   />
                 </div>
@@ -1340,7 +1340,7 @@ export default function PlanstellberechnungPage() {
                     step="1"
                     value={planstellenData.unterrichtssollNachKuerzung || 0}
                     onChange={(e) => handleInputChange('unterrichtssollNachKuerzung', parseFloat(e.target.value))}
-                    className="bg-yellow-50 border-yellow-300"
+                    className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-800"
                     data-testid="input-unterrichtssoll-nach-kuerzung"
                   />
                 </div>
