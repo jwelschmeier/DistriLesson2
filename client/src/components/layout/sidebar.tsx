@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/hooks/useTheme";
 import { Button } from "@/components/ui/button";
-import { BarChart3, Upload, Calculator, Users, Presentation, School, Clock, Sparkles, BookOpen, Calendar, Grid, RefreshCw, Menu, ChevronLeft, MessageSquare } from "lucide-react";
+import { BarChart3, Upload, Calculator, Users, Presentation, School, Clock, Sparkles, BookOpen, Calendar, Grid, RefreshCw, Menu, ChevronLeft, MessageSquare, Moon, Sun } from "lucide-react";
 import logoImage from "@assets/logo-removebg-preview_1757711438324.png";
 
 const navigationItems = [
@@ -30,6 +31,7 @@ const adminNavigationItems = [
 export function Sidebar() {
   const [location] = useLocation();
   const { isAdmin } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const toggleCollapsed = () => {
@@ -146,6 +148,37 @@ export function Sidebar() {
           </>
         )}
       </nav>
+      
+      {/* Theme Toggle */}
+      <div className={cn(
+        "border-t border-border",
+        isCollapsed ? "p-2" : "p-4"
+      )}>
+        <Button
+          variant="ghost"
+          size={isCollapsed ? "sm" : "default"}
+          onClick={toggleTheme}
+          className={cn(
+            "w-full flex items-center transition-colors",
+            isCollapsed 
+              ? "justify-center p-2" 
+              : "justify-start space-x-3 px-3 py-2",
+            "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+          )}
+          data-testid="button-theme-toggle"
+          title={isCollapsed ? (theme === "dark" ? "Zum Light Mode wechseln" : "Zum Dark Mode wechseln") : undefined}
+        >
+          {theme === "dark" ? (
+            <Sun className="w-5 h-5 flex-shrink-0" />
+          ) : (
+            <Moon className="w-5 h-5 flex-shrink-0" />
+          )}
+          {!isCollapsed && (
+            <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
+          )}
+        </Button>
+      </div>
+      
       {/* User Info */}
       <div className={cn(
         "border-t border-border",
