@@ -12,8 +12,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Calendar, Clock, Users, BookOpen, Presentation, School, GraduationCap, Save, Trash2, Plus, Edit, Eye } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Calendar, Clock, Users, BookOpen, Presentation, School, GraduationCap, Save, Trash2, Plus, Edit, Eye, AlertTriangle, CheckCircle } from "lucide-react";
+import { insertAssignmentSchema, type InsertAssignment } from "@shared/schema";
+import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { type Teacher, type Class, type Subject, type Assignment } from "@shared/schema";
@@ -22,6 +27,28 @@ interface ExtendedAssignment extends Assignment {
   teacher?: Teacher;
   class?: Class;
   subject?: Subject;
+}
+
+// Assignment form schema for assignments tab (from StdV-Le)
+const assignmentFormSchema = insertAssignmentSchema.extend({
+  teacherId: z.string().min(1, "Lehrkraft muss ausgewählt werden"),
+  classId: z.string().min(1, "Klasse muss ausgewählt werden"),
+  subjectId: z.string().min(1, "Fach muss ausgewählt werden"),
+  hoursPerWeek: z.number().min(1).max(10),
+});
+
+type AssignmentFormData = z.infer<typeof assignmentFormSchema>;
+
+interface AssignmentWithDetails extends Assignment {
+  teacher?: Teacher;
+  class?: Class;
+  subject?: Subject;
+}
+
+interface ConflictCheck {
+  hasConflict: boolean;
+  message: string;
+  type: "warning" | "error";
 }
 
 export default function Stundenplaene() {
@@ -33,6 +60,13 @@ export default function Stundenplaene() {
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedSemester, setSelectedSemester] = useState<'all' | '1' | '2'>('all');
+  
+  // State for assignments tab (from StdV-Le)
+  const [assignmentsSelectedTeacher, setAssignmentsSelectedTeacher] = useState<string>("all");
+  const [assignmentsSelectedClass, setAssignmentsSelectedClass] = useState<string>("all");
+  const [assignmentsSelectedSemester, setAssignmentsSelectedSemester] = useState<string>("all");
+  const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
+  const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
   
   // State for editable table
   const [editedAssignments, setEditedAssignments] = useState<Record<string, Partial<Assignment>>>({});
@@ -53,6 +87,19 @@ export default function Stundenplaene() {
   }>({ isOpen: false, context: 'teacher', selectedIds: [] });
   
   const { toast } = useToast();
+  
+  // Form for assignments tab
+  const assignmentForm = useForm<AssignmentFormData>({
+    resolver: zodResolver(assignmentFormSchema),
+    defaultValues: {
+      teacherId: "",
+      classId: "",
+      subjectId: "",
+      hoursPerWeek: 1,
+      semester: "1",
+      isOptimized: false,
+    },
+  });
 
   const { data: teachers, isLoading: teachersLoading } = useQuery<Teacher[]>({
     queryKey: ["/api/teachers"],
@@ -848,6 +895,233 @@ export default function Stundenplaene() {
     }
   };
 
+  // Additional mutations for assignments tab
+  const createAssignmentFromTabMutation = useMutation({
+    mutationFn: async (data: AssignmentFormData) => {
+      const response = await apiRequest("POST", "/api/assignments", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Zuweisung erstellt",
+        description: "Die Unterrichtszuweisung wurde erfolgreich erstellt.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teachers"] });
+      setIsAssignmentDialogOpen(false);
+      assignmentForm.reset();
+    },
+    onError: (error) => {
+      toast({
+        title: "Fehler beim Erstellen",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateAssignmentFromTabMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<AssignmentFormData> }) => {
+      const response = await apiRequest("PUT", `/api/assignments/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Zuweisung aktualisiert",
+        description: "Die Änderungen wurden gespeichert.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teachers"] });
+      setIsAssignmentDialogOpen(false);
+      setEditingAssignment(null);
+      assignmentForm.reset();
+    },
+    onError: (error) => {
+      toast({
+        title: "Fehler beim Aktualisieren",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteAssignmentFromTabMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/assignments/${id}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Zuweisung gelöscht",
+        description: "Die Unterrichtszuweisung wurde entfernt.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teachers"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Fehler beim Löschen",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Functions for assignments tab (from StdV-Le)
+  const checkConflicts = (assignment: AssignmentFormData): ConflictCheck => {
+    const teacher = teachers?.find(t => t.id === assignment.teacherId);
+    const subject = subjects?.find(s => s.id === assignment.subjectId);
+
+    if (!teacher || !subject) {
+      return { hasConflict: false, message: "", type: "warning" };
+    }
+
+    // Parse teacher subjects
+    const teacherSubjects = teacher.subjects.flatMap(subjectString => 
+      subjectString.split(',').map(s => s.trim().toUpperCase())
+    );
+    
+    // Check if teacher has qualification for this subject
+    const subjectShortName = subject.shortName.trim().toUpperCase();
+    if (!teacherSubjects.includes(subjectShortName)) {
+      return {
+        hasConflict: true,
+        message: `${teacher.firstName} ${teacher.lastName} hat keine Qualifikation für ${subject.name} (${subject.shortName})`,
+        type: "error"
+      };
+    }
+
+    // Semester-aware workload calculation
+    const teacherAssignmentsInSemester = assignments?.filter(a => 
+      a.teacherId === assignment.teacherId && a.semester === assignment.semester
+    ) || [];
+    
+    const existingAssignments = editingAssignment 
+      ? teacherAssignmentsInSemester.filter(a => a.id !== editingAssignment.id)
+      : teacherAssignmentsInSemester;
+    
+    const currentSemesterHours = existingAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
+    const totalSemesterHours = currentSemesterHours + assignment.hoursPerWeek;
+    const maxHoursPerSemester = parseFloat(teacher.maxHours);
+    
+    if (totalSemesterHours > maxHoursPerSemester) {
+      return {
+        hasConflict: true,
+        message: `${teacher.firstName} ${teacher.lastName} würde im ${assignment.semester}. HJ mit ${totalSemesterHours}h überbelastet (Max: ${maxHoursPerSemester}h)`,
+        type: "error"
+      };
+    }
+
+    if (totalSemesterHours > maxHoursPerSemester * 0.9) {
+      return {
+        hasConflict: true,
+        message: `${teacher.firstName} ${teacher.lastName} würde im ${assignment.semester}. HJ stark ausgelastet (${totalSemesterHours}/${maxHoursPerSemester}h)`,
+        type: "warning"
+      };
+    }
+
+    return { hasConflict: false, message: "", type: "warning" };
+  };
+
+  const handleAssignmentEdit = (assignment: Assignment) => {
+    setEditingAssignment(assignment);
+    assignmentForm.reset({
+      teacherId: assignment.teacherId,
+      classId: assignment.classId,
+      subjectId: assignment.subjectId,
+      hoursPerWeek: parseFloat(assignment.hoursPerWeek),
+      semester: assignment.semester as "1" | "2",
+      isOptimized: assignment.isOptimized,
+    });
+    setIsAssignmentDialogOpen(true);
+  };
+
+  const handleAssignmentSubmit = (data: AssignmentFormData) => {
+    const conflicts = checkConflicts(data);
+    
+    if (conflicts.hasConflict && conflicts.type === "error") {
+      toast({
+        title: "Konflikt erkannt",
+        description: conflicts.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (editingAssignment) {
+      updateAssignmentFromTabMutation.mutate({ id: editingAssignment.id, data });
+    } else {
+      createAssignmentFromTabMutation.mutate(data);
+    }
+
+    if (conflicts.hasConflict && conflicts.type === "warning") {
+      toast({
+        title: "Warnung",
+        description: conflicts.message,
+        variant: "default",
+      });
+    }
+  };
+
+  const handleAssignmentDelete = (id: string) => {
+    if (confirm("Sind Sie sicher, dass Sie diese Zuweisung löschen möchten?")) {
+      deleteAssignmentFromTabMutation.mutate(id);
+    }
+  };
+  
+  // Create enriched assignments with teacher, class, and subject details for assignments tab
+  const enrichedAssignments: AssignmentWithDetails[] = assignments?.map(assignment => ({
+    ...assignment,
+    teacher: teachers?.find(t => t.id === assignment.teacherId),
+    class: classes?.find(c => c.id === assignment.classId),
+    subject: subjects?.find(s => s.id === assignment.subjectId),
+  })) || [];
+
+  const filteredAssignments = enrichedAssignments.filter(assignment => {
+    const matchesTeacher = assignmentsSelectedTeacher === "all" || assignment.teacherId === assignmentsSelectedTeacher;
+    const matchesClass = assignmentsSelectedClass === "all" || assignment.classId === assignmentsSelectedClass;
+    const matchesSemester = assignmentsSelectedSemester === "all" || assignment.semester === assignmentsSelectedSemester;
+    return matchesTeacher && matchesClass && matchesSemester;
+  });
+
+  // Statistics for assignments tab
+  const totalAssignments = assignments?.length || 0;
+  const totalHours = assignments?.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0) || 0;
+  const optimizedAssignments = assignments?.filter(a => a.isOptimized).length || 0;
+  const semester1Assignments = assignments?.filter(a => a.semester === "1").length || 0;
+  const semester2Assignments = assignments?.filter(a => a.semester === "2").length || 0;
+  const semester1Hours = assignments?.filter(a => a.semester === "1").reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0) || 0;
+  const semester2Hours = assignments?.filter(a => a.semester === "2").reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0) || 0;
+  
+  const getConflictStatus = (assignment: AssignmentWithDetails) => {
+    if (!assignment.teacher || !assignment.subject) return null;
+    
+    const teacherSubjects = assignment.teacher.subjects.flatMap(subjectString => 
+      subjectString.split(',').map(s => s.trim().toUpperCase())
+    );
+    
+    const subjectShortName = assignment.subject.shortName.trim().toUpperCase();
+    if (!teacherSubjects.includes(subjectShortName)) {
+      return { type: "error", message: "Keine Qualifikation" };
+    }
+    
+    const teacherAssignmentsInSemester = assignments?.filter(a => 
+      a.teacherId === assignment.teacherId && a.semester === assignment.semester
+    ) || [];
+    
+    const currentSemesterHours = teacherAssignmentsInSemester.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
+    const maxHoursPerSemester = parseFloat(assignment.teacher.maxHours);
+    
+    if (currentSemesterHours > maxHoursPerSemester) {
+      return { type: "error", message: `Überbelastung ${assignment.semester}.HJ` };
+    }
+    
+    if (currentSemesterHours > maxHoursPerSemester * 0.9) {
+      return { type: "warning", message: `Hohe Belastung ${assignment.semester}.HJ` };
+    }
+    
+    return { type: "success", message: "OK" };
+  };
+
   const isLoading = teachersLoading || classesLoading || subjectsLoading || assignmentsLoading;
 
   if (isLoading) {
@@ -896,7 +1170,7 @@ export default function Stundenplaene() {
         {/* Main Content */}
         <div className="p-4">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" data-testid="tabs-stundenplaene">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="teacher" data-testid="tab-lehrer">
                 <Presentation className="h-4 w-4 mr-2" />
                 Lehrer
@@ -904,6 +1178,10 @@ export default function Stundenplaene() {
               <TabsTrigger value="class" data-testid="tab-klasse">
                 <School className="h-4 w-4 mr-2" />
                 Klasse
+              </TabsTrigger>
+              <TabsTrigger value="assignments" data-testid="tab-zuweisungen">
+                <Clock className="h-4 w-4 mr-2" />
+                Zuweisungen
               </TabsTrigger>
             </TabsList>
 
@@ -1993,6 +2271,437 @@ export default function Stundenplaene() {
                   </Card>
                 </>
               )}
+            </TabsContent>
+            
+            {/* Assignments Tab Content */}
+            <TabsContent value="assignments" className="space-y-4">
+              {/* Statistics Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <Card data-testid="card-total-assignments">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-muted-foreground text-xs font-medium">Zuweisungen gesamt</p>
+                        <p className="text-2xl font-bold text-foreground">{totalAssignments}</p>
+                      </div>
+                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Clock className="text-blue-600 text-sm" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card data-testid="card-total-hours">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-muted-foreground text-xs font-medium">Stunden gesamt</p>
+                        <p className="text-2xl font-bold text-foreground">{totalHours}</p>
+                      </div>
+                      <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <BookOpen className="text-green-600 text-sm" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card data-testid="card-semester1">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-muted-foreground text-xs font-medium">1. Halbjahr</p>
+                        <p className="text-2xl font-bold text-foreground">{semester1Hours}h</p>
+                        <p className="text-xs text-muted-foreground">{semester1Assignments} Zuweisungen</p>
+                      </div>
+                      <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <Calendar className="text-orange-600 text-sm" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card data-testid="card-semester2">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-muted-foreground text-xs font-medium">2. Halbjahr</p>
+                        <p className="text-2xl font-bold text-foreground">{semester2Hours}h</p>
+                        <p className="text-xs text-muted-foreground">{semester2Assignments} Zuweisungen</p>
+                      </div>
+                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <Calendar className="text-purple-600 text-sm" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card data-testid="card-optimized">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-muted-foreground text-xs font-medium">Automatisch</p>
+                        <p className="text-2xl font-bold text-foreground">{optimizedAssignments}</p>
+                        <p className="text-xs text-muted-foreground">{Math.round((optimizedAssignments/totalAssignments)*100) || 0}% der Zuweisungen</p>
+                      </div>
+                      <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+                        <GraduationCap className="text-indigo-600 text-sm" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              {/* Filters */}
+              <Card data-testid="card-assignment-filters">
+                <CardHeader>
+                  <CardTitle>Filter</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="w-64">
+                      <label className="block text-sm font-medium text-foreground mb-2">Nach Lehrkraft filtern</label>
+                      <Select value={assignmentsSelectedTeacher} onValueChange={setAssignmentsSelectedTeacher}>
+                        <SelectTrigger data-testid="select-filter-teacher">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Alle Lehrkräfte</SelectItem>
+                          {teachers?.map(teacher => (
+                            <SelectItem key={teacher.id} value={teacher.id}>
+                              {teacher.firstName} {teacher.lastName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="w-64">
+                      <label className="block text-sm font-medium text-foreground mb-2">Nach Klasse filtern</label>
+                      <Select value={assignmentsSelectedClass} onValueChange={setAssignmentsSelectedClass}>
+                        <SelectTrigger data-testid="select-filter-class">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Alle Klassen</SelectItem>
+                          {classes?.map(classData => (
+                            <SelectItem key={classData.id} value={classData.id}>
+                              {classData.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="w-48">
+                      <label className="block text-sm font-medium text-foreground mb-2">Nach Halbjahr filtern</label>
+                      <Select value={assignmentsSelectedSemester} onValueChange={setAssignmentsSelectedSemester}>
+                        <SelectTrigger data-testid="select-filter-semester">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Alle Halbjahre</SelectItem>
+                          <SelectItem value="1">1. Halbjahr</SelectItem>
+                          <SelectItem value="2">2. Halbjahr</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Assignments List with Create Button */}
+              <Card data-testid="card-assignments-list">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Unterrichtszuweisungen ({filteredAssignments.length})</CardTitle>
+                    <Dialog open={isAssignmentDialogOpen} onOpenChange={setIsAssignmentDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button data-testid="button-add-assignment" onClick={() => {
+                          setEditingAssignment(null);
+                          assignmentForm.reset();
+                        }}>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Zuweisung erstellen
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>
+                            {editingAssignment ? "Zuweisung bearbeiten" : "Neue Zuweisung"}
+                          </DialogTitle>
+                        </DialogHeader>
+                        <Form {...assignmentForm}>
+                          <form onSubmit={assignmentForm.handleSubmit(handleAssignmentSubmit)} className="space-y-4">
+                            <FormField
+                              control={assignmentForm.control}
+                              name="teacherId"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Lehrkraft</FormLabel>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger data-testid="select-teacher">
+                                        <SelectValue placeholder="Lehrkraft auswählen" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {teachers?.map(teacher => (
+                                        <SelectItem key={teacher.id} value={teacher.id}>
+                                          {teacher.firstName} {teacher.lastName} ({teacher.shortName})
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={assignmentForm.control}
+                              name="classId"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Klasse</FormLabel>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger data-testid="select-class">
+                                        <SelectValue placeholder="Klasse auswählen" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {classes?.map(classData => (
+                                        <SelectItem key={classData.id} value={classData.id}>
+                                          {classData.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={assignmentForm.control}
+                              name="subjectId"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Fach</FormLabel>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger data-testid="select-subject">
+                                        <SelectValue placeholder="Fach auswählen" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {subjects?.map(subject => (
+                                        <SelectItem key={subject.id} value={subject.id}>
+                                          {subject.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={assignmentForm.control}
+                              name="hoursPerWeek"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Wochenstunden</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      {...field} 
+                                      type="number" 
+                                      min="1" 
+                                      max="10"
+                                      onChange={e => field.onChange(parseInt(e.target.value) || 1)}
+                                      data-testid="input-hours"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={assignmentForm.control}
+                              name="semester"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Halbjahr</FormLabel>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger data-testid="select-semester">
+                                        <SelectValue placeholder="Halbjahr auswählen" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="1">1. Halbjahr</SelectItem>
+                                      <SelectItem value="2">2. Halbjahr</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <div className="flex justify-end space-x-2 pt-4">
+                              <Button type="button" variant="outline" onClick={() => setIsAssignmentDialogOpen(false)}>
+                                Abbrechen
+                              </Button>
+                              <Button 
+                                type="submit" 
+                                disabled={createAssignmentFromTabMutation.isPending || updateAssignmentFromTabMutation.isPending}
+                                data-testid="button-save-assignment"
+                              >
+                                {createAssignmentFromTabMutation.isPending || updateAssignmentFromTabMutation.isPending ? "Speichert..." : "Speichern"}
+                              </Button>
+                            </div>
+                          </form>
+                        </Form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {assignmentsLoading ? (
+                    <div className="text-center py-8">Lade Zuweisungen...</div>
+                  ) : filteredAssignments.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      {assignmentsSelectedTeacher !== "all" || assignmentsSelectedClass !== "all" || assignmentsSelectedSemester !== "all"
+                        ? "Keine Zuweisungen gefunden, die den Filterkriterien entsprechen."
+                        : "Keine Unterrichtszuweisungen vorhanden. Bitte erstellen Sie Zuweisungen oder verwenden Sie die Optimierung."
+                      }
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-muted">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                              Lehrkraft
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                              Klasse
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                              Fach
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                              Halbjahr
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                              Stunden/Woche
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                              Typ
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                              Aktionen
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-card divide-y divide-border">
+                          {filteredAssignments.map((assignment) => {
+                            const conflictStatus = getConflictStatus(assignment);
+                            return (
+                              <tr key={assignment.id} data-testid={`row-assignment-${assignment.id}`}>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="flex items-center">
+                                    <div className="w-8 h-8 bg-secondary rounded-full flex items-center justify-center">
+                                      <span className="text-secondary-foreground text-sm font-medium">
+                                        {assignment.teacher?.shortName || "?"}
+                                      </span>
+                                    </div>
+                                    <div className="ml-3">
+                                      <div className="text-sm font-medium text-foreground">
+                                        {assignment.teacher ? 
+                                          `${assignment.teacher.firstName} ${assignment.teacher.lastName}` : 
+                                          "Unbekannt"
+                                        }
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <Badge variant="light">
+                                    {assignment.class?.name || "Unbekannt"}
+                                  </Badge>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                                  {assignment.subject?.name || "Unbekannt"}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <Badge variant="light">
+                                    {assignment.semester === "1" ? "1. HJ" : "2. HJ"}
+                                  </Badge>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                                  {assignment.hoursPerWeek}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  {conflictStatus && (
+                                    <div className="flex items-center">
+                                      {conflictStatus.type === "error" && (
+                                        <AlertTriangle className="w-4 h-4 text-red-500 mr-1" />
+                                      )}
+                                      {conflictStatus.type === "warning" && (
+                                        <AlertTriangle className="w-4 h-4 text-orange-500 mr-1" />
+                                      )}
+                                      {conflictStatus.type === "success" && (
+                                        <CheckCircle className="w-4 h-4 text-green-500 mr-1" />
+                                      )}
+                                      <Badge 
+                                        variant={
+                                          conflictStatus.type === "error" ? "destructive" :
+                                          conflictStatus.type === "warning" ? "light" : "light"
+                                        }
+                                      >
+                                        {conflictStatus.message}
+                                      </Badge>
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <Badge variant="light">
+                                    {assignment.isOptimized ? "Automatisch" : "Manuell"}
+                                  </Badge>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="flex items-center space-x-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleAssignmentEdit(assignment)}
+                                      data-testid={`button-edit-${assignment.id}`}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleAssignmentDelete(assignment.id)}
+                                      data-testid={`button-delete-${assignment.id}`}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </div>
