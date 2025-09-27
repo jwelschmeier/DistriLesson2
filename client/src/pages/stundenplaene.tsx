@@ -534,14 +534,43 @@ export default function Stundenplaene() {
     
     const workloadMap = new Map<string, { "1": number; "2": number; total: number }>();
     
+    // First, group assignments to handle team teaching correctly
+    // Each team teaching group should only count hours once per teacher
+    const processedAssignments = new Map<string, { teacherId: string; hours: number; semester: string }>();
+    
     extendedAssignments.forEach(assignment => {
-      const teacherId = assignment.teacherId;
+      const hours = parseFloat(assignment.hoursPerWeek);
+      
+      // Skip 0-hour assignments as they're often placeholders
+      if (hours <= 0) return;
+      
+      // For team teaching, we need to count the hours for each teacher individually
+      // but avoid double-counting within the same teacher's workload
+      const groupKey = assignment.teamTeachingId 
+        ? `team-${assignment.teamTeachingId}-${assignment.classId}-${assignment.subjectId}-${assignment.semester}-${assignment.teacherId}`
+        : `individual-${assignment.classId}-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
+      
+      const existing = processedAssignments.get(groupKey);
+      
+      // Keep the assignment with maximum hours (handles duplicates)
+      if (!existing || hours > existing.hours) {
+        processedAssignments.set(groupKey, {
+          teacherId: assignment.teacherId,
+          hours: hours,
+          semester: assignment.semester
+        });
+      }
+    });
+    
+    // Now calculate workload from processed assignments
+    Array.from(processedAssignments.values()).forEach(processedAssignment => {
+      const teacherId = processedAssignment.teacherId;
       const current = workloadMap.get(teacherId) || { "1": 0, "2": 0, total: 0 };
       
-      if (assignment.semester === "1") {
-        current["1"] += parseFloat(assignment.hoursPerWeek);
-      } else if (assignment.semester === "2") {
-        current["2"] += parseFloat(assignment.hoursPerWeek);
+      if (processedAssignment.semester === "1") {
+        current["1"] += processedAssignment.hours;
+      } else if (processedAssignment.semester === "2") {
+        current["2"] += processedAssignment.hours;
       }
       current.total = current["1"] + current["2"];
       
