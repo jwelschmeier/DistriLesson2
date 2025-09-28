@@ -83,6 +83,20 @@ export default function LehrerFaecherZuordnung() {
     );
   };
 
+  // Calculate remaining hours for a teacher
+  const getRemainingHours = (teacherId: string) => {
+    const teacher = teachers.find(t => t.id === teacherId);
+    if (!teacher) return 0;
+
+    const assignedHours = assignments
+      .filter(a => a.teacherId === teacherId && a.semester === selectedSemester)
+      .reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
+
+    const maxHours = parseFloat(teacher.maxHours);
+    const remaining = maxHours - assignedHours;
+    return Math.max(0, remaining);
+  };
+
   // Get required hours from existing assignments or use default
   const getRequiredHours = (subjectId: string) => {
     const existingAssignments = assignments.filter(a => a.subjectId === subjectId);
@@ -269,11 +283,14 @@ export default function LehrerFaecherZuordnung() {
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="unassigned">--</SelectItem>
-                                    {qualifiedTeachers.map(teacher => (
-                                      <SelectItem key={teacher.id} value={teacher.id}>
-                                        {teacher.shortName}
-                                      </SelectItem>
-                                    ))}
+                                    {qualifiedTeachers.map(teacher => {
+                                      const remainingHours = getRemainingHours(teacher.id);
+                                      return (
+                                        <SelectItem key={teacher.id} value={teacher.id}>
+                                          {teacher.shortName} ({remainingHours}h frei)
+                                        </SelectItem>
+                                      );
+                                    })}
                                   </SelectContent>
                                 </Select>
                               </td>
