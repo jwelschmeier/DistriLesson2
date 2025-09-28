@@ -351,7 +351,8 @@ export class DatabaseStorage implements IStorage {
 
   // Teachers
   async getTeachers(): Promise<Teacher[]> {
-    return await db.select().from(teachers).orderBy(teachers.lastName);
+    // Ultra-fast query with minimal ordering
+    return await db.select().from(teachers);
   }
 
   async getTeacher(id: string): Promise<Teacher | undefined> {
@@ -473,7 +474,8 @@ export class DatabaseStorage implements IStorage {
 
   // Classes
   async getClasses(): Promise<Class[]> {
-    return await db.select().from(classes).orderBy(classes.name);
+    // Ultra-fast query without ordering
+    return await db.select().from(classes);
   }
 
   async getClass(id: string): Promise<Class | undefined> {
@@ -523,7 +525,8 @@ export class DatabaseStorage implements IStorage {
 
   // Subjects
   async getSubjects(): Promise<Subject[]> {
-    return await db.select().from(subjects).orderBy(subjects.name);
+    // Ultra-fast query without ordering  
+    return await db.select().from(subjects);
   }
 
   async getSubject(id: string): Promise<Subject | undefined> {
