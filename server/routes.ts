@@ -148,10 +148,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Protected routes - all routes below this point require authentication
   // Teachers routes
   app.get("/api/teachers", async (req, res) => {
+    const startTime = Date.now();
     try {
       const teachers = await storage.getTeachers();
+      const duration = Date.now() - startTime;
+      console.log(`[PERF] Teachers query completed in ${duration}ms`);
       res.json(teachers);
     } catch (error) {
+      const duration = Date.now() - startTime;
+      console.error(`[PERF] Teachers query failed after ${duration}ms:`, error);
       res.status(500).json({ error: "Failed to fetch teachers" });
     }
   });
@@ -276,10 +281,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Classes routes
   app.get("/api/classes", async (req, res) => {
+    const startTime = Date.now();
     try {
       const classes = await storage.getClasses();
+      const duration = Date.now() - startTime;
+      console.log(`[PERF] Classes query completed in ${duration}ms`);
       res.json(classes);
     } catch (error) {
+      const duration = Date.now() - startTime;
+      console.error(`[PERF] Classes query failed after ${duration}ms:`, error);
       res.status(500).json({ error: "Failed to fetch classes" });
     }
   });
@@ -488,10 +498,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Subjects routes
   app.get("/api/subjects", async (req, res) => {
+    const startTime = Date.now();
     try {
       const subjects = await storage.getSubjects();
+      const duration = Date.now() - startTime;
+      console.log(`[PERF] Subjects query completed in ${duration}ms`);
       res.json(subjects);
     } catch (error) {
+      const duration = Date.now() - startTime;
+      console.error(`[PERF] Subjects query failed after ${duration}ms:`, error);
       res.status(500).json({ error: "Failed to fetch subjects" });
     }
   });
