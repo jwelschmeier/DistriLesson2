@@ -404,7 +404,82 @@ export default function LehrerFaecherZuordnung() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Datenabgleich-Button */}
+                <div className="flex flex-col gap-2 ml-auto">
+                  <Label>&nbsp;</Label>
+                  <Button 
+                    onClick={performDataComparison}
+                    disabled={isComparingData}
+                    variant="outline"
+                    size="sm"
+                  >
+                    {isComparingData ? (
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                    )}
+                    Datenabgleich
+                  </Button>
+                </div>
               </div>
+
+              {/* Abgleichsergebnis anzeigen */}
+              {comparisonResult && (
+                <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    <div className="flex items-center justify-between mb-2">
+                      <strong>Datenabgleich-Ergebnis ({selectedSemester}. Halbjahr)</strong>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setComparisonResult(null)}
+                        className="h-6 px-2 text-xs"
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-4 gap-4 text-sm mb-3">
+                      <div className="text-center">
+                        <div className="font-semibold text-green-600">{comparisonResult.summary.consistent}</div>
+                        <div className="text-xs text-muted-foreground">Konsistent</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-semibold text-orange-600">{comparisonResult.summary.missing}</div>
+                        <div className="text-xs text-muted-foreground">Abweichungen</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-semibold text-red-600">{comparisonResult.summary.conflicts}</div>
+                        <div className="text-xs text-muted-foreground">Konflikte</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-semibold">{comparisonResult.summary.total}</div>
+                        <div className="text-xs text-muted-foreground">Gesamt</div>
+                      </div>
+                    </div>
+                    {comparisonResult.differences.length > 0 ? (
+                      <div className="max-h-32 overflow-y-auto space-y-1">
+                        {comparisonResult.differences.slice(0, 5).map(diff => (
+                          <div key={diff.id} className="text-xs p-2 bg-white dark:bg-slate-800 rounded border">
+                            <span className="font-medium text-orange-600">{diff.issue}:</span> {diff.description}
+                          </div>
+                        ))}
+                        {comparisonResult.differences.length > 5 && (
+                          <div className="text-xs text-muted-foreground">
+                            ... und {comparisonResult.differences.length - 5} weitere Unterschiede
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center text-green-600 text-sm">
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Alle Daten sind konsistent zwischen Matrix und Stundenplänen
+                      </div>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
 
               {/* Assignment Matrix */}
               <div className="bg-card border rounded-lg overflow-hidden">
