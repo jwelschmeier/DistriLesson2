@@ -39,9 +39,21 @@ export default function LehrerFaecherZuordnung() {
     select: (data) => data.sort((a, b) => a.grade - b.grade || a.name.localeCompare(b.name))
   });
 
+  // Definierte Reihenfolge der deutschen Schulfächer
+  const SUBJECT_ORDER = ['D', 'M', 'E', 'Fs', 'SW', 'PK', 'GE', 'EK', 'BI', 'PH', 'CH', 'TC', 'If', 'HW', 'KU', 'MU', 'Tx', 'ER', 'KR', 'PP', 'SO', 'BO', 'SP'];
+
   const { data: subjects = [] } = useQuery<Subject[]>({ 
     queryKey: ['/api/subjects'],
-    select: (data) => data.sort((a, b) => a.name.localeCompare(b.name))
+    select: (data) => {
+      // Filtere nur die gewünschten Fächer und sortiere nach der definierten Reihenfolge
+      return data
+        .filter(subject => SUBJECT_ORDER.includes(subject.shortName))
+        .sort((a, b) => {
+          const indexA = SUBJECT_ORDER.indexOf(a.shortName);
+          const indexB = SUBJECT_ORDER.indexOf(b.shortName);
+          return indexA - indexB;
+        });
+    }
   });
 
   const { data: assignments = [] } = useQuery<AssignmentData[]>({ 
