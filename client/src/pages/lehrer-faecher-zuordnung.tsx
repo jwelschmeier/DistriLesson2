@@ -88,22 +88,25 @@ export default function LehrerFaecherZuordnung() {
   // Definierte Reihenfolge der deutschen Schulfächer
   const SUBJECT_ORDER = ['D', 'M', 'E', 'Fs', 'SW', 'PK', 'GE', 'EK', 'BI', 'PH', 'CH', 'TC', 'If', 'HW', 'KU', 'MU', 'Tx', 'ER', 'KR', 'PP', 'SO', 'BO', 'SP'];
 
-  // Data fetching
-  const { data: teachers = [] } = useQuery<Teacher[]>({ 
+  // Data fetching with proper error handling
+  const { data: teachers = [], isLoading: teachersLoading } = useQuery<Teacher[]>({ 
     queryKey: ['/api/teachers'],
-    select: (data) => data.filter(t => t.isActive),
-    staleTime: 30000 // Cache for 30 seconds
+    select: (data: Teacher[]) => data?.filter(t => t.isActive) || [],
+    staleTime: 30000,
+    retry: false
   });
 
-  const { data: classes = [] } = useQuery<Class[]>({ 
+  const { data: classes = [], isLoading: classesLoading } = useQuery<Class[]>({ 
     queryKey: ['/api/classes'],
-    select: (data) => data.sort((a, b) => a.grade - b.grade || a.name.localeCompare(b.name)),
-    staleTime: 30000
+    select: (data: Class[]) => data?.sort((a, b) => a.grade - b.grade || a.name.localeCompare(b.name)) || [],
+    staleTime: 30000,
+    retry: false
   });
 
-  const { data: subjects = [] } = useQuery<Subject[]>({ 
+  const { data: subjects = [], isLoading: subjectsLoading } = useQuery<Subject[]>({ 
     queryKey: ['/api/subjects'],
-    select: (data) => {
+    select: (data: Subject[]) => {
+      if (!data) return [];
       return data
         .filter(subject => SUBJECT_ORDER.includes(subject.shortName))
         .sort((a, b) => {
@@ -112,14 +115,19 @@ export default function LehrerFaecherZuordnung() {
           return indexA - indexB;
         });
     },
-    staleTime: 30000 // Cache for 30 seconds
+    staleTime: 30000,
+    retry: false
   });
 
-  const { data: assignments = [] } = useQuery<AssignmentData[]>({ 
+  const { data: assignments = [], isLoading: assignmentsLoading } = useQuery<AssignmentData[]>({ 
     queryKey: ['/api/assignments', selectedSemester],
     queryFn: () => fetch(`/api/assignments?semester=${selectedSemester}&minimal=true`).then(res => res.json()),
-    staleTime: 30000 // Cache for 30 seconds
+    staleTime: 30000,
+    retry: false
   });
+
+  // Show loading state while data is loading
+  const isLoading = teachersLoading || classesLoading || subjectsLoading || assignmentsLoading;
 
   // Abgleich mit Stundenpläne-Daten (vollständige API)
   const { refetch: refetchFullAssignments } = useQuery<AssignmentData[]>({ 
@@ -455,6 +463,12 @@ export default function LehrerFaecherZuordnung() {
             <Grid3X3 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
             <div>
               <h2 className="text-2xl font-semibold text-foreground">Lehrer-Fächer-Zuordnung</h2>
+              {isLoading && (
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                  <span className="text-sm text-orange-600 font-medium">Daten werden geladen... (kann bis zu 10 Sekunden dauern)</span>
+                </div>
+              )}
             </div>
           </div>
         </header>
