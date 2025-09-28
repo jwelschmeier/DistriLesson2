@@ -126,6 +126,7 @@ export default function Lehrerverwaltung() {
   // Load assignments to calculate actual teacher workload
   const { data: assignments = [] } = useQuery<Assignment[]>({
     queryKey: ["/api/assignments"],
+    queryFn: () => fetch("/api/assignments?minimal=true").then(res => res.json())
   });
 
   // Calculate actual current hours per teacher from assignments with team teaching support

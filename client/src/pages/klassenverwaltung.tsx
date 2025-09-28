@@ -68,6 +68,7 @@ export default function Klassenverwaltung() {
 
   const { data: assignments, isLoading: assignmentsLoading } = useQuery<Assignment[]>({
     queryKey: ["/api/assignments"],
+    queryFn: () => fetch("/api/assignments?minimal=true").then(res => res.json())
   });
 
   // Calculate actual assigned hours per class from assignments

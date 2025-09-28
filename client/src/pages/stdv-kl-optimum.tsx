@@ -55,6 +55,7 @@ export default function StdvKlOptimum() {
 
   const { data: assignments } = useQuery<Assignment[]>({
     queryKey: ["/api/assignments"],
+    queryFn: () => fetch("/api/assignments?minimal=true").then(res => res.json())
   });
 
   const optimizeMutation = useMutation({
