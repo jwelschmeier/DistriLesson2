@@ -127,6 +127,7 @@ export default function LehrerFaecherZuordnung() {
   // Datenabgleich zwischen Matrix und Stundenplänen
   const [comparisonResult, setComparisonResult] = useState<DataComparison | null>(null);
   const [isComparingData, setIsComparingData] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   
   const performDataComparison = useCallback(async () => {
     setIsComparingData(true);
@@ -212,6 +213,78 @@ export default function LehrerFaecherZuordnung() {
       setIsComparingData(false);
     }
   }, [assignments, refetchFullAssignments, toast]);
+
+  // Synchronisationsfunktion
+  const performDataSynchronization = useCallback(async () => {
+    if (!comparisonResult || comparisonResult.differences.length === 0) {
+      toast({
+        title: "Keine Synchronisation erforderlich",
+        description: "Es wurden keine Unterschiede zum Synchronisieren gefunden.",
+        variant: "default"
+      });
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      // Filtere nur "Nur in Stundenplänen" Einträge für Synchronisation
+      const toSync = comparisonResult.differences.filter(diff => 
+        diff.issue === 'Nur in Stundenplänen' && diff.schedulesData
+      );
+
+      let syncedCount = 0;
+      let errorCount = 0;
+
+      // Synchronisiere jeden fehlenden Eintrag
+      for (const diff of toSync) {
+        if (diff.schedulesData) {
+          try {
+            // Erstelle den Assignment in der Matrix
+            await createAssignmentMutation.mutateAsync({
+              teacherId: diff.schedulesData.teacherId,
+              classId: diff.schedulesData.classId,
+              subjectId: diff.schedulesData.subjectId,
+              hoursPerWeek: Number(diff.schedulesData.hoursPerWeek),
+              semester: diff.schedulesData.semester
+            });
+            syncedCount++;
+          } catch (error) {
+            console.error('Fehler beim Synchronisieren des Eintrags:', error);
+            errorCount++;
+          }
+        }
+      }
+
+      // Erfolgs-/Fehlermeldung
+      if (syncedCount > 0) {
+        toast({
+          title: "Synchronisation erfolgreich",
+          description: `${syncedCount} Zuordnungen wurden erfolgreich synchronisiert${errorCount > 0 ? `, ${errorCount} Fehler aufgetreten` : ''}.`,
+          variant: "default"
+        });
+        
+        // Aktualisiere die Daten und führe neuen Abgleich durch
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Kurz warten
+        performDataComparison();
+      } else if (errorCount > 0) {
+        toast({
+          title: "Synchronisation fehlgeschlagen",
+          description: `${errorCount} Einträge konnten nicht synchronisiert werden.`,
+          variant: "destructive"
+        });
+      }
+
+    } catch (error) {
+      console.error('Fehler bei der Synchronisation:', error);
+      toast({
+        title: "Synchronisation fehlgeschlagen",
+        description: "Ein unerwarteter Fehler ist aufgetreten.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [comparisonResult, createAssignmentMutation, toast, performDataComparison]);
 
   // Pre-computed indexes for O(1) lookups
   const computedData = useMemo(() => {
@@ -502,6 +575,31 @@ export default function LehrerFaecherZuordnung() {
                       <div className="flex items-center text-green-600 text-sm">
                         <CheckCircle className="h-4 w-4 mr-2" />
                         Alle Daten sind konsistent zwischen Matrix und Stundenplänen
+                      </div>
+                    )}
+                    
+                    {/* Synchronisations-Button */}
+                    {comparisonResult.differences.length > 0 && (
+                      <div className="mt-3 pt-3 border-t">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm text-muted-foreground">
+                            {comparisonResult.differences.filter(d => d.issue === 'Nur in Stundenplänen').length} Einträge können von Stundenplänen übernommen werden
+                          </p>
+                          <Button 
+                            onClick={performDataSynchronization}
+                            disabled={isSyncing}
+                            size="sm"
+                            variant="default"
+                            data-testid="button-sync-data"
+                          >
+                            {isSyncing ? (
+                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                            )}
+                            Synchronisieren
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </AlertDescription>

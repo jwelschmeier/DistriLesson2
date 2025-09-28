@@ -76,6 +76,7 @@ export default function Stundenplaene() {
 
   const { data: assignments, isLoading: assignmentsLoading } = useQuery<Assignment[]>({
     queryKey: ["/api/assignments"],
+    queryFn: () => fetch("/api/assignments?minimal=true").then(res => res.json())
   });
 
   // Mutations for assignment operations
