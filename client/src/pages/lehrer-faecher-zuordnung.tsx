@@ -312,16 +312,16 @@ export default function LehrerFaecherZuordnung() {
                                       {subject.shortName} - {subject.name}
                                     </Label>
                                     <Select
-                                      value={assignment?.teacherId || ''}
+                                      value={assignment?.teacherId || 'unassigned'}
                                       onValueChange={(teacherId) => 
-                                        updateAssignment(classData.id, subject.id, teacherId || null)
+                                        updateAssignment(classData.id, subject.id, teacherId === 'unassigned' ? null : teacherId)
                                       }
                                     >
                                       <SelectTrigger className="w-full" data-testid={`select-teacher-${classData.name}-${subject.shortName}`}>
                                         <SelectValue placeholder="Lehrer wählen..." />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        <SelectItem value="">-- Kein Lehrer --</SelectItem>
+                                        <SelectItem value="unassigned">-- Kein Lehrer --</SelectItem>
                                         {(showAllTeachers ? qualifiedTeachers : qualifiedTeachers.slice(0, 15)).map(teacher => {
                                           const workload = getTeacherWorkload(teacher.id);
                                           const status = getWorkloadStatus(workload.percentage);
