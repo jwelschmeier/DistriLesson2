@@ -5,9 +5,27 @@ import { Sidebar } from '@/components/layout/sidebar';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Grid3X3 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Grid3X3, RefreshCw, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Teacher, Class, Subject, Assignment } from '@shared/schema';
+
+type DataComparison = {
+  differences: {
+    id: string;
+    issue: string;
+    description: string;
+    matrixData?: Assignment;
+    schedulesData?: Assignment;
+  }[];
+  summary: {
+    total: number;
+    missing: number;
+    conflicts: number;
+    consistent: number;
+  };
+};
 
 type AssignmentData = Assignment & {
   teacher?: Teacher;
@@ -97,6 +115,82 @@ export default function LehrerFaecherZuordnung() {
     queryKey: ['/api/assignments', selectedSemester],
     queryFn: () => fetch(`/api/assignments?semester=${selectedSemester}&minimal=true`).then(res => res.json())
   });
+
+  // Abgleich mit Stundenpläne-Daten (vollständige API)
+  const { data: fullAssignments = [], refetch: refetchFullAssignments, isLoading: isComparingData } = useQuery<AssignmentData[]>({ 
+    queryKey: ['/api/assignments-full', selectedSemester],
+    queryFn: () => fetch(`/api/assignments?semester=${selectedSemester}`).then(res => res.json()),
+    enabled: false // Nur auf Anfrage laden
+  });
+
+  // Datenabgleich zwischen Matrix und Stundenplänen
+  const [comparisonResult, setComparisonResult] = useState<DataComparison | null>(null);
+  
+  const performDataComparison = useCallback(async () => {
+    await refetchFullAssignments();
+    
+    const differences: DataComparison['differences'] = [];
+    const summary = { total: 0, missing: 0, conflicts: 0, consistent: 0 };
+
+    // Erstelle Maps für einfachen Vergleich
+    const matrixMap = new Map<string, AssignmentData>();
+    const schedulesMap = new Map<string, AssignmentData>();
+
+    assignments.forEach(a => {
+      const key = `${a.classId}-${a.subjectId}-${a.semester}`;
+      matrixMap.set(key, a);
+    });
+
+    fullAssignments.forEach(a => {
+      const key = `${a.classId}-${a.subjectId}-${a.semester}`;
+      schedulesMap.set(key, a);
+    });
+
+    // Vergleiche alle Matrix-Einträge
+    matrixMap.forEach((matrixAssignment, key) => {
+      summary.total++;
+      const scheduleAssignment = schedulesMap.get(key);
+      
+      if (!scheduleAssignment) {
+        summary.missing++;
+        differences.push({
+          id: `missing-${key}`,
+          issue: 'Fehlend in Stundenplänen',
+          description: `Zuordnung existiert in Matrix aber nicht in Stundenplänen`,
+          matrixData: matrixAssignment
+        });
+      } else if (
+        matrixAssignment.teacherId !== scheduleAssignment.teacherId ||
+        matrixAssignment.hoursPerWeek !== scheduleAssignment.hoursPerWeek
+      ) {
+        summary.conflicts++;
+        differences.push({
+          id: `conflict-${key}`,
+          issue: 'Datenkonflikte',
+          description: `Unterschiedliche Lehrer oder Stunden: Matrix=${matrixAssignment.teacherId}, Stundenplan=${scheduleAssignment.teacherId}`,
+          matrixData: matrixAssignment,
+          schedulesData: scheduleAssignment
+        });
+      } else {
+        summary.consistent++;
+      }
+    });
+
+    // Prüfe auf zusätzliche Einträge in Stundenplänen
+    schedulesMap.forEach((scheduleAssignment, key) => {
+      if (!matrixMap.has(key)) {
+        summary.missing++;
+        differences.push({
+          id: `extra-${key}`,
+          issue: 'Nur in Stundenplänen',
+          description: `Zuordnung existiert nur in Stundenplänen, nicht in Matrix`,
+          schedulesData: scheduleAssignment
+        });
+      }
+    });
+
+    setComparisonResult({ differences, summary });
+  }, [assignments, fullAssignments, refetchFullAssignments]);
 
   // Pre-computed indexes for O(1) lookups
   const computedData = useMemo(() => {
