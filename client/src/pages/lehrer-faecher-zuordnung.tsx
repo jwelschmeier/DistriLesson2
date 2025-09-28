@@ -95,7 +95,7 @@ export default function LehrerFaecherZuordnung() {
 
   const { data: assignments = [] } = useQuery<AssignmentData[]>({ 
     queryKey: ['/api/assignments', selectedSemester],
-    queryFn: () => fetch(`/api/assignments?semester=${selectedSemester}`).then(res => res.json())
+    queryFn: () => fetch(`/api/assignments?semester=${selectedSemester}&minimal=true`).then(res => res.json())
   });
 
   // Pre-computed indexes for O(1) lookups
@@ -224,8 +224,8 @@ export default function LehrerFaecherZuordnung() {
     }
   });
 
-  // Update assignment
-  const updateAssignment = (classId: string, subjectId: string, teacherId: string | null) => {
+  // Memoized update assignment function to prevent unnecessary re-renders
+  const updateAssignment = useCallback((classId: string, subjectId: string, teacherId: string | null) => {
     const hours = getRequiredHours(subjectId);
     const existingAssignment = getAssignment(classId, subjectId);
 
@@ -248,7 +248,7 @@ export default function LehrerFaecherZuordnung() {
         semester: selectedSemester
       });
     }
-  };
+  }, [selectedSemester, getRequiredHours, getAssignment, createAssignmentMutation, updateAssignmentMutation, deleteAssignmentMutation]);
 
   return (
     <div className="flex h-screen bg-muted/50 dark:bg-muted/20">

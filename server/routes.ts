@@ -570,9 +570,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Optional semester parameter for filtering
       const semester = req.query.semester as string;
       
-      // Use optimized method with pre-loaded relations to avoid N+1 queries
-      const assignments = await storage.getAssignmentsWithRelations(semester);
-      res.json(assignments);
+      // For performance, return minimal data when explicitly requested
+      if (req.query.minimal === 'true') {
+        const assignments = await storage.getAssignmentsMinimal(semester);
+        res.json(assignments);
+      } else {
+        // Use optimized method with pre-loaded relations for other uses
+        const assignments = await storage.getAssignmentsWithRelations(semester);
+        res.json(assignments);
+      }
     } catch (error) {
       console.error("Failed to fetch assignments:", error);
       res.status(500).json({ error: "Failed to fetch assignments" });
