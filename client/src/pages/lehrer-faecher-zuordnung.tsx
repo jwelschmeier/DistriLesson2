@@ -24,6 +24,7 @@ type DataComparison = {
     missing: number;
     conflicts: number;
     consistent: number;
+    extraInSchedules: number;
   };
 };
 
@@ -117,7 +118,7 @@ export default function LehrerFaecherZuordnung() {
   });
 
   // Abgleich mit Stundenpläne-Daten (vollständige API)
-  const { data: fullAssignments = [], refetch: refetchFullAssignments, isLoading: isComparingData } = useQuery<AssignmentData[]>({ 
+  const { refetch: refetchFullAssignments } = useQuery<AssignmentData[]>({ 
     queryKey: ['/api/assignments-full', selectedSemester],
     queryFn: () => fetch(`/api/assignments?semester=${selectedSemester}`).then(res => res.json()),
     enabled: false // Nur auf Anfrage laden
@@ -125,72 +126,92 @@ export default function LehrerFaecherZuordnung() {
 
   // Datenabgleich zwischen Matrix und Stundenplänen
   const [comparisonResult, setComparisonResult] = useState<DataComparison | null>(null);
+  const [isComparingData, setIsComparingData] = useState(false);
   
   const performDataComparison = useCallback(async () => {
-    await refetchFullAssignments();
-    
-    const differences: DataComparison['differences'] = [];
-    const summary = { total: 0, missing: 0, conflicts: 0, consistent: 0 };
-
-    // Erstelle Maps für einfachen Vergleich
-    const matrixMap = new Map<string, AssignmentData>();
-    const schedulesMap = new Map<string, AssignmentData>();
-
-    assignments.forEach(a => {
-      const key = `${a.classId}-${a.subjectId}-${a.semester}`;
-      matrixMap.set(key, a);
-    });
-
-    fullAssignments.forEach(a => {
-      const key = `${a.classId}-${a.subjectId}-${a.semester}`;
-      schedulesMap.set(key, a);
-    });
-
-    // Vergleiche alle Matrix-Einträge
-    matrixMap.forEach((matrixAssignment, key) => {
-      summary.total++;
-      const scheduleAssignment = schedulesMap.get(key);
+    setIsComparingData(true);
+    try {
+      // Hole frische Daten von der vollständigen API
+      const { data: schedules = [] } = await refetchFullAssignments();
       
-      if (!scheduleAssignment) {
-        summary.missing++;
-        differences.push({
-          id: `missing-${key}`,
-          issue: 'Fehlend in Stundenplänen',
-          description: `Zuordnung existiert in Matrix aber nicht in Stundenplänen`,
-          matrixData: matrixAssignment
-        });
-      } else if (
-        matrixAssignment.teacherId !== scheduleAssignment.teacherId ||
-        matrixAssignment.hoursPerWeek !== scheduleAssignment.hoursPerWeek
-      ) {
-        summary.conflicts++;
-        differences.push({
-          id: `conflict-${key}`,
-          issue: 'Datenkonflikte',
-          description: `Unterschiedliche Lehrer oder Stunden: Matrix=${matrixAssignment.teacherId}, Stundenplan=${scheduleAssignment.teacherId}`,
-          matrixData: matrixAssignment,
-          schedulesData: scheduleAssignment
-        });
-      } else {
-        summary.consistent++;
-      }
-    });
+      const differences: DataComparison['differences'] = [];
+      const summary = { 
+        total: 0, 
+        missing: 0,      // Nur in Matrix
+        conflicts: 0,    // Unterschiedliche Daten
+        consistent: 0,   // Gleiche Daten
+        extraInSchedules: 0 // Nur in Stundenplänen
+      };
 
-    // Prüfe auf zusätzliche Einträge in Stundenplänen
-    schedulesMap.forEach((scheduleAssignment, key) => {
-      if (!matrixMap.has(key)) {
-        summary.missing++;
-        differences.push({
-          id: `extra-${key}`,
-          issue: 'Nur in Stundenplänen',
-          description: `Zuordnung existiert nur in Stundenplänen, nicht in Matrix`,
-          schedulesData: scheduleAssignment
-        });
-      }
-    });
+      // Erstelle Maps für einfachen Vergleich
+      const matrixMap = new Map<string, AssignmentData>();
+      const schedulesMap = new Map<string, AssignmentData>();
 
-    setComparisonResult({ differences, summary });
-  }, [assignments, fullAssignments, refetchFullAssignments]);
+      assignments.forEach(a => {
+        const key = `${a.classId}-${a.subjectId}-${a.semester}`;
+        matrixMap.set(key, a);
+      });
+
+      schedules.forEach(a => {
+        const key = `${a.classId}-${a.subjectId}-${a.semester}`;
+        schedulesMap.set(key, a);
+      });
+
+      // Vergleiche alle Matrix-Einträge
+      matrixMap.forEach((matrixAssignment, key) => {
+        summary.total++;
+        const scheduleAssignment = schedulesMap.get(key);
+        
+        if (!scheduleAssignment) {
+          summary.missing++;
+          differences.push({
+            id: `missing-${key}`,
+            issue: 'Nur in Matrix',
+            description: `Zuordnung existiert in Matrix aber nicht in Stundenplänen`,
+            matrixData: matrixAssignment
+          });
+        } else if (
+          matrixAssignment.teacherId !== scheduleAssignment.teacherId ||
+          Number(matrixAssignment.hoursPerWeek) !== Number(scheduleAssignment.hoursPerWeek)
+        ) {
+          summary.conflicts++;
+          differences.push({
+            id: `conflict-${key}`,
+            issue: 'Datenkonflikte',
+            description: `Matrix: ${matrixAssignment.teacherId || 'Nicht zugeordnet'} (${matrixAssignment.hoursPerWeek}h) ≠ Stundenpläne: ${scheduleAssignment.teacherId || 'Nicht zugeordnet'} (${scheduleAssignment.hoursPerWeek}h)`,
+            matrixData: matrixAssignment,
+            schedulesData: scheduleAssignment
+          });
+        } else {
+          summary.consistent++;
+        }
+      });
+
+      // Prüfe auf zusätzliche Einträge in Stundenplänen
+      schedulesMap.forEach((scheduleAssignment, key) => {
+        if (!matrixMap.has(key)) {
+          summary.extraInSchedules++;
+          differences.push({
+            id: `extra-${key}`,
+            issue: 'Nur in Stundenplänen',
+            description: `Zuordnung existiert nur in Stundenplänen, nicht in Matrix`,
+            schedulesData: scheduleAssignment
+          });
+        }
+      });
+
+      setComparisonResult({ differences, summary });
+    } catch (error) {
+      console.error('Fehler beim Datenabgleich:', error);
+      toast({
+        title: "Fehler beim Datenabgleich",
+        description: "Die Daten konnten nicht verglichen werden.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsComparingData(false);
+    }
+  }, [assignments, refetchFullAssignments, toast]);
 
   // Pre-computed indexes for O(1) lookups
   const computedData = useMemo(() => {
@@ -290,6 +311,7 @@ export default function LehrerFaecherZuordnung() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/assignments', selectedSemester] });
+      queryClient.invalidateQueries({ queryKey: ['/api/assignments-full', selectedSemester] });
       toast({ title: "Zuordnung aktualisiert", description: "Die Zuordnung wurde erfolgreich geändert." });
     },
     onError: (error: any) => {
@@ -413,6 +435,7 @@ export default function LehrerFaecherZuordnung() {
                     disabled={isComparingData}
                     variant="outline"
                     size="sm"
+                    data-testid="button-data-comparison"
                   >
                     {isComparingData ? (
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -440,22 +463,26 @@ export default function LehrerFaecherZuordnung() {
                         ✕
                       </Button>
                     </div>
-                    <div className="grid grid-cols-4 gap-4 text-sm mb-3">
-                      <div className="text-center">
+                    <div className="grid grid-cols-5 gap-3 text-sm mb-3">
+                      <div className="text-center" data-testid="summary-consistent">
                         <div className="font-semibold text-green-600">{comparisonResult.summary.consistent}</div>
                         <div className="text-xs text-muted-foreground">Konsistent</div>
                       </div>
-                      <div className="text-center">
-                        <div className="font-semibold text-orange-600">{comparisonResult.summary.missing}</div>
-                        <div className="text-xs text-muted-foreground">Abweichungen</div>
+                      <div className="text-center" data-testid="summary-missing">
+                        <div className="font-semibold text-blue-600">{comparisonResult.summary.missing}</div>
+                        <div className="text-xs text-muted-foreground">Nur Matrix</div>
                       </div>
-                      <div className="text-center">
+                      <div className="text-center" data-testid="summary-extra">
+                        <div className="font-semibold text-orange-600">{comparisonResult.summary.extraInSchedules}</div>
+                        <div className="text-xs text-muted-foreground">Nur Stundenpläne</div>
+                      </div>
+                      <div className="text-center" data-testid="summary-conflicts">
                         <div className="font-semibold text-red-600">{comparisonResult.summary.conflicts}</div>
                         <div className="text-xs text-muted-foreground">Konflikte</div>
                       </div>
-                      <div className="text-center">
-                        <div className="font-semibold">{comparisonResult.summary.total}</div>
-                        <div className="text-xs text-muted-foreground">Gesamt</div>
+                      <div className="text-center" data-testid="summary-total">
+                        <div className="font-semibold">{comparisonResult.summary.total + comparisonResult.summary.extraInSchedules}</div>
+                        <div className="text-xs text-muted-foreground">Gesamt verglichen</div>
                       </div>
                     </div>
                     {comparisonResult.differences.length > 0 ? (
