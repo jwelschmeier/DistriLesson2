@@ -24,6 +24,9 @@ export default function LehrerFaecherZuordnung() {
   const [selectedSemester, setSelectedSemester] = useState<"1" | "2">("1");
   const [filterGrade, setFilterGrade] = useState<string>('alle');
   const [filterSubject, setFilterSubject] = useState<string>('alle');
+  const [showAllClasses, setShowAllClasses] = useState(false);
+  const [showAllSubjects, setShowAllSubjects] = useState(false);
+  const [showAllTeachers, setShowAllTeachers] = useState(false);
 
   // Data fetching
   const { data: teachers = [] } = useQuery<Teacher[]>({ 
@@ -64,14 +67,14 @@ export default function LehrerFaecherZuordnung() {
     }
   });
 
-  // Update assignment mutation
+  // Update assignment mutation  
   const updateAssignmentMutation = useMutation({
     mutationFn: async ({ id, ...data }: { id: string; teacherId?: string; hoursPerWeek?: number }) => {
       return apiRequest(`/api/assignments/${id}`, 'PATCH', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/assignments'] });
-      toast({ title: "Zuordnung aktualisiert", description: "Die Änderungen wurden gespeichert." });
+      toast({ title: "Zuordnung aktualisiert", description: "Die Zuordnung wurde erfolgreich geändert." });
     },
     onError: (error: any) => {
       toast({ 
@@ -120,29 +123,49 @@ export default function LehrerFaecherZuordnung() {
     );
   };
 
-  // Get teachers qualified for a subject
+  // Memoized teacher qualifications lookup
+  const teacherQualifications = useMemo(() => {
+    const qualificationMap = new Map<string, Teacher[]>();
+    
+    subjects.forEach(subject => {
+      const qualified = teachers.filter(teacher => 
+        teacher.subjects.some(s => 
+          s.toLowerCase() === subject.shortName.toLowerCase() ||
+          s.toLowerCase().includes(subject.shortName.toLowerCase())
+        )
+      );
+      qualificationMap.set(subject.shortName, qualified);
+    });
+    
+    return qualificationMap;
+  }, [teachers, subjects]);
+
+  // Get teachers qualified for a subject (now uses memoized lookup)
   const getQualifiedTeachers = (subjectShortName: string) => {
-    return teachers.filter(teacher => 
-      teacher.subjects.some(s => 
-        s.toLowerCase() === subjectShortName.toLowerCase() ||
-        s.toLowerCase().includes(subjectShortName.toLowerCase())
-      )
-    );
+    return teacherQualifications.get(subjectShortName) || [];
   };
 
-  // Teacher workload calculation
-  const getTeacherWorkload = (teacherId: string) => {
-    const teacher = teachers.find(t => t.id === teacherId);
-    if (!teacher) return { assigned: 0, max: 25, percentage: 0 };
-
-    const assigned = assignments
-      .filter(a => a.teacherId === teacherId && a.semester === selectedSemester)
-      .reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
+  // Memoized teacher workload calculations
+  const teacherWorkloads = useMemo(() => {
+    const workloadMap = new Map<string, { assigned: number; max: number; percentage: number }>();
     
-    const max = parseFloat(teacher.maxHours);
-    const percentage = (assigned / max) * 100;
+    teachers.forEach(teacher => {
+      const assigned = assignments
+        .filter(a => a.teacherId === teacher.id && a.semester === selectedSemester)
+        .reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
+      
+      const max = parseFloat(teacher.maxHours);
+      const percentage = (assigned / max) * 100;
+      
+      workloadMap.set(teacher.id, { assigned, max, percentage });
+    });
+    
+    return workloadMap;
+  }, [teachers, assignments, selectedSemester]);
 
-    return { assigned, max, percentage };
+  // Teacher workload calculation (now uses memoized lookup)
+  const getTeacherWorkload = (teacherId: string) => {
+    return teacherWorkloads.get(teacherId) || { assigned: 0, max: 25, percentage: 0 };
   };
 
   const getWorkloadStatus = (percentage: number) => {
@@ -230,7 +253,7 @@ export default function LehrerFaecherZuordnung() {
                       </SelectContent>
                     </Select>
                   </div>
-
+                  
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="filter-subject">Fach</Label>
                     <Select value={filterSubject} onValueChange={setFilterSubject}>
@@ -250,169 +273,167 @@ export default function LehrerFaecherZuordnung() {
                 </CardContent>
               </Card>
 
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                {/* Assignment Matrix */}
-                <div className="lg:col-span-3">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Grid3X3 className="h-5 w-5" />
-                        Zuordnungsmatrix - {selectedSemester === "1" ? "1. Halbjahr" : "2. Halbjahr"}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="overflow-x-auto">
-                        <table className="w-full border-collapse">
-                          <thead>
-                            <tr className="border-b">
-                              <th className="text-left p-3 font-medium bg-muted/50 dark:bg-muted/20">
-                                Klasse
-                              </th>
-                              {filteredSubjects.map(subject => (
-                                <th key={subject.id} className="text-left p-3 font-medium bg-muted/50 dark:bg-muted/20 min-w-32">
-                                  <div className="text-sm">
-                                    <div className="font-semibold">{subject.shortName}</div>
-                                    <div className="text-xs text-muted-foreground">{subject.name}</div>
-                                  </div>
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {filteredClasses.map(classData => (
-                              <tr key={classData.id} className="border-b hover:bg-muted/30 dark:hover:bg-muted/10">
-                                <td className="p-3 font-medium">
-                                  <div className="text-sm">
-                                    <div className="font-semibold">{classData.name}</div>
-                                    <div className="text-xs text-muted-foreground">
-                                      {classData.studentCount} Schüler
-                                    </div>
-                                  </div>
-                                </td>
-                                {filteredSubjects.map(subject => {
-                                  const assignment = getAssignment(classData.id, subject.id);
-                                  const qualifiedTeachers = getQualifiedTeachers(subject.shortName);
-                                  
-                                  return (
-                                    <td key={subject.id} className="p-3">
-                                      <div className="space-y-2">
-                                        <Select
-                                          value={assignment?.teacherId || ''}
-                                          onValueChange={(teacherId) => 
-                                            updateAssignment(classData.id, subject.id, teacherId || null)
-                                          }
-                                        >
-                                          <SelectTrigger className="w-full text-xs" data-testid={`select-teacher-${classData.name}-${subject.shortName}`}>
-                                            <SelectValue placeholder="--" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="">-- Kein Lehrer --</SelectItem>
-                                            {qualifiedTeachers.map(teacher => {
-                                              const workload = getTeacherWorkload(teacher.id);
-                                              const status = getWorkloadStatus(workload.percentage);
-                                              
-                                              return (
-                                                <SelectItem 
-                                                  key={teacher.id} 
-                                                  value={teacher.id}
-                                                  className={
-                                                    status === 'überlastet' ? 'text-red-600 dark:text-red-400' :
-                                                    status === 'grenzwertig' ? 'text-yellow-600 dark:text-yellow-400' :
-                                                    'text-green-600 dark:text-green-400'
-                                                  }
-                                                >
-                                                  <div className="flex items-center gap-2">
-                                                    <span>{teacher.shortName}</span>
-                                                    <Badge variant={
-                                                      status === 'überlastet' ? 'destructive' :
-                                                      status === 'grenzwertig' ? 'secondary' : 'default'
-                                                    } className="text-xs">
-                                                      {workload.percentage.toFixed(0)}%
-                                                    </Badge>
-                                                  </div>
-                                                </SelectItem>
-                                              );
-                                            })}
-                                          </SelectContent>
-                                        </Select>
-                                        
-                                        {assignment && (
-                                          <div className="flex items-center gap-2">
-                                            <Input
-                                              type="number"
-                                              min="0.5"
-                                              max="10"
-                                              step="0.5"
-                                              value={assignment.hoursPerWeek}
-                                              onChange={(e) => {
-                                                const hours = parseFloat(e.target.value);
-                                                if (hours >= 0.5 && hours <= 10) {
-                                                  updateAssignment(classData.id, subject.id, assignment.teacherId, hours);
-                                                }
-                                              }}
-                                              className="w-16 text-xs h-8"
-                                              data-testid={`input-hours-${classData.name}-${subject.shortName}`}
-                                            />
-                                            <span className="text-xs text-muted-foreground">h</span>
-                                          </div>
-                                        )}
-                                      </div>
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+              <div className="space-y-6">
+                {/* Assignment Matrix - Simplified */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Grid3X3 className="h-5 w-5" />
+                      Zuordnungsmatrix - {selectedSemester === "1" ? "1. Halbjahr" : "2. Halbjahr"}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="text-sm text-muted-foreground">
+                        {filteredClasses.length} Klassen × {filteredSubjects.length} Fächer
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                      
+                      {/* Improved List View with pagination */}
+                      <div className="space-y-4">
+                        {(showAllClasses ? filteredClasses : filteredClasses.slice(0, 10)).map(classData => (
+                          <Card key={classData.id} className="p-4">
+                            <div className="flex items-center justify-between mb-4">
+                              <div>
+                                <h3 className="font-semibold">{classData.name}</h3>
+                                <p className="text-sm text-muted-foreground">
+                                  {classData.grade}. Jahrgang • {classData.studentCount} Schüler
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {(showAllSubjects ? filteredSubjects : filteredSubjects.slice(0, 12)).map(subject => {
+                                const assignment = getAssignment(classData.id, subject.id);
+                                const qualifiedTeachers = getQualifiedTeachers(subject.shortName);
+                                
+                                return (
+                                  <div key={subject.id} className="space-y-2">
+                                    <Label className="text-sm font-medium">
+                                      {subject.shortName} - {subject.name}
+                                    </Label>
+                                    <Select
+                                      value={assignment?.teacherId || ''}
+                                      onValueChange={(teacherId) => 
+                                        updateAssignment(classData.id, subject.id, teacherId || null)
+                                      }
+                                    >
+                                      <SelectTrigger className="w-full" data-testid={`select-teacher-${classData.name}-${subject.shortName}`}>
+                                        <SelectValue placeholder="Lehrer wählen..." />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="">-- Kein Lehrer --</SelectItem>
+                                        {(showAllTeachers ? qualifiedTeachers : qualifiedTeachers.slice(0, 15)).map(teacher => {
+                                          const workload = getTeacherWorkload(teacher.id);
+                                          const status = getWorkloadStatus(workload.percentage);
+                                          
+                                          return (
+                                            <SelectItem key={teacher.id} value={teacher.id}>
+                                              <div className="flex items-center gap-2">
+                                                <span>{teacher.shortName}</span>
+                                                <Badge variant={
+                                                  status === 'überlastet' ? 'destructive' :
+                                                  status === 'grenzwertig' ? 'secondary' : 'default'
+                                                } className="text-xs">
+                                                  {workload.percentage.toFixed(0)}%
+                                                </Badge>
+                                              </div>
+                                            </SelectItem>
+                                          );
+                                        })}
+                                      </SelectContent>
+                                    </Select>
+                                    
+                                    {assignment && (
+                                      <div className="flex items-center gap-2">
+                                        <Input
+                                          type="number"
+                                          min="0.5"
+                                          max="10"
+                                          step="0.5"
+                                          value={assignment.hoursPerWeek}
+                                          onChange={(e) => {
+                                            const hours = parseFloat(e.target.value);
+                                            if (hours >= 0.5 && hours <= 10) {
+                                              updateAssignment(classData.id, subject.id, assignment.teacherId, hours);
+                                            }
+                                          }}
+                                          className="w-20 text-sm"
+                                          data-testid={`input-hours-${classData.name}-${subject.shortName}`}
+                                        />
+                                        <span className="text-sm text-muted-foreground">h/Woche</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            
+                            {!showAllSubjects && filteredSubjects.length > 12 && (
+                              <div className="mt-4 text-center">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => setShowAllSubjects(true)}
+                                >
+                                  {filteredSubjects.length - 12} weitere Fächer anzeigen
+                                </Button>
+                              </div>
+                            )}
+                          </Card>
+                        ))}
+                      </div>
+                      
+                      {!showAllClasses && filteredClasses.length > 10 && (
+                        <div className="text-center space-y-2">
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setShowAllClasses(true)}
+                          >
+                            Alle {filteredClasses.length} Klassen anzeigen
+                          </Button>
+                          <p className="text-sm text-muted-foreground">
+                            (Zeige {Math.min(10, filteredClasses.length)} von {filteredClasses.length} Klassen)
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
 
                 {/* Teacher Workload Overview */}
-                <div className="lg:col-span-1">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Users className="h-5 w-5" />
-                        Lehrerbelastung
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5" />
+                      Lehrerbelastung - {selectedSemester === "1" ? "1. Halbjahr" : "2. Halbjahr"}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {teachers
-                        .sort((a, b) => a.shortName.localeCompare(b.shortName))
+                        .filter(t => t.isActive)
+                        .slice(0, showAllTeachers ? undefined : 18)
                         .map(teacher => {
                           const workload = getTeacherWorkload(teacher.id);
                           const status = getWorkloadStatus(workload.percentage);
                           
                           return (
-                            <div key={teacher.id} className="border rounded-lg p-3 space-y-3" data-testid={`workload-${teacher.shortName}`}>
-                              <div className="flex justify-between items-center">
-                                <div className="font-medium text-sm">{teacher.shortName}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {workload.assigned.toFixed(1)}/{workload.max}h
-                                </div>
-                              </div>
-                              
-                              <div className="w-full bg-muted rounded-full h-2">
-                                <div 
-                                  className={`h-2 rounded-full transition-all ${
-                                    status === 'überlastet' ? 'bg-red-500' :
-                                    status === 'grenzwertig' ? 'bg-yellow-500' :
-                                    'bg-green-500'
-                                  }`}
-                                  style={{width: `${Math.min(workload.percentage, 100)}%`}}
-                                />
-                              </div>
-                              
-                              <div className="flex items-center justify-between">
+                            <div key={teacher.id} className="p-4 border rounded-lg">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="font-medium">{teacher.shortName}</span>
                                 <Badge variant={
                                   status === 'überlastet' ? 'destructive' :
                                   status === 'grenzwertig' ? 'secondary' : 'default'
-                                } className="text-xs">
+                                }>
                                   {workload.percentage.toFixed(1)}%
                                 </Badge>
-                                
+                              </div>
+                              
+                              <div className="text-sm text-muted-foreground mb-2">
+                                <div>{workload.assigned.toFixed(1)}h / {workload.max}h</div>
+                              </div>
+                              
+                              <div className="flex items-center gap-1 mb-2">                                
                                 {status === 'überlastet' && (
                                   <AlertTriangle className="h-4 w-4 text-red-500" />
                                 )}
@@ -437,9 +458,20 @@ export default function LehrerFaecherZuordnung() {
                             </div>
                           );
                         })}
-                    </CardContent>
-                  </Card>
-                </div>
+                    </div>
+                    
+                    {!showAllTeachers && teachers.filter(t => t.isActive).length > 18 && (
+                      <div className="text-center mt-4">
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setShowAllTeachers(true)}
+                        >
+                          Alle {teachers.filter(t => t.isActive).length} Lehrer anzeigen
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             </TabsContent>
           </Tabs>
