@@ -214,77 +214,6 @@ export default function LehrerFaecherZuordnung() {
     }
   }, [assignments, refetchFullAssignments, toast]);
 
-  // Synchronisationsfunktion
-  const performDataSynchronization = useCallback(async () => {
-    if (!comparisonResult || comparisonResult.differences.length === 0) {
-      toast({
-        title: "Keine Synchronisation erforderlich",
-        description: "Es wurden keine Unterschiede zum Synchronisieren gefunden.",
-        variant: "default"
-      });
-      return;
-    }
-
-    setIsSyncing(true);
-    try {
-      // Filtere nur "Nur in Stundenplänen" Einträge für Synchronisation
-      const toSync = comparisonResult.differences.filter(diff => 
-        diff.issue === 'Nur in Stundenplänen' && diff.schedulesData
-      );
-
-      let syncedCount = 0;
-      let errorCount = 0;
-
-      // Synchronisiere jeden fehlenden Eintrag
-      for (const diff of toSync) {
-        if (diff.schedulesData) {
-          try {
-            // Erstelle den Assignment in der Matrix
-            await createAssignmentMutation.mutateAsync({
-              teacherId: diff.schedulesData.teacherId,
-              classId: diff.schedulesData.classId,
-              subjectId: diff.schedulesData.subjectId,
-              hoursPerWeek: Number(diff.schedulesData.hoursPerWeek),
-              semester: diff.schedulesData.semester
-            });
-            syncedCount++;
-          } catch (error) {
-            console.error('Fehler beim Synchronisieren des Eintrags:', error);
-            errorCount++;
-          }
-        }
-      }
-
-      // Erfolgs-/Fehlermeldung
-      if (syncedCount > 0) {
-        toast({
-          title: "Synchronisation erfolgreich",
-          description: `${syncedCount} Zuordnungen wurden erfolgreich synchronisiert${errorCount > 0 ? `, ${errorCount} Fehler aufgetreten` : ''}.`,
-          variant: "default"
-        });
-        
-        // Aktualisiere die Daten und führe neuen Abgleich durch
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Kurz warten
-        performDataComparison();
-      } else if (errorCount > 0) {
-        toast({
-          title: "Synchronisation fehlgeschlagen",
-          description: `${errorCount} Einträge konnten nicht synchronisiert werden.`,
-          variant: "destructive"
-        });
-      }
-
-    } catch (error) {
-      console.error('Fehler bei der Synchronisation:', error);
-      toast({
-        title: "Synchronisation fehlgeschlagen",
-        description: "Ein unerwarteter Fehler ist aufgetreten.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [comparisonResult, createAssignmentMutation, toast, performDataComparison]);
 
   // Pre-computed indexes for O(1) lookups
   const computedData = useMemo(() => {
@@ -412,6 +341,78 @@ export default function LehrerFaecherZuordnung() {
       });
     }
   });
+
+  // Synchronisationsfunktion
+  const performDataSynchronization = useCallback(async () => {
+    if (!comparisonResult || comparisonResult.differences.length === 0) {
+      toast({
+        title: "Keine Synchronisation erforderlich",
+        description: "Es wurden keine Unterschiede zum Synchronisieren gefunden.",
+        variant: "default"
+      });
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      // Filtere nur "Nur in Stundenplänen" Einträge für Synchronisation
+      const toSync = comparisonResult.differences.filter(diff => 
+        diff.issue === 'Nur in Stundenplänen' && diff.schedulesData
+      );
+
+      let syncedCount = 0;
+      let errorCount = 0;
+
+      // Synchronisiere jeden fehlenden Eintrag
+      for (const diff of toSync) {
+        if (diff.schedulesData) {
+          try {
+            // Erstelle den Assignment in der Matrix
+            await createAssignmentMutation.mutateAsync({
+              teacherId: diff.schedulesData.teacherId,
+              classId: diff.schedulesData.classId,
+              subjectId: diff.schedulesData.subjectId,
+              hoursPerWeek: Number(diff.schedulesData.hoursPerWeek),
+              semester: diff.schedulesData.semester
+            });
+            syncedCount++;
+          } catch (error) {
+            console.error('Fehler beim Synchronisieren des Eintrags:', error);
+            errorCount++;
+          }
+        }
+      }
+
+      // Erfolgs-/Fehlermeldung
+      if (syncedCount > 0) {
+        toast({
+          title: "Synchronisation erfolgreich",
+          description: `${syncedCount} Zuordnungen wurden erfolgreich synchronisiert${errorCount > 0 ? `, ${errorCount} Fehler aufgetreten` : ''}.`,
+          variant: "default"
+        });
+        
+        // Aktualisiere die Daten und führe neuen Abgleich durch
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Kurz warten
+        performDataComparison();
+      } else if (errorCount > 0) {
+        toast({
+          title: "Synchronisation fehlgeschlagen",
+          description: `${errorCount} Einträge konnten nicht synchronisiert werden.`,
+          variant: "destructive"
+        });
+      }
+
+    } catch (error) {
+      console.error('Fehler bei der Synchronisation:', error);
+      toast({
+        title: "Synchronisation fehlgeschlagen",
+        description: "Ein unerwarteter Fehler ist aufgetreten.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [comparisonResult, createAssignmentMutation, toast, performDataComparison]);
 
   // Memoized update assignment function to prevent unnecessary re-renders
   const updateAssignment = useCallback((classId: string, subjectId: string, teacherId: string | null) => {
