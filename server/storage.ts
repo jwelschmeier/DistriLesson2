@@ -166,7 +166,7 @@ export interface IStorage {
   getAssignmentsMinimal(semester?: string): Promise<Assignment[]>;
   getAssignmentsWithRelations(semester?: string): Promise<(Assignment & {
     _teacher?: { shortName: string; firstName: string; lastName: string } | null;
-    _class?: { name: string; grade: number } | null;
+    _class?: { name: string; grade: number | null } | null;
     _subject?: { name: string; shortName: string; category: string } | null;
   })[]>;
   getAssignment(id: string): Promise<Assignment | undefined>;
@@ -661,13 +661,14 @@ export class DatabaseStorage implements IStorage {
 
   // Minimal assignment data for performance-critical operations (e.g., assignment matrix)
   async getAssignmentsMinimal(semester?: string): Promise<Assignment[]> {
-    let query = db.select().from(assignments);
-
     if (semester) {
-      query = query.where(eq(assignments.semester, semester));
+      return await db.select().from(assignments)
+        .where(eq(assignments.semester, semester))
+        .orderBy(desc(assignments.createdAt));
     }
-
-    return await query.orderBy(desc(assignments.createdAt));
+    
+    return await db.select().from(assignments)
+      .orderBy(desc(assignments.createdAt));
   }
 
   // Optimized method with pre-loaded related data for frontend performance
