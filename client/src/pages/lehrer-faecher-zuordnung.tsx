@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Sidebar } from '@/components/layout/sidebar';
@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Grid3X3, Users, BookOpen, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Teacher, Class, Subject, Assignment } from '@shared/schema';
@@ -22,8 +23,9 @@ type AssignmentData = Assignment & {
 export default function LehrerFaecherZuordnung() {
   const { toast } = useToast();
   const [selectedSemester, setSelectedSemester] = useState<"1" | "2">("1");
-  const [filterGrade, setFilterGrade] = useState<string>('alle');
-  const [filterSubject, setFilterSubject] = useState<string>('alle');
+  const [selectedGrades, setSelectedGrades] = useState<number[]>([5, 6, 7, 8, 9, 10]);
+  const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [showAllClasses, setShowAllClasses] = useState(false);
   const [showAllSubjects, setShowAllSubjects] = useState(false);
   const [showAllTeachers, setShowAllTeachers] = useState(false);
@@ -34,13 +36,13 @@ export default function LehrerFaecherZuordnung() {
     select: (data) => data.filter(t => t.isActive)
   });
 
+  // Definierte Reihenfolge der deutschen Schulfächer
+  const SUBJECT_ORDER = ['D', 'M', 'E', 'Fs', 'SW', 'PK', 'GE', 'EK', 'BI', 'PH', 'CH', 'TC', 'If', 'HW', 'KU', 'MU', 'Tx', 'ER', 'KR', 'PP', 'SO', 'BO', 'SP'];
+
   const { data: classes = [] } = useQuery<Class[]>({ 
     queryKey: ['/api/classes'],
     select: (data) => data.sort((a, b) => a.grade - b.grade || a.name.localeCompare(b.name))
   });
-
-  // Definierte Reihenfolge der deutschen Schulfächer
-  const SUBJECT_ORDER = ['D', 'M', 'E', 'Fs', 'SW', 'PK', 'GE', 'EK', 'BI', 'PH', 'CH', 'TC', 'If', 'HW', 'KU', 'MU', 'Tx', 'ER', 'KR', 'PP', 'SO', 'BO', 'SP'];
 
   const { data: subjects = [] } = useQuery<Subject[]>({ 
     queryKey: ['/api/subjects'],
@@ -115,16 +117,30 @@ export default function LehrerFaecherZuordnung() {
     }
   });
 
+  // Initialisiere selectedClasses und selectedSubjects mit allen verfügbaren Optionen
+  React.useEffect(() => {
+    if (classes.length > 0 && selectedClasses.length === 0) {
+      setSelectedClasses(classes.map(c => c.id));
+    }
+  }, [classes, selectedClasses.length]);
+
+  React.useEffect(() => {
+    if (subjects.length > 0 && selectedSubjects.length === 0) {
+      setSelectedSubjects(subjects.map(s => s.id));
+    }
+  }, [subjects, selectedSubjects.length]);
+
   // Filter logic
   const filteredClasses = useMemo(() => {
-    if (filterGrade === 'alle') return classes;
-    return classes.filter(c => c.grade.toString() === filterGrade);
-  }, [classes, filterGrade]);
+    return classes.filter(c => 
+      selectedGrades.includes(c.grade) && 
+      selectedClasses.includes(c.id)
+    );
+  }, [classes, selectedGrades, selectedClasses]);
 
   const filteredSubjects = useMemo(() => {
-    if (filterSubject === 'alle') return subjects;
-    return subjects.filter(s => s.id === filterSubject);
-  }, [subjects, filterSubject]);
+    return subjects.filter(s => selectedSubjects.includes(s.id));
+  }, [subjects, selectedSubjects]);
 
   // Assignment lookup with semester filtering on client side as backup
   const getAssignment = (classId: string, subjectId: string) => {
@@ -185,6 +201,40 @@ export default function LehrerFaecherZuordnung() {
     if (percentage > 90) return 'grenzwertig';
     return 'normal';
   };
+
+  // Filter helper functions
+  const toggleGrade = (grade: number) => {
+    setSelectedGrades(prev => 
+      prev.includes(grade) 
+        ? prev.filter(g => g !== grade)
+        : [...prev, grade]
+    );
+  };
+
+  const toggleClass = (classId: string) => {
+    setSelectedClasses(prev => 
+      prev.includes(classId) 
+        ? prev.filter(c => c !== classId)
+        : [...prev, classId]
+    );
+  };
+
+  const toggleSubject = (subjectId: string) => {
+    setSelectedSubjects(prev => 
+      prev.includes(subjectId) 
+        ? prev.filter(s => s !== subjectId)
+        : [...prev, subjectId]
+    );
+  };
+
+  const selectAllGrades = () => setSelectedGrades([5, 6, 7, 8, 9, 10]);
+  const deselectAllGrades = () => setSelectedGrades([]);
+  
+  const selectAllClasses = () => setSelectedClasses(classes.map(c => c.id));
+  const deselectAllClasses = () => setSelectedClasses([]);
+  
+  const selectAllSubjects = () => setSelectedSubjects(subjects.map(s => s.id));
+  const deselectAllSubjects = () => setSelectedSubjects([]);
 
   // Update assignment
   const updateAssignment = (classId: string, subjectId: string, teacherId: string | null, hours: number = 2) => {
@@ -247,40 +297,95 @@ export default function LehrerFaecherZuordnung() {
                     Filter & Einstellungen
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="flex flex-wrap gap-4">
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="filter-grade">Jahrgangsstufe</Label>
-                    <Select value={filterGrade} onValueChange={setFilterGrade}>
-                      <SelectTrigger className="w-40" id="filter-grade" data-testid="select-grade">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="alle">Alle Klassen</SelectItem>
-                        <SelectItem value="5">Jahrgang 5</SelectItem>
-                        <SelectItem value="6">Jahrgang 6</SelectItem>
-                        <SelectItem value="7">Jahrgang 7</SelectItem>
-                        <SelectItem value="8">Jahrgang 8</SelectItem>
-                        <SelectItem value="9">Jahrgang 9</SelectItem>
-                        <SelectItem value="10">Jahrgang 10</SelectItem>
-                      </SelectContent>
-                    </Select>
+                <CardContent className="space-y-6">
+                  {/* Jahrgangsstufen Filter */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <Label className="text-sm font-medium">Jahrgangsstufen</Label>
+                      <div className="space-x-2">
+                        <Button variant="outline" size="sm" onClick={selectAllGrades} data-testid="button-select-all-grades">
+                          Alle wählen
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={deselectAllGrades} data-testid="button-deselect-all-grades">
+                          Keine wählen
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      {[5, 6, 7, 8, 9, 10].map(grade => (
+                        <div key={grade} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`grade-${grade}`}
+                            checked={selectedGrades.includes(grade)}
+                            onCheckedChange={() => toggleGrade(grade)}
+                            data-testid={`checkbox-grade-${grade}`}
+                          />
+                          <Label htmlFor={`grade-${grade}`} className="text-sm">
+                            Jahrgang {grade}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="filter-subject">Fach</Label>
-                    <Select value={filterSubject} onValueChange={setFilterSubject}>
-                      <SelectTrigger className="w-48" id="filter-subject" data-testid="select-subject">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="alle">Alle Fächer</SelectItem>
-                        {subjects.map(subject => (
-                          <SelectItem key={subject.id} value={subject.id}>
-                            {subject.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+
+                  {/* Klassen Filter */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <Label className="text-sm font-medium">Klassen</Label>
+                      <div className="space-x-2">
+                        <Button variant="outline" size="sm" onClick={selectAllClasses} data-testid="button-select-all-classes">
+                          Alle wählen
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={deselectAllClasses} data-testid="button-deselect-all-classes">
+                          Keine wählen
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-32 overflow-y-auto">
+                      {classes.map(classData => (
+                        <div key={classData.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`class-${classData.id}`}
+                            checked={selectedClasses.includes(classData.id)}
+                            onCheckedChange={() => toggleClass(classData.id)}
+                            data-testid={`checkbox-class-${classData.name}`}
+                          />
+                          <Label htmlFor={`class-${classData.id}`} className="text-sm">
+                            {classData.name}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Fächer Filter */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <Label className="text-sm font-medium">Fächer</Label>
+                      <div className="space-x-2">
+                        <Button variant="outline" size="sm" onClick={selectAllSubjects} data-testid="button-select-all-subjects">
+                          Alle wählen
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={deselectAllSubjects} data-testid="button-deselect-all-subjects">
+                          Keine wählen
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-32 overflow-y-auto">
+                      {subjects.map(subject => (
+                        <div key={subject.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`subject-${subject.id}`}
+                            checked={selectedSubjects.includes(subject.id)}
+                            onCheckedChange={() => toggleSubject(subject.id)}
+                            data-testid={`checkbox-subject-${subject.shortName}`}
+                          />
+                          <Label htmlFor={`subject-${subject.id}`} className="text-sm">
+                            {subject.shortName}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
