@@ -93,6 +93,7 @@ export default function Dashboard() {
 
   const { data: assignments } = useQuery<Assignment[]>({
     queryKey: ["/api/assignments"],
+    queryFn: () => fetch("/api/assignments?minimal=true").then(res => res.json())
   });
 
   // Calculate actual current hours for a teacher based on assignments
