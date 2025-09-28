@@ -566,21 +566,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Assignments routes
   app.get("/api/assignments", async (req, res) => {
+    const startTime = Date.now();
     try {
       // Optional semester parameter for filtering
       const semester = req.query.semester as string;
       
       // For performance, return minimal data when explicitly requested
       if (req.query.minimal === 'true') {
+        console.log(`[PERF] Starting minimal assignments query (semester: ${semester})`);
         const assignments = await storage.getAssignmentsMinimal(semester);
+        const duration = Date.now() - startTime;
+        console.log(`[PERF] Minimal assignments query completed in ${duration}ms`);
         res.json(assignments);
       } else {
+        console.log(`[PERF] Starting full assignments query (semester: ${semester})`);
         // Use optimized method with pre-loaded relations for other uses
         const assignments = await storage.getAssignmentsWithRelations(semester);
+        const duration = Date.now() - startTime;
+        console.log(`[PERF] Full assignments query completed in ${duration}ms`);
         res.json(assignments);
       }
     } catch (error) {
-      console.error("Failed to fetch assignments:", error);
+      const duration = Date.now() - startTime;
+      console.error(`[PERF] Assignments query failed after ${duration}ms:`, error);
       res.status(500).json({ error: "Failed to fetch assignments" });
     }
   });

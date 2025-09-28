@@ -661,14 +661,25 @@ export class DatabaseStorage implements IStorage {
 
   // Minimal assignment data for performance-critical operations (e.g., assignment matrix)
   async getAssignmentsMinimal(semester?: string): Promise<Assignment[]> {
+    // Fast minimal query - only select what's needed, no joins
+    const query = db.select({
+      id: assignments.id,
+      teacherId: assignments.teacherId,
+      classId: assignments.classId,
+      subjectId: assignments.subjectId,
+      hoursPerWeek: assignments.hoursPerWeek,
+      semester: assignments.semester,
+      isOptimized: assignments.isOptimized,
+      teamTeachingId: assignments.teamTeachingId,
+      schoolYearId: assignments.schoolYearId,
+      createdAt: assignments.createdAt
+    }).from(assignments);
+    
     if (semester) {
-      return await db.select().from(assignments)
-        .where(eq(assignments.semester, semester))
-        .orderBy(desc(assignments.createdAt));
+      return await query.where(eq(assignments.semester, semester));
     }
     
-    return await db.select().from(assignments)
-      .orderBy(desc(assignments.createdAt));
+    return await query;
   }
 
   // Optimized method with pre-loaded related data for frontend performance
