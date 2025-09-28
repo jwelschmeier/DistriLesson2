@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 import { Button } from "@/components/ui/button";
-import { BarChart3, Upload, Calculator, Users, Presentation, School, Clock, Sparkles, BookOpen, Calendar, Grid, RefreshCw, Menu, ChevronLeft, MessageSquare, Moon, Sun } from "lucide-react";
+import { BarChart3, Upload, Calculator, Users, Presentation, School, Clock, Sparkles, BookOpen, Calendar, Grid, Grid3X3, RefreshCw, Menu, ChevronLeft, MessageSquare, Moon, Sun } from "lucide-react";
 import logoImage from "@assets/logo-removebg-preview_1757711438324.png";
 import logoImageDark from "@assets/Screenshot_2025-09-27_20.41.06-removebg-preview_1758998518377.png";
 
@@ -18,6 +18,7 @@ const navigationItems = [
   { href: "/faecherverwaltung", label: "Fächerverwaltung", icon: BookOpen },
   { href: "/stundenplaene", label: "Stundenpläne", icon: Calendar },
   { href: "/master-stundenplan", label: "Master-Stundenplan", icon: Grid },
+  { href: "/lehrer-faecher-zuordnung", label: "Lehrer-Fächer-Zuordnung", icon: Grid3X3 },
   { href: "/stdv-kl-optimum", label: "StdV-Kl-Optimum", icon: Sparkles },
   { href: "/schuljahreswechsel", label: "Schuljahreswechsel", icon: RefreshCw },
 ];

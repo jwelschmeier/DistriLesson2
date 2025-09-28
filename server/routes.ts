@@ -567,8 +567,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Assignments routes
   app.get("/api/assignments", async (req, res) => {
     try {
+      // Optional semester parameter for filtering
+      const semester = req.query.semester as string;
+      
       // Use optimized method with pre-loaded relations to avoid N+1 queries
-      const assignments = await storage.getAssignmentsWithRelations();
+      const assignments = await storage.getAssignmentsWithRelations(semester);
       res.json(assignments);
     } catch (error) {
       console.error("Failed to fetch assignments:", error);

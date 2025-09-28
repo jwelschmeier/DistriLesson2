@@ -1,0 +1,203 @@
+## Verbesserungsvorschläge für Ihren Code
+
+Nach der Analyse der `klassenverwaltung.tsx` Datei finde ich mehrere Bereiche, die optimiert werden können:
+
+### 1. Code-Struktur und Lesbarkeit
+
+**Probleme:**
+- Die Komponente ist mit ~800 Zeilen sehr lang
+- Komplexe Berechnungslogik vermischt mit UI-Code
+- Redundante Kommentare und hartcodierte Kurslisten
+
+**Lösungen:**
+```typescript
+// Aufteilen in kleinere Komponenten
+const ClassTable = ({ classes, onEdit, onDelete }) => { /* ... */ };
+const ClassDialog = ({ isOpen, onClose, editingClass }) => { /* ... */ };
+const BulkEditDialog = ({ /* ... */ }) => { /* ... */ };
+
+// Berechnungen in separate Hooks auslagern
+const useClassCalculations = (classes, assignments, selectedSemester) => {
+  return useMemo(() => {
+    // Berechnungslogik hier
+  }, [classes, assignments, selectedSemester]);
+};
+```
+
+### 2. Performance-Probleme
+
+**Problem:** Schwere Berechnungen in der Render-Funktion
+```typescript
+// Aktuell - berechnet bei jedem Render
+filteredClasses.map((classData) => {
+  const actualAssignedHours = calculateActualAssignedHours(classData.id, selectedSemester);
+  const correctHours = getTargetHoursForClass(classData, selectedSemester);
+  // ...
+});
+```
+
+**Lösung:** Memoization verwenden
+```typescript
+const classCalculations = useMemo(() => {
+  return filteredClasses.map(classData => ({
+    ...classData,
+    actualHours: calculateActualAssignedHours(classData.id, selectedSemester),
+    targetHours: getTargetHoursForClass(classData, selectedSemester)
+  }));
+}, [filteredClasses, selectedSemester, assignments]);
+```
+
+### 3. Datentyp-Inkonsistenzen
+
+**Problem:** String/Number Vermischung
+```typescript
+// Inkonsistent
+targetHoursSemester1: z.string().nullable().optional()
+// aber dann:
+type="number" step="0.5"
+```
+
+**Lösung:** Einheitliche Datentypen
+```typescript
+const classFormSchema = insertClassSchema.extend({
+  targetHoursSemester1: z.number().nullable().optional(),
+  targetHoursSemester2: z.number().nullable().optional(),
+});
+```
+
+### 4. Hardcodierte Werte
+
+**Problem:** Viele Magic Numbers und hardcodierte Listen
+```typescript
+const standardHours: Record<number, number> = {
+  5: 28, 6: 30, 7: 32, 8: 33, 9: 32, 10: 34
+};
+```
+
+**Lösung:** Konfigurationsdatei
+```typescript
+// config/curriculum.ts
+export const CURRICULUM_CONFIG = {
+  standardHours: { 5: 28, 6: 30, 7: 32, 8: 33, 9: 32, 10: 34 },
+  grades: [5, 6, 7, 8, 9, 10],
+  defaultCourseSize: 15
+};
+```
+
+### 5. Error Handling
+
+**Problem:** Minimales Error Handling
+```typescript
+const createDifferentiationCoursesMutation = useMutation({
+  mutationFn: async () => {
+    // Keine Validierung der Eingabedaten
+    for (const course of courses) {
+      try {
+        // ...
+      } catch (error) {
+        console.error(`Failed to create course ${course.name}:`, error);
+        // Error wird ignoriert, Schleife läuft weiter
+      }
+    }
+  }
+});
+```
+
+**Lösung:** Robustes Error Handling
+```typescript
+const createDifferentiationCoursesMutation = useMutation({
+  mutationFn: async () => {
+    const results = { created: [], failed: [], skipped: [] };
+    
+    for (const course of courses) {
+      try {
+        if (!course.name || !course.grade) {
+          results.failed.push({ course, error: 'Invalid course data' });
+          continue;
+        }
+        
+        const existingCourse = classes?.find(c => c.name === course.name);
+        if (existingCourse) {
+          results.skipped.push(course);
+          continue;
+        }
+        
+        await createCourse(course);
+        results.created.push(course);
+      } catch (error) {
+        results.failed.push({ course, error: error.message });
+      }
+    }
+    
+    return results;
+  }
+});
+```
+
+### 6. Benutzerfreundlichkeit
+
+**Verbesserungen:**
+- Loading States für längere Operationen
+- Bessere Feedback-Messages
+- Keyboard Navigation
+- Bulk-Aktionen
+
+```typescript
+// Loading State Beispiel
+{createDifferentiationCoursesMutation.isPending && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+    <div className="bg-white p-6 rounded-lg">
+      <div className="flex items-center space-x-3">
+        <Loader2 className="h-6 w-6 animate-spin" />
+        <span>Erstelle Kurse... ({createdCount}/{totalCourses})</span>
+      </div>
+    </div>
+  </div>
+)}
+```
+
+### 7. Für Ihre Lehrer-Zuordnungsseite
+
+Basierend auf Ihrer ursprünglichen Frage nach einer Seite für Lehrer-Fächer-Zuordnung, empfehle ich eine separate Komponente:
+
+```typescript
+// components/TeacherAssignmentMatrix.tsx
+const TeacherAssignmentMatrix = () => {
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  
+  return (
+    <div className="grid">
+      {/* Matrix-Ansicht wie in meinem ersten Vorschlag */}
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Klasse</TableHead>
+            {subjects.map(subject => (
+              <TableHead key={subject}>{subject}</TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {classes.map(classData => (
+            <TableRow key={classData.id}>
+              <TableCell>{classData.name}</TableCell>
+              {subjects.map(subject => (
+                <TableCell key={subject}>
+                  <TeacherSelector 
+                    classId={classData.id}
+                    subject={subject}
+                    value={getAssignment(classData.id, subject)}
+                    onChange={(teacherId) => updateAssignment(classData.id, subject, teacherId)}
+                  />
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+};
+```
+
+Die Hauptprobleme sind Komplexität, Performance und Wartbarkeit. Eine Aufteilung in kleinere, spezialisierte Komponenten würde die Übersichtlichkeit deutlich verbessern.

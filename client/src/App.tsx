@@ -23,6 +23,7 @@ import MasterStundenplan from "@/pages/master-stundenplan";
 import Schuljahreswechsel from "@/pages/schuljahreswechsel";
 import PdfImport from "@/pages/pdf-import";
 import ChatGPTImportPage from "@/pages/chatgpt-import";
+import LehrerFaecherZuordnung from "@/pages/lehrer-faecher-zuordnung";
 
 function Router() {
   const { isAuthenticated, isLoading, isAdmin } = useAuth();
@@ -59,6 +60,7 @@ function Router() {
           <Route path="/stundenplaene" component={Stundenplaene} />
           <Route path="/master-stundenplan" component={MasterStundenplan} />
           <Route path="/schuljahreswechsel" component={Schuljahreswechsel} />
+          <Route path="/lehrer-faecher-zuordnung" component={LehrerFaecherZuordnung} />
           <Route path="/pdf-import" component={PdfImport} />
           <Route path="/chatgpt-import" component={ChatGPTImportPage} />
           

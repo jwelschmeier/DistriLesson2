@@ -163,7 +163,7 @@ export interface IStorage {
 
   // Assignments
   getAssignments(): Promise<Assignment[]>;
-  getAssignmentsWithRelations(): Promise<(Assignment & {
+  getAssignmentsWithRelations(semester?: string): Promise<(Assignment & {
     _teacher?: { shortName: string; firstName: string; lastName: string } | null;
     _class?: { name: string; grade: number } | null;
     _subject?: { name: string; shortName: string; category: string } | null;
@@ -659,12 +659,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Optimized method with pre-loaded related data for frontend performance
-  async getAssignmentsWithRelations(): Promise<(Assignment & {
+  async getAssignmentsWithRelations(semester?: string): Promise<(Assignment & {
     _teacher?: { shortName: string; firstName: string; lastName: string } | null;
     _class?: { name: string; grade: number } | null;
     _subject?: { name: string; shortName: string; category: string } | null;
   })[]> {
-    const result = await db
+    let query = db
       .select({
         // Assignment fields
         id: assignments.id,
@@ -690,8 +690,14 @@ export class DatabaseStorage implements IStorage {
       .from(assignments)
       .leftJoin(teachers, eq(assignments.teacherId, teachers.id))
       .leftJoin(classes, eq(assignments.classId, classes.id))
-      .leftJoin(subjects, eq(assignments.subjectId, subjects.id))
-      .orderBy(desc(assignments.createdAt));
+      .leftJoin(subjects, eq(assignments.subjectId, subjects.id));
+
+    // Add semester filter if provided
+    if (semester) {
+      query = query.where(eq(assignments.semester, semester));
+    }
+
+    const result = await query.orderBy(desc(assignments.createdAt));
 
     return result.map(row => ({
       id: row.id,
@@ -706,8 +712,8 @@ export class DatabaseStorage implements IStorage {
       createdAt: row.createdAt,
       _teacher: row.teacherShortName ? {
         shortName: row.teacherShortName,
-        firstName: row.teacherFirstName,
-        lastName: row.teacherLastName,
+        firstName: row.teacherFirstName || '',
+        lastName: row.teacherLastName || '',
       } : null,
       _class: row.className ? {
         name: row.className,
