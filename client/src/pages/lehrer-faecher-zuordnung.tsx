@@ -91,12 +91,14 @@ export default function LehrerFaecherZuordnung() {
   // Data fetching
   const { data: teachers = [] } = useQuery<Teacher[]>({ 
     queryKey: ['/api/teachers'],
-    select: (data) => data.filter(t => t.isActive)
+    select: (data) => data.filter(t => t.isActive),
+    staleTime: 30000 // Cache for 30 seconds
   });
 
   const { data: classes = [] } = useQuery<Class[]>({ 
     queryKey: ['/api/classes'],
-    select: (data) => data.sort((a, b) => a.grade - b.grade || a.name.localeCompare(b.name))
+    select: (data) => data.sort((a, b) => a.grade - b.grade || a.name.localeCompare(b.name)),
+    staleTime: 30000
   });
 
   const { data: subjects = [] } = useQuery<Subject[]>({ 
@@ -109,12 +111,14 @@ export default function LehrerFaecherZuordnung() {
           const indexB = SUBJECT_ORDER.indexOf(b.shortName);
           return indexA - indexB;
         });
-    }
+    },
+    staleTime: 30000 // Cache for 30 seconds
   });
 
   const { data: assignments = [] } = useQuery<AssignmentData[]>({ 
     queryKey: ['/api/assignments', selectedSemester],
-    queryFn: () => fetch(`/api/assignments?semester=${selectedSemester}&minimal=true`).then(res => res.json())
+    queryFn: () => fetch(`/api/assignments?semester=${selectedSemester}&minimal=true`).then(res => res.json()),
+    staleTime: 30000 // Cache for 30 seconds
   });
 
   // Abgleich mit Stundenpläne-Daten (vollständige API)
