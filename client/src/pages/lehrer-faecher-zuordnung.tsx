@@ -292,7 +292,7 @@ export default function LehrerFaecherZuordnung() {
   // Mutations
   const createAssignmentMutation = useMutation({
     mutationFn: async (assignment: { teacherId: string; classId: string; subjectId: string; hoursPerWeek: number; semester: string }) => {
-      return apiRequest('/api/assignments', 'POST', assignment);
+      return apiRequest('POST', '/api/assignments', assignment);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/assignments', selectedSemester] });
@@ -309,7 +309,7 @@ export default function LehrerFaecherZuordnung() {
 
   const updateAssignmentMutation = useMutation({
     mutationFn: async ({ id, ...data }: { id: string; teacherId?: string; hoursPerWeek?: number }) => {
-      return apiRequest(`/api/assignments/${id}`, 'PATCH', data);
+      return apiRequest('PATCH', `/api/assignments/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/assignments', selectedSemester] });
@@ -327,7 +327,7 @@ export default function LehrerFaecherZuordnung() {
 
   const deleteAssignmentMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/assignments/${id}`, 'DELETE');
+      return apiRequest('DELETE', `/api/assignments/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/assignments', selectedSemester] });

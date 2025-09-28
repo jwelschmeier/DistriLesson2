@@ -673,10 +673,11 @@ export class DatabaseStorage implements IStorage {
   // Optimized method with pre-loaded related data for frontend performance
   async getAssignmentsWithRelations(semester?: string): Promise<(Assignment & {
     _teacher?: { shortName: string; firstName: string; lastName: string } | null;
-    _class?: { name: string; grade: number } | null;
+    _class?: { name: string; grade: number | null } | null;
     _subject?: { name: string; shortName: string; category: string } | null;
   })[]> {
-    let query = db
+    // Build base query with joins
+    const baseQuery = db
       .select({
         // Assignment fields
         id: assignments.id,
@@ -704,13 +705,12 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(classes, eq(assignments.classId, classes.id))
       .leftJoin(subjects, eq(assignments.subjectId, subjects.id));
 
-    // Add semester filter if provided
-    if (semester) {
-      query = query.where(eq(assignments.semester, semester));
-    }
+    // Apply semester filter and execute query
+    const result = semester 
+      ? await baseQuery.where(eq(assignments.semester, semester)).orderBy(desc(assignments.createdAt))
+      : await baseQuery.orderBy(desc(assignments.createdAt));
 
-    const result = await query.orderBy(desc(assignments.createdAt));
-
+    // Transform result to match expected interface
     return result.map(row => ({
       id: row.id,
       teacherId: row.teacherId,
@@ -733,8 +733,8 @@ export class DatabaseStorage implements IStorage {
       } : null,
       _subject: row.subjectName ? {
         name: row.subjectName,
-        shortName: row.subjectShortName,
-        category: row.subjectCategory,
+        shortName: row.subjectShortName || '',
+        category: row.subjectCategory || '',
       } : null,
     }));
   }
