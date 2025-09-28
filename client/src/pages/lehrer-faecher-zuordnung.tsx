@@ -2,14 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Sidebar } from '@/components/layout/sidebar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Grid3X3, BookOpen } from 'lucide-react';
+import { Grid3X3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Teacher, Class, Subject, Assignment } from '@shared/schema';
 
@@ -22,8 +18,8 @@ type AssignmentData = Assignment & {
 export default function LehrerFaecherZuordnung() {
   const { toast } = useToast();
   const [selectedSemester, setSelectedSemester] = useState<"1" | "2">("1");
-  const [selectedClass, setSelectedClass] = useState<string>("");
-  const [subjectFilter, setSubjectFilter] = useState<string>("");
+  const [gradeFilter, setGradeFilter] = useState<string>("alle");
+  const [subjectFilter, setSubjectFilter] = useState<string>("alle");
 
   // Definierte Reihenfolge der deutschen Schulfächer
   const SUBJECT_ORDER = ['D', 'M', 'E', 'Fs', 'SW', 'PK', 'GE', 'EK', 'BI', 'PH', 'CH', 'TC', 'If', 'HW', 'KU', 'MU', 'Tx', 'ER', 'KR', 'PP', 'SO', 'BO', 'SP'];
@@ -57,25 +53,16 @@ export default function LehrerFaecherZuordnung() {
     queryFn: () => fetch(`/api/assignments?semester=${selectedSemester}`).then(res => res.json())
   });
 
-  // Initialize with first class
-  React.useEffect(() => {
-    if (classes.length > 0 && !selectedClass) {
-      setSelectedClass(classes[0].id);
-    }
-  }, [classes, selectedClass]);
-
   // Filter logic
-  const filteredSubjects = useMemo(() => {
-    if (!subjectFilter) return subjects;
-    return subjects.filter(s => 
-      s.shortName.toLowerCase().includes(subjectFilter.toLowerCase()) ||
-      s.name.toLowerCase().includes(subjectFilter.toLowerCase())
-    );
-  }, [subjects, subjectFilter]);
+  const filteredClasses = useMemo(() => {
+    if (gradeFilter === 'alle') return classes;
+    return classes.filter(c => c.grade.toString() === gradeFilter);
+  }, [classes, gradeFilter]);
 
-  const selectedClassData = useMemo(() => {
-    return classes.find(c => c.id === selectedClass);
-  }, [classes, selectedClass]);
+  const filteredSubjects = useMemo(() => {
+    if (subjectFilter === 'alle') return subjects;
+    return subjects.filter(s => s.id === subjectFilter);
+  }, [subjects, subjectFilter]);
 
   // Assignment lookup
   const getAssignment = (classId: string, subjectId: string) => {
@@ -98,21 +85,11 @@ export default function LehrerFaecherZuordnung() {
 
   // Get required hours from existing assignments or use default
   const getRequiredHours = (subjectId: string) => {
-    const existingAssignments = assignments.filter(a => 
-      a.classId === selectedClass && a.subjectId === subjectId
-    );
-    
+    const existingAssignments = assignments.filter(a => a.subjectId === subjectId);
     if (existingAssignments.length > 0) {
       return parseFloat(existingAssignments[0].hoursPerWeek);
     }
-    
     return 2; // Default
-  };
-
-  const getAssignedHours = (subjectId: string) => {
-    return assignments
-      .filter(a => a.classId === selectedClass && a.subjectId === subjectId && a.semester === selectedSemester)
-      .reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
   };
 
   // Mutations
@@ -172,7 +149,7 @@ export default function LehrerFaecherZuordnung() {
     const hours = getRequiredHours(subjectId);
     const existingAssignment = getAssignment(classId, subjectId);
 
-    if (teacherId === null || teacherId === '') {
+    if (teacherId === null || teacherId === 'unassigned') {
       if (existingAssignment) {
         deleteAssignmentMutation.mutate(existingAssignment.id);
       }
@@ -193,136 +170,124 @@ export default function LehrerFaecherZuordnung() {
     }
   };
 
-  if (!selectedClassData) {
-    return (
-      <div className="flex h-screen bg-muted/50 dark:bg-muted/20">
-        <Sidebar />
-        <main className="flex-1 overflow-auto p-6">
-          <p>Keine Klassen verfügbar</p>
-        </main>
-      </div>
-    );
-  }
-
   return (
     <div className="flex h-screen bg-muted/50 dark:bg-muted/20">
       <Sidebar />
       
-      <main className="flex-1 overflow-auto p-4">
-        {/* Compact Header */}
-        <div className="flex items-center justify-between mb-4">
+      <main className="flex-1 overflow-auto">
+        {/* Header */}
+        <header className="bg-card border-b border-border px-6 py-4">
           <div className="flex items-center gap-2">
-            <Grid3X3 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            <h2 className="text-xl font-semibold">Lehrer-Fächer-Zuordnung</h2>
+            <Grid3X3 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            <div>
+              <h2 className="text-2xl font-semibold text-foreground">Lehrer-Fächer-Zuordnung</h2>
+            </div>
           </div>
-        </div>
+        </header>
 
-        {/* Compact Controls */}
-        <div className="flex items-center gap-4 mb-4 p-3 bg-card border rounded-lg">
-          <Tabs value={selectedSemester} onValueChange={(value) => setSelectedSemester(value as "1" | "2")}>
-            <TabsList className="h-8">
-              <TabsTrigger value="1" className="text-xs">1. HJ</TabsTrigger>
-              <TabsTrigger value="2" className="text-xs">2. HJ</TabsTrigger>
+        <div className="p-6">
+          {/* Semester Tabs */}
+          <Tabs value={selectedSemester} onValueChange={(value) => setSelectedSemester(value as "1" | "2")} className="mb-6">
+            <TabsList className="grid w-fit grid-cols-2">
+              <TabsTrigger value="1" data-testid="tab-semester-1">1. Halbjahr</TabsTrigger>
+              <TabsTrigger value="2" data-testid="tab-semester-2">2. Halbjahr</TabsTrigger>
             </TabsList>
+
+            <TabsContent value={selectedSemester} className="space-y-6">
+              {/* Filter Controls */}
+              <div className="flex gap-6 items-center">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="filter-grade">Jahrgangsstufe</Label>
+                  <Select value={gradeFilter} onValueChange={setGradeFilter}>
+                    <SelectTrigger className="w-40" id="filter-grade" data-testid="select-grade">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="alle">Alle Klassen</SelectItem>
+                      <SelectItem value="5">Jahrgang 5</SelectItem>
+                      <SelectItem value="6">Jahrgang 6</SelectItem>
+                      <SelectItem value="7">Jahrgang 7</SelectItem>
+                      <SelectItem value="8">Jahrgang 8</SelectItem>
+                      <SelectItem value="9">Jahrgang 9</SelectItem>
+                      <SelectItem value="10">Jahrgang 10</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="filter-subject">Fach</Label>
+                  <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+                    <SelectTrigger className="w-48" id="filter-subject" data-testid="select-subject">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="alle">Alle Fächer</SelectItem>
+                      {subjects.map(subject => (
+                        <SelectItem key={subject.id} value={subject.id}>
+                          {subject.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Assignment Matrix */}
+              <div className="bg-card border rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="text-left p-3 font-medium text-sm border-r bg-muted/80">KLASSE</th>
+                        {filteredSubjects.map(subject => (
+                          <th key={subject.id} className="text-center p-3 font-medium text-sm border-r min-w-[120px]">
+                            {subject.shortName.toUpperCase()}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredClasses.map(classData => (
+                        <tr key={classData.id} className="border-b hover:bg-muted/20">
+                          <td className="p-3 font-medium border-r bg-muted/30 text-sm">
+                            {classData.name}
+                          </td>
+                          {filteredSubjects.map(subject => {
+                            const assignment = getAssignment(classData.id, subject.id);
+                            const qualifiedTeachers = getQualifiedTeachers(subject.shortName);
+                            
+                            return (
+                              <td key={subject.id} className="p-2 border-r">
+                                <Select
+                                  value={assignment?.teacherId || 'unassigned'}
+                                  onValueChange={(teacherId) => 
+                                    updateAssignment(classData.id, subject.id, teacherId === 'unassigned' ? null : teacherId)
+                                  }
+                                >
+                                  <SelectTrigger className="w-full h-8 text-xs">
+                                    <SelectValue placeholder="--" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="unassigned">--</SelectItem>
+                                    {qualifiedTeachers.map(teacher => (
+                                      <SelectItem key={teacher.id} value={teacher.id}>
+                                        {teacher.shortName}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </TabsContent>
           </Tabs>
-
-          <div className="flex items-center gap-2">
-            <Label className="text-sm">Klasse:</Label>
-            <Select value={selectedClass} onValueChange={setSelectedClass}>
-              <SelectTrigger className="w-32 h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {classes.map(classData => (
-                  <SelectItem key={classData.id} value={classData.id}>
-                    {classData.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Label className="text-sm">Filter:</Label>
-            <Input 
-              placeholder="Fach suchen..." 
-              value={subjectFilter}
-              onChange={(e) => setSubjectFilter(e.target.value)}
-              className="w-32 h-8 text-sm"
-            />
-          </div>
-
-          <div className="text-sm text-muted-foreground">
-            {selectedClassData.grade}. Jahrgang • {selectedClassData.studentCount} Schüler
-          </div>
         </div>
-
-        {/* Compact Assignment Table */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <BookOpen className="h-4 w-4" />
-              {selectedClassData.name} - {selectedSemester === "1" ? "1. Halbjahr" : "2. Halbjahr"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-16">Fach</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead className="w-48">Zugewiesener Lehrer</TableHead>
-                  <TableHead className="w-20 text-center">Stunden</TableHead>
-                  <TableHead className="w-20 text-center">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredSubjects.map(subject => {
-                  const assignment = getAssignment(selectedClass, subject.id);
-                  const qualifiedTeachers = getQualifiedTeachers(subject.shortName);
-                  const requiredHours = getRequiredHours(subject.id);
-                  const assignedHours = getAssignedHours(subject.id);
-                  const isAssigned = !!assignment;
-                  
-                  return (
-                    <TableRow key={subject.id}>
-                      <TableCell className="font-medium">{subject.shortName}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{subject.name}</TableCell>
-                      <TableCell>
-                        <Select
-                          value={assignment?.teacherId || 'unassigned'}
-                          onValueChange={(teacherId) => 
-                            updateAssignment(selectedClass, subject.id, teacherId === 'unassigned' ? null : teacherId)
-                          }
-                        >
-                          <SelectTrigger className="h-8">
-                            <SelectValue placeholder="Lehrer wählen..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="unassigned">-- Nicht zugewiesen --</SelectItem>
-                            {qualifiedTeachers.map(teacher => (
-                              <SelectItem key={teacher.id} value={teacher.id}>
-                                {teacher.shortName} - {teacher.firstName} {teacher.lastName}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="text-center text-sm">
-                        {requiredHours}h
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={isAssigned ? "default" : "secondary"} className="text-xs">
-                          {isAssigned ? "✓" : "—"}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
       </main>
     </div>
   );
