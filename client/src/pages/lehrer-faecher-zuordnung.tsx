@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Sidebar } from '@/components/layout/sidebar';
@@ -14,6 +14,51 @@ type AssignmentData = Assignment & {
   class?: Class;
   subject?: Subject;
 };
+
+// Memoized matrix cell component for performance
+const MatrixCell = React.memo(({ 
+  classId, 
+  subjectId, 
+  subjectShortName,
+  assignment, 
+  qualifiedTeachers,
+  remainingHoursByTeacher,
+  onUpdate 
+}: {
+  classId: string;
+  subjectId: string;
+  subjectShortName: string;
+  assignment?: AssignmentData;
+  qualifiedTeachers: Teacher[];
+  remainingHoursByTeacher: Map<string, number>;
+  onUpdate: (classId: string, subjectId: string, teacherId: string | null) => void;
+}) => {
+  return (
+    <td className="p-2 border-r">
+      <Select
+        value={assignment?.teacherId || 'unassigned'}
+        onValueChange={(teacherId) => 
+          onUpdate(classId, subjectId, teacherId === 'unassigned' ? null : teacherId)
+        }
+      >
+        <SelectTrigger className="w-full h-8 text-xs">
+          <SelectValue placeholder="--" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="unassigned">--</SelectItem>
+          {qualifiedTeachers.map(teacher => {
+            const remainingHours = remainingHoursByTeacher.get(teacher.id) || 0;
+            return (
+              <SelectItem key={teacher.id} value={teacher.id}>
+                {teacher.shortName} ({remainingHours}h frei)
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
+    </td>
+  );
+});
 
 export default function LehrerFaecherZuordnung() {
   const { toast } = useToast();
@@ -53,6 +98,46 @@ export default function LehrerFaecherZuordnung() {
     queryFn: () => fetch(`/api/assignments?semester=${selectedSemester}`).then(res => res.json())
   });
 
+  // Pre-computed indexes for O(1) lookups
+  const computedData = useMemo(() => {
+    // Assignment index: classId-subjectId-semester -> assignment
+    const assignmentIndex = new Map<string, AssignmentData>();
+    assignments.forEach(assignment => {
+      const key = `${assignment.classId}-${assignment.subjectId}-${assignment.semester}`;
+      assignmentIndex.set(key, assignment);
+    });
+
+    // Teachers by subject short name (lowercased)
+    const teachersBySubjectShort = new Map<string, Teacher[]>();
+    subjects.forEach(subject => {
+      const qualified = teachers.filter(teacher => 
+        teacher.subjects.some(s => 
+          s.toLowerCase() === subject.shortName.toLowerCase() ||
+          s.toLowerCase().includes(subject.shortName.toLowerCase())
+        )
+      );
+      teachersBySubjectShort.set(subject.shortName.toLowerCase(), qualified);
+    });
+
+    // Remaining hours by teacher
+    const remainingHoursByTeacher = new Map<string, number>();
+    teachers.forEach(teacher => {
+      const assignedHours = assignments
+        .filter(a => a.teacherId === teacher.id && a.semester === selectedSemester)
+        .reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
+      
+      const maxHours = parseFloat(teacher.maxHours);
+      const remaining = Math.max(0, maxHours - assignedHours);
+      remainingHoursByTeacher.set(teacher.id, remaining);
+    });
+
+    return {
+      assignmentIndex,
+      teachersBySubjectShort,
+      remainingHoursByTeacher
+    };
+  }, [assignments, teachers, subjects, selectedSemester]);
+
   // Filter logic
   const filteredClasses = useMemo(() => {
     if (gradeFilter === 'alle') return classes;
@@ -64,38 +149,19 @@ export default function LehrerFaecherZuordnung() {
     return subjects.filter(s => s.id === subjectFilter);
   }, [subjects, subjectFilter]);
 
-  // Assignment lookup
-  const getAssignment = (classId: string, subjectId: string) => {
-    return assignments.find(a => 
-      a.classId === classId && 
-      a.subjectId === subjectId && 
-      a.semester === selectedSemester
-    );
-  };
+  // O(1) lookup functions
+  const getAssignment = useCallback((classId: string, subjectId: string) => {
+    const key = `${classId}-${subjectId}-${selectedSemester}`;
+    return computedData.assignmentIndex.get(key);
+  }, [computedData.assignmentIndex, selectedSemester]);
 
-  // Get qualified teachers for a subject
-  const getQualifiedTeachers = (subjectShortName: string) => {
-    return teachers.filter(teacher => 
-      teacher.subjects.some(s => 
-        s.toLowerCase() === subjectShortName.toLowerCase() ||
-        s.toLowerCase().includes(subjectShortName.toLowerCase())
-      )
-    );
-  };
+  const getQualifiedTeachers = useCallback((subjectShortName: string) => {
+    return computedData.teachersBySubjectShort.get(subjectShortName.toLowerCase()) || [];
+  }, [computedData.teachersBySubjectShort]);
 
-  // Calculate remaining hours for a teacher
-  const getRemainingHours = (teacherId: string) => {
-    const teacher = teachers.find(t => t.id === teacherId);
-    if (!teacher) return 0;
-
-    const assignedHours = assignments
-      .filter(a => a.teacherId === teacherId && a.semester === selectedSemester)
-      .reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
-
-    const maxHours = parseFloat(teacher.maxHours);
-    const remaining = maxHours - assignedHours;
-    return Math.max(0, remaining);
-  };
+  const getRemainingHours = useCallback((teacherId: string) => {
+    return computedData.remainingHoursByTeacher.get(teacherId) || 0;
+  }, [computedData.remainingHoursByTeacher]);
 
   // Get required hours from existing assignments or use default
   const getRequiredHours = (subjectId: string) => {
@@ -112,7 +178,7 @@ export default function LehrerFaecherZuordnung() {
       return apiRequest('/api/assignments', 'POST', assignment);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/assignments', selectedSemester] });
       toast({ title: "Zuordnung erstellt", description: "Die Zuordnung wurde erfolgreich gespeichert." });
     },
     onError: (error: any) => {
@@ -129,7 +195,7 @@ export default function LehrerFaecherZuordnung() {
       return apiRequest(`/api/assignments/${id}`, 'PATCH', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/assignments', selectedSemester] });
       toast({ title: "Zuordnung aktualisiert", description: "Die Zuordnung wurde erfolgreich geändert." });
     },
     onError: (error: any) => {
@@ -146,7 +212,7 @@ export default function LehrerFaecherZuordnung() {
       return apiRequest(`/api/assignments/${id}`, 'DELETE');
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/assignments', selectedSemester] });
       toast({ title: "Zuordnung gelöscht", description: "Die Zuordnung wurde entfernt." });
     },
     onError: (error: any) => {
@@ -271,29 +337,16 @@ export default function LehrerFaecherZuordnung() {
                             const qualifiedTeachers = getQualifiedTeachers(subject.shortName);
                             
                             return (
-                              <td key={subject.id} className="p-2 border-r">
-                                <Select
-                                  value={assignment?.teacherId || 'unassigned'}
-                                  onValueChange={(teacherId) => 
-                                    updateAssignment(classData.id, subject.id, teacherId === 'unassigned' ? null : teacherId)
-                                  }
-                                >
-                                  <SelectTrigger className="w-full h-8 text-xs">
-                                    <SelectValue placeholder="--" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="unassigned">--</SelectItem>
-                                    {qualifiedTeachers.map(teacher => {
-                                      const remainingHours = getRemainingHours(teacher.id);
-                                      return (
-                                        <SelectItem key={teacher.id} value={teacher.id}>
-                                          {teacher.shortName} ({remainingHours}h frei)
-                                        </SelectItem>
-                                      );
-                                    })}
-                                  </SelectContent>
-                                </Select>
-                              </td>
+                              <MatrixCell
+                                key={`${classData.id}-${subject.id}`}
+                                classId={classData.id}
+                                subjectId={subject.id}
+                                subjectShortName={subject.shortName}
+                                assignment={assignment}
+                                qualifiedTeachers={qualifiedTeachers}
+                                remainingHoursByTeacher={computedData.remainingHoursByTeacher}
+                                onUpdate={updateAssignment}
+                              />
                             );
                           })}
                         </tr>
