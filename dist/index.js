@@ -1268,8 +1268,8 @@ var DatabaseStorage = class {
     return await db.select().from(assignments).orderBy(desc(assignments.createdAt));
   }
   // Optimized method with pre-loaded related data for frontend performance
-  async getAssignmentsWithRelations() {
-    const result = await db.select({
+  async getAssignmentsWithRelations(semester) {
+    let query = db.select({
       // Assignment fields
       id: assignments.id,
       teacherId: assignments.teacherId,
@@ -1290,7 +1290,11 @@ var DatabaseStorage = class {
       subjectName: subjects.name,
       subjectShortName: subjects.shortName,
       subjectCategory: subjects.category
-    }).from(assignments).leftJoin(teachers, eq(assignments.teacherId, teachers.id)).leftJoin(classes, eq(assignments.classId, classes.id)).leftJoin(subjects, eq(assignments.subjectId, subjects.id)).orderBy(desc(assignments.createdAt));
+    }).from(assignments).leftJoin(teachers, eq(assignments.teacherId, teachers.id)).leftJoin(classes, eq(assignments.classId, classes.id)).leftJoin(subjects, eq(assignments.subjectId, subjects.id));
+    if (semester) {
+      query = query.where(eq(assignments.semester, semester));
+    }
+    const result = await query.orderBy(desc(assignments.createdAt));
     return result.map((row) => ({
       id: row.id,
       teacherId: row.teacherId,
@@ -1304,8 +1308,8 @@ var DatabaseStorage = class {
       createdAt: row.createdAt,
       _teacher: row.teacherShortName ? {
         shortName: row.teacherShortName,
-        firstName: row.teacherFirstName,
-        lastName: row.teacherLastName
+        firstName: row.teacherFirstName || "",
+        lastName: row.teacherLastName || ""
       } : null,
       _class: row.className ? {
         name: row.className,
@@ -3760,7 +3764,8 @@ async function registerRoutes(app2) {
   });
   app2.get("/api/assignments", async (req, res) => {
     try {
-      const assignments2 = await storage.getAssignmentsWithRelations();
+      const semester = req.query.semester;
+      const assignments2 = await storage.getAssignmentsWithRelations(semester);
       res.json(assignments2);
     } catch (error) {
       console.error("Failed to fetch assignments:", error);
