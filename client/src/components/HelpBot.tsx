@@ -87,9 +87,9 @@ export function HelpBot({ isOpen, onClose, onMinimize, isMinimized }: HelpBotPro
   return (
     <div className={cn(
       "fixed bottom-4 right-4 z-50 bg-background border border-border rounded-lg shadow-lg transition-all duration-300",
-      isMinimized ? "w-80 h-12" : "w-96 h-[500px]"
+      isMinimized ? "w-80 h-12" : "w-96 h-[500px] max-w-[calc(100vw-2rem)]"
     )}>
-      <Card className="h-full flex flex-col">
+      <Card className="h-full flex flex-col overflow-hidden">
         <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-lg flex items-center gap-2">
             <Bot className="h-5 w-5 text-primary" />
@@ -116,9 +116,9 @@ export function HelpBot({ isOpen, onClose, onMinimize, isMinimized }: HelpBotPro
         </CardHeader>
 
         {!isMinimized && (
-          <CardContent className="flex flex-col flex-1 p-4 pt-0">
-            <ScrollArea className="flex-1 mb-4 pr-4">
-              <div className="space-y-4">
+          <CardContent className="flex flex-col flex-1 p-4 pt-0 min-h-0 overflow-hidden">
+            <ScrollArea className="flex-1 mb-4 pr-4 max-h-[320px] overflow-y-auto">
+              <div className="space-y-4 min-h-0">
                 {messages.map((message) => (
                   <div
                     key={message.id}
@@ -134,14 +134,16 @@ export function HelpBot({ isOpen, onClose, onMinimize, isMinimized }: HelpBotPro
                     )}
                     <div
                       className={cn(
-                        "max-w-[80%] rounded-lg p-3 text-sm",
+                        "max-w-[80%] rounded-lg p-3 text-sm break-words overflow-wrap-anywhere",
                         message.type === 'user'
                           ? "bg-primary text-primary-foreground"
                           : "bg-muted"
                       )}
                       data-testid={`message-${message.type}-${message.id}`}
                     >
-                      {message.content}
+                      <div className="whitespace-pre-wrap break-words overflow-hidden">
+                        {message.content}
+                      </div>
                     </div>
                     {message.type === 'user' && (
                       <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
