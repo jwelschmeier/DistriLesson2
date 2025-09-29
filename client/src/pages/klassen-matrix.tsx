@@ -13,52 +13,15 @@ import { ArrowLeft, Users, BookOpen, Save, RotateCcw } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
-// Component for individual matrix cells
-interface MatrixCellProps {
-  teacherId: string;
-  subjectId: string; 
-  classId: string;
-  semester: "1" | "2";
-  currentHours: number;
-  isQualified: boolean;
-  onChange: (hours: number) => void;
-}
-
-function MatrixCell({ teacherId, subjectId, classId, semester, currentHours, isQualified, onChange }: MatrixCellProps) {
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    const hours = value === '' ? 0 : Math.max(0, Math.min(50, parseInt(value) || 0));
-    onChange(hours);
-  };
-
-  return (
-    <Input
-      type="number"
-      min="0"
-      max="50"
-      value={currentHours || ''}
-      onChange={handleChange}
-      className={`w-16 text-center text-sm ${
-        !isQualified 
-          ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800' 
-          : currentHours > 0 
-            ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' 
-            : 'bg-background'
-      }`}
-      placeholder="0"
-      data-testid={`input-hours-${teacherId}-${subjectId}-${classId}-${semester}`}
-    />
-  );
-}
 
 export default function KlassenMatrix() {
   const params = useParams();
   const classId = params.classId as string;
   const { toast } = useToast();
   
-  // Local state for unsaved changes per semester
-  const [changes1, setChanges1] = useState<Record<string, number>>({});
-  const [changes2, setChanges2] = useState<Record<string, number>>({});
+  // Local state for unsaved changes per semester (subjectId-semester -> teacherId)
+  const [changes1, setChanges1] = useState<Record<string, string | null>>({});
+  const [changes2, setChanges2] = useState<Record<string, string | null>>({});
   const [saving, setSaving] = useState(false);
 
   // Get the selected class info
@@ -95,46 +58,42 @@ export default function KlassenMatrix() {
     staleTime: 30000
   });
 
-  // Determine which teachers are qualified for each subject
-  const qualifiedTeachers = useMemo(() => {
-    const qualifications: Record<string, boolean> = {};
-    teachers.forEach(teacher => {
-      subjects.forEach(subject => {
-        const key = `${teacher.id}-${subject.id}`;
-        qualifications[key] = teacher.subjects.includes(subject.shortName);
+  // Subject order for consistent display
+  const SUBJECT_ORDER = ['D', 'M', 'E', 'Fs', 'SW', 'PK', 'GE', 'EK', 'BI', 'PH', 'CH', 'TC', 'If', 'HW', 'KU', 'MU', 'Tx', 'ER', 'KR', 'PP', 'SO', 'BO', 'SP'];
+  
+  // Sort subjects according to predefined order
+  const sortedSubjects = useMemo(() => {
+    return subjects
+      .filter(subject => SUBJECT_ORDER.includes(subject.shortName))
+      .sort((a, b) => {
+        const indexA = SUBJECT_ORDER.indexOf(a.shortName);
+        const indexB = SUBJECT_ORDER.indexOf(b.shortName);
+        return indexA - indexB;
       });
-    });
-    return qualifications;
-  }, [teachers, subjects]);
+  }, [subjects]);
 
-  // Create matrices for both semesters
-  const createMatrix = (assignments: Assignment[], changes: Record<string, number>) => {
-    const matrix: Record<string, number> = {};
+  // Get current teacher for a subject and semester (considering local changes)
+  const getCurrentTeacher = (subjectId: string, semester: "1" | "2") => {
+    const key = `${subjectId}-${semester}`;
+    const localChange = semester === "1" ? changes1[key] : changes2[key];
     
-    // Fill with existing assignments
-    assignments.forEach(assignment => {
-      const key = `${assignment.teacherId}-${assignment.subjectId}`;
-      matrix[key] = parseFloat(assignment.hoursPerWeek);
-    });
+    if (localChange !== undefined) {
+      return localChange;
+    }
     
-    // Apply local changes
-    Object.entries(changes).forEach(([key, hours]) => {
-      matrix[key] = hours;
-    });
-    
-    return matrix;
+    // Fall back to existing assignments
+    const assignments = semester === "1" ? assignments1 : assignments2;
+    const assignment = assignments.find(a => a.subjectId === subjectId);
+    return assignment?.teacherId || null;
   };
 
-  const matrix1 = createMatrix(assignments1, changes1);
-  const matrix2 = createMatrix(assignments2, changes2);
-
-  // Handle cell changes
-  const handleCellChange = (semester: "1" | "2", teacherId: string, subjectId: string, hours: number) => {
-    const key = `${teacherId}-${subjectId}`;
+  // Handle teacher assignment changes
+  const handleTeacherChange = (semester: "1" | "2", subjectId: string, teacherId: string | null) => {
+    const key = `${subjectId}-${semester}`;
     if (semester === "1") {
-      setChanges1(prev => ({ ...prev, [key]: hours }));
+      setChanges1(prev => ({ ...prev, [key]: teacherId }));
     } else {
-      setChanges2(prev => ({ ...prev, [key]: hours }));
+      setChanges2(prev => ({ ...prev, [key]: teacherId }));
     }
   };
 
@@ -143,19 +102,32 @@ export default function KlassenMatrix() {
     mutationFn: async () => {
       setSaving(true);
       const allChanges = [
-        ...Object.entries(changes1).map(([key, hours]) => ({ key: key.split('-'), semester: '1', hours })),
-        ...Object.entries(changes2).map(([key, hours]) => ({ key: key.split('-'), semester: '2', hours }))
+        ...Object.entries(changes1).map(([key, teacherId]) => ({ 
+          subjectId: key.split('-')[0], 
+          semester: '1', 
+          teacherId 
+        })),
+        ...Object.entries(changes2).map(([key, teacherId]) => ({ 
+          subjectId: key.split('-')[0], 
+          semester: '2', 
+          teacherId 
+        }))
       ];
 
       for (const change of allChanges) {
-        const [teacherId, subjectId] = change.key;
-        await apiRequest('POST', '/api/assignments', {
-          teacherId,
-          subjectId,
-          classId,
-          semester: change.semester,
-          hoursPerWeek: change.hours.toString()
-        });
+        if (change.teacherId) {
+          // Create or update assignment
+          await apiRequest('POST', '/api/assignments', {
+            teacherId: change.teacherId,
+            subjectId: change.subjectId,
+            classId,
+            semester: change.semester,
+            hoursPerWeek: "1" // Default to 1 hour
+          });
+        } else {
+          // TODO: Delete assignment if teacherId is null
+          // This would require an API endpoint to delete assignments
+        }
       }
     },
     onSuccess: () => {
@@ -268,113 +240,98 @@ export default function KlassenMatrix() {
             </Card>
           </div>
 
-          {/* Two-Column Matrix Layout */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            {/* Semester 1 */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                1. Halbjahr
-                {Object.keys(changes1).length > 0 && (
-                  <Badge variant="secondary">{Object.keys(changes1).length} Änderungen</Badge>
-                )}
-              </h3>
-              <div className="border rounded-lg overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="bg-muted/50">
-                        <th className="border-b border-r p-3 text-left font-medium text-sm">Lehrer</th>
-                        {subjects.map(subject => (
-                          <th key={subject.id} className="border-b border-r p-2 text-center text-xs font-medium min-w-[4rem]">
-                            {subject.shortName}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {teachers.map(teacher => (
-                        <tr key={teacher.id} className="hover:bg-muted/25">
-                          <td className="border-b border-r p-3 font-medium text-sm bg-muted/25">
-                            {teacher.shortName}
-                          </td>
-                          {subjects.map(subject => {
-                            const key = `${teacher.id}-${subject.id}`;
-                            const isQualified = qualifiedTeachers[key] || false;
-                            const hours = matrix1[key] || 0;
-                            
-                            return (
-                              <td key={subject.id} className="border-b border-r p-2 text-center">
-                                <MatrixCell
-                                  teacherId={teacher.id}
-                                  subjectId={subject.id}
-                                  classId={classId}
-                                  semester="1"
-                                  currentHours={hours}
-                                  isQualified={isQualified}
-                                  onChange={(hours) => handleCellChange("1", teacher.id, subject.id, hours)}
-                                />
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+          {/* Single Matrix Layout - Subjects Horizontal */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <h3 className="text-lg font-semibold">Lehrer-Fächer-Zuordnung</h3>
+              {(Object.keys(changes1).length > 0 || Object.keys(changes2).length > 0) && (
+                <Badge variant="secondary">
+                  {Object.keys(changes1).length + Object.keys(changes2).length} Änderungen
+                </Badge>
+              )}
             </div>
-
-            {/* Semester 2 */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                2. Halbjahr
-                {Object.keys(changes2).length > 0 && (
-                  <Badge variant="secondary">{Object.keys(changes2).length} Änderungen</Badge>
-                )}
-              </h3>
-              <div className="border rounded-lg overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="bg-muted/50">
-                        <th className="border-b border-r p-3 text-left font-medium text-sm">Lehrer</th>
-                        {subjects.map(subject => (
-                          <th key={subject.id} className="border-b border-r p-2 text-center text-xs font-medium min-w-[4rem]">
-                            {subject.shortName}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {teachers.map(teacher => (
-                        <tr key={teacher.id} className="hover:bg-muted/25">
-                          <td className="border-b border-r p-3 font-medium text-sm bg-muted/25">
-                            {teacher.shortName}
-                          </td>
-                          {subjects.map(subject => {
-                            const key = `${teacher.id}-${subject.id}`;
-                            const isQualified = qualifiedTeachers[key] || false;
-                            const hours = matrix2[key] || 0;
-                            
-                            return (
-                              <td key={subject.id} className="border-b border-r p-2 text-center">
-                                <MatrixCell
-                                  teacherId={teacher.id}
-                                  subjectId={subject.id}
-                                  classId={classId}
-                                  semester="2"
-                                  currentHours={hours}
-                                  isQualified={isQualified}
-                                  onChange={(hours) => handleCellChange("2", teacher.id, subject.id, hours)}
-                                />
-                              </td>
-                            );
-                          })}
-                        </tr>
+            
+            <div className="border rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-muted/50">
+                      <th className="border-b border-r p-3 text-left font-medium">KLASSE</th>
+                      {sortedSubjects.map(subject => (
+                        <th key={subject.id} className="border-b border-r p-3 text-center text-sm font-medium min-w-[140px]">
+                          {subject.shortName.toUpperCase()}
+                        </th>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="hover:bg-muted/25">
+                      <td className="border-b border-r p-4 font-semibold text-lg bg-muted/25">
+                        {selectedClass.name}
+                      </td>
+                      {sortedSubjects.map(subject => {
+                        // Get teachers qualified for this subject
+                        const qualifiedForSubject = teachers.filter(teacher => 
+                          teacher.subjects.includes(subject.shortName)
+                        );
+                        
+                        // Get current teacher assignments (considering local changes)
+                        const currentTeacher1 = getCurrentTeacher(subject.id, "1");
+                        const currentTeacher2 = getCurrentTeacher(subject.id, "2");
+                        
+                        return (
+                          <td key={subject.id} className="border-b border-r p-2 text-center">
+                            <div className="space-y-2">
+                              {/* 1. Halbjahr */}
+                              <div className="text-xs text-muted-foreground font-medium">1. HJ</div>
+                              <Select
+                                value={currentTeacher1 || 'unassigned'}
+                                onValueChange={(teacherId) => 
+                                  handleTeacherChange("1", subject.id, teacherId === 'unassigned' ? null : teacherId)
+                                }
+                                data-testid={`select-teacher-${subject.id}-semester-1`}
+                              >
+                                <SelectTrigger className="w-full h-8 text-xs">
+                                  <SelectValue placeholder="--" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="unassigned">--</SelectItem>
+                                  {qualifiedForSubject.map(teacher => (
+                                    <SelectItem key={teacher.id} value={teacher.id}>
+                                      {teacher.shortName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              
+                              {/* 2. Halbjahr */}
+                              <div className="text-xs text-muted-foreground font-medium">2. HJ</div>
+                              <Select
+                                value={currentTeacher2 || 'unassigned'}
+                                onValueChange={(teacherId) => 
+                                  handleTeacherChange("2", subject.id, teacherId === 'unassigned' ? null : teacherId)
+                                }
+                                data-testid={`select-teacher-${subject.id}-semester-2`}
+                              >
+                                <SelectTrigger className="w-full h-8 text-xs">
+                                  <SelectValue placeholder="--" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="unassigned">--</SelectItem>
+                                  {qualifiedForSubject.map(teacher => (
+                                    <SelectItem key={teacher.id} value={teacher.id}>
+                                      {teacher.shortName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
