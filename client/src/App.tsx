@@ -24,6 +24,8 @@ import Schuljahreswechsel from "@/pages/schuljahreswechsel";
 import PdfImport from "@/pages/pdf-import";
 import ChatGPTImportPage from "@/pages/chatgpt-import";
 import LehrerFaecherZuordnung from "@/pages/lehrer-faecher-zuordnung";
+import KlassenAuswahl from "@/pages/klassen-auswahl";
+import KlassenMatrix from "@/pages/klassen-matrix";
 
 function Router() {
   const { isAuthenticated, isLoading, isAdmin } = useAuth();
@@ -61,6 +63,8 @@ function Router() {
           <Route path="/master-stundenplan" component={MasterStundenplan} />
           <Route path="/schuljahreswechsel" component={Schuljahreswechsel} />
           <Route path="/lehrer-faecher-zuordnung" component={LehrerFaecherZuordnung} />
+          <Route path="/lehrer-faecher-zuordnung/select" component={KlassenAuswahl} />
+          <Route path="/lehrer-faecher-zuordnung/:classId" component={KlassenMatrix} />
           <Route path="/pdf-import" component={PdfImport} />
           <Route path="/chatgpt-import" component={ChatGPTImportPage} />
           
