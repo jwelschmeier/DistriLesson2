@@ -18,7 +18,7 @@ const navigationItems = [
   { href: "/faecherverwaltung", label: "Fächerverwaltung", icon: BookOpen },
   { href: "/stundenplaene", label: "Stundenpläne", icon: Calendar },
   { href: "/master-stundenplan", label: "Master-Stundenplan", icon: Grid },
-  { href: "/lehrer-faecher-zuordnung", label: "Lehrer-Fächer-Zuordnung", icon: Grid3X3 },
+  { href: "/lehrer-faecher-zuordnung/select", label: "Lehrer-Fächer-Zuordnung", icon: Grid3X3 },
   { href: "/stdv-kl-optimum", label: "StdV-Kl-Optimum", icon: Sparkles },
   { href: "/schuljahreswechsel", label: "Schuljahreswechsel", icon: RefreshCw },
 ];

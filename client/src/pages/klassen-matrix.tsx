@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { Teacher, Class, Subject, Assignment } from "@shared/schema";
-import { Sidebar } from "@/components/Sidebar";
+import { Sidebar } from "@/components/layout/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -143,12 +143,12 @@ export default function KlassenMatrix() {
     mutationFn: async () => {
       setSaving(true);
       const allChanges = [
-        ...Object.entries(changes1).map(([key, hours]) => ({ ...key.split('-'), semester: '1', hours })),
-        ...Object.entries(changes2).map(([key, hours]) => ({ ...key.split('-'), semester: '2', hours }))
+        ...Object.entries(changes1).map(([key, hours]) => ({ key: key.split('-'), semester: '1', hours })),
+        ...Object.entries(changes2).map(([key, hours]) => ({ key: key.split('-'), semester: '2', hours }))
       ];
 
       for (const change of allChanges) {
-        const [teacherId, subjectId] = change;
+        const [teacherId, subjectId] = change.key;
         await apiRequest('POST', '/api/assignments', {
           teacherId,
           subjectId,
