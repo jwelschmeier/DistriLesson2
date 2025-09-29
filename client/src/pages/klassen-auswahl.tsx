@@ -10,6 +10,7 @@ import { useState } from "react";
 
 export default function KlassenAuswahl() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedType, setSelectedType] = useState<string>("all");
 
   const { data: classes = [], isLoading } = useQuery<Class[]>({ 
     queryKey: ['/api/classes'],
@@ -26,11 +27,13 @@ export default function KlassenAuswahl() {
     return acc;
   }, {} as Record<number, Class[]>);
 
-  // Filter classes based on search term
-  const filteredClasses = classes.filter(classItem => 
-    classItem.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    classItem.grade.toString().includes(searchTerm)
-  );
+  // Filter classes based on search term and type
+  const filteredClasses = classes.filter(classItem => {
+    const matchesSearch = classItem.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      classItem.grade.toString().includes(searchTerm);
+    const matchesType = selectedType === "all" || classItem.type === selectedType;
+    return matchesSearch && matchesType;
+  });
 
   const filteredClassesByGrade = filteredClasses.reduce((acc, classItem) => {
     const grade = classItem.grade;
@@ -60,9 +63,9 @@ export default function KlassenAuswahl() {
         </header>
 
         <div className="p-6">
-          {/* Search */}
-          <div className="mb-6 max-w-md">
-            <div className="relative">
+          {/* Search and Filter */}
+          <div className="mb-6 space-y-4">
+            <div className="relative max-w-md">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Klasse oder Jahrgang suchen..."
@@ -71,6 +74,54 @@ export default function KlassenAuswahl() {
                 className="pl-10"
                 data-testid="input-class-search"
               />
+            </div>
+            
+            {/* Type Filter */}
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setSelectedType("all")}
+                className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                  selectedType === "all" 
+                    ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300" 
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                }`}
+                data-testid="filter-all"
+              >
+                Alle
+              </button>
+              <button
+                onClick={() => setSelectedType("klasse")}
+                className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                  selectedType === "klasse" 
+                    ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300" 
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                }`}
+                data-testid="filter-klasse"
+              >
+                Klassen
+              </button>
+              <button
+                onClick={() => setSelectedType("kurs")}
+                className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                  selectedType === "kurs" 
+                    ? "bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300" 
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                }`}
+                data-testid="filter-kurs"
+              >
+                Kurse
+              </button>
+              <button
+                onClick={() => setSelectedType("ag")}
+                className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                  selectedType === "ag" 
+                    ? "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300" 
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                }`}
+                data-testid="filter-ag"
+              >
+                AGs
+              </button>
             </div>
           </div>
 
