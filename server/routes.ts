@@ -583,16 +583,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/assignments", async (req, res) => {
     const startTime = Date.now();
     try {
-      // Optional semester parameter for filtering
+      // Optional parameters for filtering
       const semester = req.query.semester as string;
+      const classId = req.query.classId as string;
       
       // For performance, return minimal data when explicitly requested
       if (req.query.minimal === 'true') {
-        console.log(`[PERF] Starting minimal assignments query (semester: ${semester})`);
-        const assignments = await storage.getAssignmentsMinimal(semester);
-        const duration = Date.now() - startTime;
-        console.log(`[PERF] Minimal assignments query completed in ${duration}ms`);
-        res.json(assignments);
+        // If classId is provided, use class-specific query for better performance
+        if (classId) {
+          console.log(`[PERF] Starting class-specific assignments query (class: ${classId}, semester: ${semester})`);
+          const assignments = await storage.getAssignmentsByClassAndSemesterMinimal(classId, semester);
+          const duration = Date.now() - startTime;
+          console.log(`[PERF] Class-specific assignments query completed in ${duration}ms`);
+          res.json(assignments);
+        } else {
+          console.log(`[PERF] Starting minimal assignments query (semester: ${semester})`);
+          const assignments = await storage.getAssignmentsMinimal(semester);
+          const duration = Date.now() - startTime;
+          console.log(`[PERF] Minimal assignments query completed in ${duration}ms`);
+          res.json(assignments);
+        }
       } else {
         console.log(`[PERF] Starting full assignments query (semester: ${semester})`);
         // Use optimized method with pre-loaded relations for other uses

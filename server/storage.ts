@@ -164,6 +164,7 @@ export interface IStorage {
   // Assignments
   getAssignments(): Promise<Assignment[]>;
   getAssignmentsMinimal(semester?: string): Promise<Assignment[]>;
+  getAssignmentsByClassAndSemesterMinimal(classId: string, semester?: string): Promise<Assignment[]>;
   getAssignmentsWithRelations(semester?: string): Promise<(Assignment & {
     _teacher?: { shortName: string; firstName: string; lastName: string } | null;
     _class?: { name: string; grade: number | null } | null;
@@ -660,6 +661,40 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(assignments)
       .orderBy(desc(assignments.createdAt));
+  }
+
+  // Class-specific minimal assignment data for optimal performance
+  async getAssignmentsByClassAndSemesterMinimal(classId: string, semester?: string): Promise<Assignment[]> {
+    const startTime = Date.now();
+    console.log(`[PERF] Starting class-specific assignments query (class: ${classId}, semester: ${semester})`);
+    
+    try {
+      let query = db.select({
+        id: assignments.id,
+        teacherId: assignments.teacherId,
+        classId: assignments.classId, 
+        subjectId: assignments.subjectId,
+        hoursPerWeek: assignments.hoursPerWeek,
+        semester: assignments.semester,
+        isOptimized: assignments.isOptimized,
+        teamTeachingId: assignments.teamTeachingId,
+        schoolYearId: assignments.schoolYearId,
+        createdAt: assignments.createdAt
+      })
+      .from(assignments)
+      .where(eq(assignments.classId, classId));
+      
+      if (semester) {
+        query = query.where(eq(assignments.semester, semester));
+      }
+      
+      const result = await query;
+      console.log(`[PERF] Class-specific assignments query completed in ${Date.now() - startTime}ms`);
+      return result;
+    } catch (error) {
+      console.error('[ERROR] Class-specific assignments query failed:', error);
+      throw error;
+    }
   }
 
   // Minimal assignment data for performance-critical operations (e.g., assignment matrix)
