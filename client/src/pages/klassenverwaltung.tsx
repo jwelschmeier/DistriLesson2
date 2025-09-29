@@ -49,7 +49,7 @@ type GradeBulkEditData = z.infer<typeof gradeBulkEditSchema>;
 export default function Klassenverwaltung() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterGrade, setFilterGrade] = useState("all");
-  const [filterType, setFilterType] = useState<"all" | "klassen" | "kurse">("all");
+  const [filterType, setFilterType] = useState<"all" | "klasse" | "kurs" | "ag">("all");
   const [selectedSemester, setSelectedSemester] = useState<'all' | '1' | '2'>('1'); // Default to first semester
   const [isClassDialogOpen, setIsClassDialogOpen] = useState(false);
   const [isGradeBulkEditOpen, setIsGradeBulkEditOpen] = useState(false);
@@ -59,7 +59,13 @@ export default function Klassenverwaltung() {
   const queryClient = useQueryClient();
 
   const { data: classes, isLoading: classesLoading } = useQuery<Class[]>({
-    queryKey: ["/api/classes"],
+    queryKey: ["/api/classes", filterType === "all" ? undefined : filterType],
+    queryFn: () => {
+      const url = filterType === "all" 
+        ? "/api/classes" 
+        : `/api/classes?type=${filterType}`;
+      return fetch(url).then(res => res.json());
+    }
   });
 
   const { data: teachers, isLoading: teachersLoading } = useQuery<Teacher[]>({
@@ -410,13 +416,8 @@ export default function Klassenverwaltung() {
     const matchesSearch = classData.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesGrade = filterGrade === "all" || classData.grade.toString() === filterGrade;
     
-    // Typ-Filter: Klassen vs Kurse
-    let matchesType = true;
-    if (filterType === "klassen") {
-      matchesType = isRegularClass(classData.name);
-    } else if (filterType === "kurse") {
-      matchesType = !isRegularClass(classData.name);
-    }
+    // Typ-Filter basierend auf dem tatsächlichen type Feld
+    const matchesType = filterType === "all" || classData.type === filterType;
     
     return matchesSearch && matchesGrade && matchesType;
   }) || [];
@@ -750,20 +751,28 @@ export default function Klassenverwaltung() {
                 Alle
               </Button>
               <Button
-                variant={filterType === "klassen" ? "default" : "ghost"}
+                variant={filterType === "klasse" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setFilterType("klassen")}
+                onClick={() => setFilterType("klasse")}
                 data-testid="filter-klassen"
               >
                 Klassen
               </Button>
               <Button
-                variant={filterType === "kurse" ? "default" : "ghost"}
+                variant={filterType === "kurs" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setFilterType("kurse")}
+                onClick={() => setFilterType("kurs")}
                 data-testid="filter-kurse"
               >
                 Kurse
+              </Button>
+              <Button
+                variant={filterType === "ag" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setFilterType("ag")}
+                data-testid="filter-ag"
+              >
+                AGs
               </Button>
             </div>
             
@@ -802,7 +811,7 @@ export default function Klassenverwaltung() {
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder={filterType === "klassen" ? "Klassen suchen..." : filterType === "kurse" ? "Kurse suchen..." : "Klassen/Kurse suchen..."}
+                placeholder={filterType === "klasse" ? "Klassen suchen..." : filterType === "kurs" ? "Kurse suchen..." : filterType === "ag" ? "AGs suchen..." : "Klassen/Kurse/AGs suchen..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-8"
