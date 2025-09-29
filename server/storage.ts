@@ -146,6 +146,7 @@ export interface IStorage {
 
   // Classes
   getClasses(): Promise<Class[]>;
+  getClassesByType(type?: string): Promise<Class[]>;
   getClass(id: string): Promise<Class | undefined>;
   getClassByName(name: string): Promise<Class | undefined>;
   createClass(classData: InsertClass): Promise<Class>;
@@ -477,6 +478,13 @@ export class DatabaseStorage implements IStorage {
   async getClasses(): Promise<Class[]> {
     // Ultra-fast query without ordering
     return await db.select().from(classes);
+  }
+
+  async getClassesByType(type?: string): Promise<Class[]> {
+    if (!type) {
+      return await this.getClasses();
+    }
+    return await db.select().from(classes).where(eq(classes.type, type));
   }
 
   async getClass(id: string): Promise<Class | undefined> {

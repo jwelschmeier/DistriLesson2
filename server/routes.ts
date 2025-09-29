@@ -283,9 +283,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/classes", async (req, res) => {
     const startTime = Date.now();
     try {
-      const classes = await storage.getClasses();
+      const type = req.query.type as string | undefined;
+      const classes = await storage.getClassesByType(type);
       const duration = Date.now() - startTime;
-      console.log(`[PERF] Classes query completed in ${duration}ms`);
+      console.log(`[PERF] Classes query completed in ${duration}ms${type ? ` (type: ${type})` : ''}`);
       res.json(classes);
     } catch (error) {
       const duration = Date.now() - startTime;

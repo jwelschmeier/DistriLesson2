@@ -52,6 +52,7 @@ export const students = pgTable("students", {
 export const classes = pgTable("classes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name", { length: 50 }).notNull(),
+  type: varchar("type", { length: 10 }).notNull().default("klasse"), // "klasse", "kurs", "ag"
   grade: integer("grade").notNull(),
   studentCount: integer("student_count").notNull().default(0),
   subjectHours: json("subject_hours").$type<Record<string, number>>().notNull().default({}),
@@ -348,6 +349,7 @@ export const insertClassSchema = createInsertSchema(classes).omit({
   id: true,
   createdAt: true,
 }).extend({
+  type: z.enum(["klasse", "kurs", "ag"], { invalid_type_error: "Typ muss 'klasse', 'kurs' oder 'ag' sein" }),
   classTeacher1Id: z.string().uuid().nullable().optional(),
   classTeacher2Id: z.string().uuid().nullable().optional(),
   schoolYearId: z.string().uuid().nullable().optional(),
