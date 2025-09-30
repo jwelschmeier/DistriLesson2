@@ -345,9 +345,16 @@ export default function KlassenMatrix() {
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="bg-muted/50">
-                      <th className="border-b border-r p-3 text-left font-medium">KLASSE</th>
-                      {sortedSubjects.map(subject => (
-                        <th key={subject.id} className="border-b border-r p-3 text-center text-sm font-medium min-w-[140px]">
+                      <th className="border-b border-r p-3 text-left font-medium bg-muted/30 dark:bg-muted/40">KLASSE</th>
+                      {sortedSubjects.map((subject, index) => (
+                        <th 
+                          key={subject.id} 
+                          className={`border-b border-r p-3 text-center text-sm font-medium min-w-[140px] ${
+                            index % 2 === 0 
+                              ? 'bg-blue-50 dark:bg-blue-950/30' 
+                              : 'bg-green-50 dark:bg-green-950/30'
+                          }`}
+                        >
                           {subject.shortName.toUpperCase()}
                         </th>
                       ))}
@@ -356,10 +363,10 @@ export default function KlassenMatrix() {
                   <tbody>
                     {(viewMode === "single" ? [selectedClass] : jahrgangClasses).map((classItem) => (
                       <tr key={classItem.id} className="hover:bg-muted/25">
-                        <td className="border-b border-r p-4 font-semibold text-lg bg-muted/25">
+                        <td className="border-b border-r p-4 font-semibold text-lg bg-muted/25 dark:bg-muted/30">
                           {classItem.name}
                         </td>
-                        {sortedSubjects.map(subject => {
+                        {sortedSubjects.map((subject, index) => {
                         // Get teachers qualified for this subject
                         const qualifiedForSubject = teachers.filter(teacher => 
                           teacher.subjects.includes(subject.shortName)
@@ -370,7 +377,14 @@ export default function KlassenMatrix() {
                         const currentTeacher2 = getCurrentTeacher(classItem.id, subject.id, "2");
                         
                         return (
-                          <td key={subject.id} className="border-b border-r p-2 text-center">
+                          <td 
+                            key={subject.id} 
+                            className={`border-b border-r p-2 text-center ${
+                              index % 2 === 0 
+                                ? 'bg-blue-50/50 dark:bg-blue-950/20' 
+                                : 'bg-green-50/50 dark:bg-green-950/20'
+                            }`}
+                          >
                             <div className="space-y-2">
                               {/* 1. Halbjahr */}
                               <div className="text-xs text-muted-foreground font-medium">1. HJ</div>
