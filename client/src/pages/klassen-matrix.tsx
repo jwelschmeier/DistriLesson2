@@ -26,10 +26,17 @@ export default function KlassenMatrix() {
   const [viewMode, setViewMode] = useState<"single" | "jahrgang">("single");
 
   // Get the selected class info
-  const { data: selectedClass } = useQuery<Class>({
+  const { data: selectedClass, isLoading: isLoadingClass, isError: isClassError } = useQuery<Class>({
     queryKey: ['/api/classes', classId],
-    queryFn: () => fetch(`/api/classes/${classId}`).then(res => res.json()),
-    enabled: !!classId
+    queryFn: async () => {
+      const res = await fetch(`/api/classes/${classId}`);
+      if (!res.ok) {
+        throw new Error('Klasse nicht gefunden');
+      }
+      return res.json();
+    },
+    enabled: !!classId,
+    retry: false
   });
 
   // Load teachers and subjects (cached globally)
@@ -189,7 +196,7 @@ export default function KlassenMatrix() {
     setChanges2({});
   };
 
-  if (!selectedClass) {
+  if (isLoadingClass) {
     return (
       <div className="flex h-screen bg-muted/50 dark:bg-muted/20">
         <Sidebar />
@@ -197,6 +204,26 @@ export default function KlassenMatrix() {
           <div className="text-center">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto mb-4"></div>
             <p className="text-muted-foreground">Klasse wird geladen...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (isClassError || !selectedClass) {
+    return (
+      <div className="flex h-screen bg-muted/50 dark:bg-muted/20">
+        <Sidebar />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-lg font-semibold mb-2">Klasse nicht gefunden</p>
+            <p className="text-muted-foreground mb-4">Die angeforderte Klasse existiert nicht.</p>
+            <Link href="/lehrer-faecher-zuordnung/select">
+              <Button>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Zurück zur Klassenauswahl
+              </Button>
+            </Link>
           </div>
         </main>
       </div>
