@@ -196,6 +196,56 @@ export default function KlassenMatrix() {
     setChanges2({});
   };
 
+  // Calculate teacher workload for each semester
+  const getTeacherWorkload = useCallback((teacherId: string, semester: "1" | "2") => {
+    const teacher = teachers.find(t => t.id === teacherId);
+    if (!teacher) return { assigned: 0, total: 0, free: 0 };
+
+    const assignments = semester === "1" ? assignments1 : assignments2;
+    const changes = semester === "1" ? changes1 : changes2;
+
+    // Calculate assigned hours from saved assignments
+    let assignedHours = 0;
+    assignments.forEach(assignment => {
+      if (assignment.teacherId === teacherId) {
+        const hours = typeof assignment.hoursPerWeek === 'string' 
+          ? parseFloat(assignment.hoursPerWeek) 
+          : assignment.hoursPerWeek;
+        assignedHours += hours || 0;
+      }
+    });
+
+    // Adjust for pending changes
+    Object.entries(changes).forEach(([key, changedTeacherId]) => {
+      const [changeClassId, changeSubjectId, _semester] = key.split('::');
+      
+      // Find original assignment
+      const originalAssignment = assignments.find(
+        a => a.classId === changeClassId && a.subjectId === changeSubjectId
+      );
+      
+      // If this teacher was originally assigned, subtract those hours
+      if (originalAssignment?.teacherId === teacherId) {
+        const hours = typeof originalAssignment.hoursPerWeek === 'string' 
+          ? parseFloat(originalAssignment.hoursPerWeek) 
+          : originalAssignment.hoursPerWeek;
+        assignedHours -= hours || 0;
+      }
+      
+      // If this teacher is newly assigned, add default hours (1)
+      if (changedTeacherId === teacherId) {
+        assignedHours += 1; // Default hours for new assignment
+      }
+    });
+
+    const total = typeof teacher.maxHours === 'string' 
+      ? parseFloat(teacher.maxHours) 
+      : teacher.maxHours;
+    const free = Math.max(0, total - assignedHours);
+
+    return { assigned: assignedHours, total, free };
+  }, [teachers, assignments1, assignments2, changes1, changes2]);
+
   if (isLoadingClass) {
     return (
       <div className="flex h-screen bg-muted/50 dark:bg-muted/20">
@@ -400,11 +450,14 @@ export default function KlassenMatrix() {
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="unassigned">--</SelectItem>
-                                  {qualifiedForSubject.map(teacher => (
-                                    <SelectItem key={teacher.id} value={teacher.id}>
-                                      {teacher.shortName}
-                                    </SelectItem>
-                                  ))}
+                                  {qualifiedForSubject.map(teacher => {
+                                    const workload = getTeacherWorkload(teacher.id, "1");
+                                    return (
+                                      <SelectItem key={teacher.id} value={teacher.id}>
+                                        {teacher.shortName} ({workload.assigned}/{workload.total}h)
+                                      </SelectItem>
+                                    );
+                                  })}
                                 </SelectContent>
                               </Select>
                               
@@ -422,11 +475,14 @@ export default function KlassenMatrix() {
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="unassigned">--</SelectItem>
-                                  {qualifiedForSubject.map(teacher => (
-                                    <SelectItem key={teacher.id} value={teacher.id}>
-                                      {teacher.shortName}
-                                    </SelectItem>
-                                  ))}
+                                  {qualifiedForSubject.map(teacher => {
+                                    const workload = getTeacherWorkload(teacher.id, "2");
+                                    return (
+                                      <SelectItem key={teacher.id} value={teacher.id}>
+                                        {teacher.shortName} ({workload.assigned}/{workload.total}h)
+                                      </SelectItem>
+                                    );
+                                  })}
                                 </SelectContent>
                               </Select>
                             </div>
