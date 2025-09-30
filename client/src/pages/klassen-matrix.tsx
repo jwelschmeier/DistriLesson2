@@ -59,8 +59,10 @@ export default function KlassenMatrix() {
 
   // Load assignments for both semesters
   // In jahrgang mode, load for entire grade; in single mode, load for specific class
+  const jahrgangClassIds = jahrgangClasses.map(c => c.id).join(',');
+  
   const { data: assignments1 = [] } = useQuery<Assignment[]>({ 
-    queryKey: viewMode === "jahrgang" ? ['/api/assignments', selectedClass?.grade, '1'] : ['/api/assignments', classId, '1'],
+    queryKey: viewMode === "jahrgang" ? ['/api/assignments', 'jahrgang', selectedClass?.grade, '1', jahrgangClassIds] : ['/api/assignments', classId, '1'],
     queryFn: () => {
       if (viewMode === "jahrgang" && selectedClass) {
         return fetch(`/api/assignments?minimal=true&semester=1`).then(res => res.json())
@@ -71,12 +73,12 @@ export default function KlassenMatrix() {
       }
       return fetch(`/api/assignments?minimal=true&classId=${classId}&semester=1`).then(res => res.json());
     },
-    enabled: !!classId || (!!selectedClass && viewMode === "jahrgang"),
+    enabled: viewMode === "single" ? !!classId : (!!selectedClass && jahrgangClasses.length > 0),
     staleTime: 30000
   });
 
   const { data: assignments2 = [] } = useQuery<Assignment[]>({ 
-    queryKey: viewMode === "jahrgang" ? ['/api/assignments', selectedClass?.grade, '2'] : ['/api/assignments', classId, '2'],
+    queryKey: viewMode === "jahrgang" ? ['/api/assignments', 'jahrgang', selectedClass?.grade, '2', jahrgangClassIds] : ['/api/assignments', classId, '2'],
     queryFn: () => {
       if (viewMode === "jahrgang" && selectedClass) {
         return fetch(`/api/assignments?minimal=true&semester=2`).then(res => res.json())
@@ -87,7 +89,7 @@ export default function KlassenMatrix() {
       }
       return fetch(`/api/assignments?minimal=true&classId=${classId}&semester=2`).then(res => res.json());
     },
-    enabled: !!classId || (!!selectedClass && viewMode === "jahrgang"),
+    enabled: viewMode === "single" ? !!classId : (!!selectedClass && jahrgangClasses.length > 0),
     staleTime: 30000
   });
 
@@ -107,7 +109,7 @@ export default function KlassenMatrix() {
 
   // Get current teacher for a subject, semester, and class (considering local changes)
   const getCurrentTeacher = (classItemId: string, subjectId: string, semester: "1" | "2") => {
-    const key = `${classItemId}-${subjectId}-${semester}`;
+    const key = `${classItemId}::${subjectId}::${semester}`;
     const localChange = semester === "1" ? changes1[key] : changes2[key];
     
     if (localChange !== undefined) {
@@ -122,7 +124,7 @@ export default function KlassenMatrix() {
 
   // Handle teacher assignment changes
   const handleTeacherChange = (classItemId: string, semester: "1" | "2", subjectId: string, teacherId: string | null) => {
-    const key = `${classItemId}-${subjectId}-${semester}`;
+    const key = `${classItemId}::${subjectId}::${semester}`;
     if (semester === "1") {
       setChanges1(prev => ({ ...prev, [key]: teacherId }));
     } else {
@@ -148,7 +150,7 @@ export default function KlassenMatrix() {
       ];
 
       for (const change of allChanges) {
-        const [changeClassId, changeSubjectId] = change.key.split('-');
+        const [changeClassId, changeSubjectId, _semester] = change.key.split('::');
         if (change.teacherId) {
           // Create or update assignment
           await apiRequest('POST', '/api/assignments', {
@@ -156,7 +158,7 @@ export default function KlassenMatrix() {
             subjectId: changeSubjectId,
             classId: changeClassId,
             semester: change.semester,
-            hoursPerWeek: "1" // Default to 1 hour
+            hoursPerWeek: 1 // Default to 1 hour (number)
           });
         } else {
           // TODO: Delete assignment if teacherId is null
@@ -165,7 +167,8 @@ export default function KlassenMatrix() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/assignments', classId] });
+      // Invalidate all assignment queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/assignments'] });
       setChanges1({});
       setChanges2({});
       toast({ title: "Erfolgreich gespeichert", description: "Alle Änderungen wurden übernommen." });
