@@ -23,6 +23,7 @@ export default function KlassenMatrix() {
   const [changes1, setChanges1] = useState<Record<string, string | null>>({});
   const [changes2, setChanges2] = useState<Record<string, string | null>>({});
   const [saving, setSaving] = useState(false);
+  const [viewMode, setViewMode] = useState<"single" | "jahrgang">("single");
 
   // Get the selected class info
   const { data: selectedClass } = useQuery<Class>({
@@ -43,18 +44,50 @@ export default function KlassenMatrix() {
     staleTime: 60000
   });
 
-  // Load assignments for both semesters in parallel (class-specific)
+  // Load all classes of the same grade for jahrgang view
+  const { data: allClasses = [] } = useQuery<Class[]>({
+    queryKey: ['/api/classes'],
+    staleTime: 60000
+  });
+
+  const jahrgangClasses = useMemo(() => {
+    if (!selectedClass) return [];
+    return allClasses
+      .filter(c => c.grade === selectedClass.grade && c.type === 'klasse')
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [allClasses, selectedClass]);
+
+  // Load assignments for both semesters
+  // In jahrgang mode, load for entire grade; in single mode, load for specific class
   const { data: assignments1 = [] } = useQuery<Assignment[]>({ 
-    queryKey: ['/api/assignments', classId, '1'],
-    queryFn: () => fetch(`/api/assignments?minimal=true&classId=${classId}&semester=1`).then(res => res.json()),
-    enabled: !!classId,
+    queryKey: viewMode === "jahrgang" ? ['/api/assignments', selectedClass?.grade, '1'] : ['/api/assignments', classId, '1'],
+    queryFn: () => {
+      if (viewMode === "jahrgang" && selectedClass) {
+        return fetch(`/api/assignments?minimal=true&semester=1`).then(res => res.json())
+          .then((data: Assignment[]) => data.filter(a => {
+            const assignmentClass = allClasses.find(c => c.id === a.classId);
+            return assignmentClass && assignmentClass.grade === selectedClass.grade;
+          }));
+      }
+      return fetch(`/api/assignments?minimal=true&classId=${classId}&semester=1`).then(res => res.json());
+    },
+    enabled: !!classId || (!!selectedClass && viewMode === "jahrgang"),
     staleTime: 30000
   });
 
   const { data: assignments2 = [] } = useQuery<Assignment[]>({ 
-    queryKey: ['/api/assignments', classId, '2'],
-    queryFn: () => fetch(`/api/assignments?minimal=true&classId=${classId}&semester=2`).then(res => res.json()),
-    enabled: !!classId,
+    queryKey: viewMode === "jahrgang" ? ['/api/assignments', selectedClass?.grade, '2'] : ['/api/assignments', classId, '2'],
+    queryFn: () => {
+      if (viewMode === "jahrgang" && selectedClass) {
+        return fetch(`/api/assignments?minimal=true&semester=2`).then(res => res.json())
+          .then((data: Assignment[]) => data.filter(a => {
+            const assignmentClass = allClasses.find(c => c.id === a.classId);
+            return assignmentClass && assignmentClass.grade === selectedClass.grade;
+          }));
+      }
+      return fetch(`/api/assignments?minimal=true&classId=${classId}&semester=2`).then(res => res.json());
+    },
+    enabled: !!classId || (!!selectedClass && viewMode === "jahrgang"),
     staleTime: 30000
   });
 
@@ -72,9 +105,9 @@ export default function KlassenMatrix() {
       });
   }, [subjects]);
 
-  // Get current teacher for a subject and semester (considering local changes)
-  const getCurrentTeacher = (subjectId: string, semester: "1" | "2") => {
-    const key = `${subjectId}-${semester}`;
+  // Get current teacher for a subject, semester, and class (considering local changes)
+  const getCurrentTeacher = (classItemId: string, subjectId: string, semester: "1" | "2") => {
+    const key = `${classItemId}-${subjectId}-${semester}`;
     const localChange = semester === "1" ? changes1[key] : changes2[key];
     
     if (localChange !== undefined) {
@@ -83,13 +116,13 @@ export default function KlassenMatrix() {
     
     // Fall back to existing assignments
     const assignments = semester === "1" ? assignments1 : assignments2;
-    const assignment = assignments.find(a => a.subjectId === subjectId);
+    const assignment = assignments.find(a => a.subjectId === subjectId && a.classId === classItemId);
     return assignment?.teacherId || null;
   };
 
   // Handle teacher assignment changes
-  const handleTeacherChange = (semester: "1" | "2", subjectId: string, teacherId: string | null) => {
-    const key = `${subjectId}-${semester}`;
+  const handleTeacherChange = (classItemId: string, semester: "1" | "2", subjectId: string, teacherId: string | null) => {
+    const key = `${classItemId}-${subjectId}-${semester}`;
     if (semester === "1") {
       setChanges1(prev => ({ ...prev, [key]: teacherId }));
     } else {
@@ -103,24 +136,25 @@ export default function KlassenMatrix() {
       setSaving(true);
       const allChanges = [
         ...Object.entries(changes1).map(([key, teacherId]) => ({ 
-          subjectId: key.split('-')[0], 
+          key,
           semester: '1', 
           teacherId 
         })),
         ...Object.entries(changes2).map(([key, teacherId]) => ({ 
-          subjectId: key.split('-')[0], 
+          key,
           semester: '2', 
           teacherId 
         }))
       ];
 
       for (const change of allChanges) {
+        const [changeClassId, changeSubjectId] = change.key.split('-');
         if (change.teacherId) {
           // Create or update assignment
           await apiRequest('POST', '/api/assignments', {
             teacherId: change.teacherId,
-            subjectId: change.subjectId,
-            classId,
+            subjectId: changeSubjectId,
+            classId: changeClassId,
             semester: change.semester,
             hoursPerWeek: "1" // Default to 1 hour
           });
@@ -185,15 +219,17 @@ export default function KlassenMatrix() {
               <div className="flex items-center gap-2">
                 <BookOpen className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                 <div>
-                  <h2 className="text-2xl font-semibold text-foreground">
-                    Lehrer-Fächer-Zuordnung: {selectedClass.name}
-                  </h2>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Users className="h-4 w-4" />
-                      {selectedClass.studentCount} Schüler
-                    </span>
-                    <Badge variant="outline">{selectedClass.grade}. Jahrgang</Badge>
+                  <h2 className="text-2xl font-semibold text-foreground">Lehrer-Fächer-Zuordnung</h2>
+                  <div className="flex items-center gap-3 mt-1">
+                    <Badge variant="default" className="text-base px-3 py-1">
+                      {viewMode === "single" ? selectedClass.name : `${selectedClass.grade}. Jahrgang`}
+                    </Badge>
+                    {viewMode === "single" && (
+                      <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Users className="h-4 w-4" />
+                        {selectedClass.studentCount} Schüler
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -224,6 +260,29 @@ export default function KlassenMatrix() {
         </header>
 
         <div className="p-6">
+          {/* View Mode Selector */}
+          <div className="mb-6 flex items-center gap-3">
+            <span className="text-sm font-medium">Ansicht:</span>
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === "single" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("single")}
+                data-testid="button-view-single"
+              >
+                Einzelklasse
+              </Button>
+              <Button
+                variant={viewMode === "jahrgang" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("jahrgang")}
+                data-testid="button-view-jahrgang"
+              >
+                Ganzer Jahrgang
+              </Button>
+            </div>
+          </div>
+
           {/* Semester Overview */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <Card>
@@ -265,19 +324,20 @@ export default function KlassenMatrix() {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="hover:bg-muted/25">
-                      <td className="border-b border-r p-4 font-semibold text-lg bg-muted/25">
-                        {selectedClass.name}
-                      </td>
-                      {sortedSubjects.map(subject => {
+                    {(viewMode === "single" ? [selectedClass] : jahrgangClasses).map((classItem) => (
+                      <tr key={classItem.id} className="hover:bg-muted/25">
+                        <td className="border-b border-r p-4 font-semibold text-lg bg-muted/25">
+                          {classItem.name}
+                        </td>
+                        {sortedSubjects.map(subject => {
                         // Get teachers qualified for this subject
                         const qualifiedForSubject = teachers.filter(teacher => 
                           teacher.subjects.includes(subject.shortName)
                         );
                         
                         // Get current teacher assignments (considering local changes)
-                        const currentTeacher1 = getCurrentTeacher(subject.id, "1");
-                        const currentTeacher2 = getCurrentTeacher(subject.id, "2");
+                        const currentTeacher1 = getCurrentTeacher(classItem.id, subject.id, "1");
+                        const currentTeacher2 = getCurrentTeacher(classItem.id, subject.id, "2");
                         
                         return (
                           <td key={subject.id} className="border-b border-r p-2 text-center">
@@ -287,9 +347,9 @@ export default function KlassenMatrix() {
                               <Select
                                 value={currentTeacher1 || 'unassigned'}
                                 onValueChange={(teacherId) => 
-                                  handleTeacherChange("1", subject.id, teacherId === 'unassigned' ? null : teacherId)
+                                  handleTeacherChange(classItem.id, "1", subject.id, teacherId === 'unassigned' ? null : teacherId)
                                 }
-                                data-testid={`select-teacher-${subject.id}-semester-1`}
+                                data-testid={`select-teacher-${classItem.id}-${subject.id}-semester-1`}
                               >
                                 <SelectTrigger className="w-full h-8 text-xs">
                                   <SelectValue placeholder="--" />
@@ -309,9 +369,9 @@ export default function KlassenMatrix() {
                               <Select
                                 value={currentTeacher2 || 'unassigned'}
                                 onValueChange={(teacherId) => 
-                                  handleTeacherChange("2", subject.id, teacherId === 'unassigned' ? null : teacherId)
+                                  handleTeacherChange(classItem.id, "2", subject.id, teacherId === 'unassigned' ? null : teacherId)
                                 }
-                                data-testid={`select-teacher-${subject.id}-semester-2`}
+                                data-testid={`select-teacher-${classItem.id}-${subject.id}-semester-2`}
                               >
                                 <SelectTrigger className="w-full h-8 text-xs">
                                   <SelectValue placeholder="--" />
@@ -329,7 +389,8 @@ export default function KlassenMatrix() {
                           </td>
                         );
                       })}
-                    </tr>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
