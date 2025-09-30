@@ -295,6 +295,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/classes/:id", async (req, res) => {
+    try {
+      const classItem = await storage.getClass(req.params.id);
+      if (!classItem) {
+        return res.status(404).json({ error: "Klasse nicht gefunden" });
+      }
+      res.json(classItem);
+    } catch (error) {
+      console.error("Error fetching class:", error);
+      res.status(500).json({ error: "Failed to fetch class" });
+    }
+  });
+
   app.post("/api/classes", async (req, res) => {
     try {
       // Allow null values for teacher fields to support "Kein Klassenlehrer" option
