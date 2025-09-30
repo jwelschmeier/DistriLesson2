@@ -345,14 +345,14 @@ export default function KlassenMatrix() {
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="bg-muted/50">
-                      <th className="border-b border-r p-3 text-left font-medium bg-muted/30 dark:bg-muted/40">KLASSE</th>
+                      <th className="border-b border-r p-3 text-left font-medium bg-slate-200 dark:bg-slate-700">KLASSE</th>
                       {sortedSubjects.map((subject, index) => (
                         <th 
                           key={subject.id} 
                           className={`border-b border-r p-3 text-center text-sm font-medium min-w-[140px] ${
                             index % 2 === 0 
-                              ? 'bg-blue-50 dark:bg-blue-950/30' 
-                              : 'bg-green-50 dark:bg-green-950/30'
+                              ? 'bg-blue-100 dark:bg-blue-900/50' 
+                              : 'bg-emerald-100 dark:bg-emerald-900/50'
                           }`}
                         >
                           {subject.shortName.toUpperCase()}
@@ -363,7 +363,7 @@ export default function KlassenMatrix() {
                   <tbody>
                     {(viewMode === "single" ? [selectedClass] : jahrgangClasses).map((classItem) => (
                       <tr key={classItem.id} className="hover:bg-muted/25">
-                        <td className="border-b border-r p-4 font-semibold text-lg bg-muted/25 dark:bg-muted/30">
+                        <td className="border-b border-r p-4 font-semibold text-lg bg-slate-100 dark:bg-slate-800">
                           {classItem.name}
                         </td>
                         {sortedSubjects.map((subject, index) => {
@@ -381,8 +381,8 @@ export default function KlassenMatrix() {
                             key={subject.id} 
                             className={`border-b border-r p-2 text-center ${
                               index % 2 === 0 
-                                ? 'bg-blue-50/50 dark:bg-blue-950/20' 
-                                : 'bg-green-50/50 dark:bg-green-950/20'
+                                ? 'bg-blue-50 dark:bg-blue-900/30' 
+                                : 'bg-emerald-50 dark:bg-emerald-900/30'
                             }`}
                           >
                             <div className="space-y-2">
