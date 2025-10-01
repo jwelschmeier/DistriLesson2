@@ -1353,51 +1353,28 @@ export default function Stundenplaene() {
 
             {/* Class Tab Content */}
             <TabsContent value="class" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <School className="mr-2 text-primary" />
-                      Klasse auswählen
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Select value={selectedClassId} onValueChange={setSelectedClassId} data-testid="select-class">
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Wählen Sie eine Klasse aus..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredClasses?.map((cls) => (
-                          <SelectItem key={cls.id} value={cls.id}>
-                            {cls.name} (Stufe {cls.grade})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Calendar className="mr-2 text-primary" />
-                      Halbjahr filtern
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Select value={selectedSemester} onValueChange={(value: 'all' | '1' | '2') => setSelectedSemester(value)} data-testid="select-semester-filter-class">
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Beide Halbjahre</SelectItem>
-                        <SelectItem value="1">1. Halbjahr</SelectItem>
-                        <SelectItem value="2">2. Halbjahr</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </CardContent>
-                </Card>
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <School className="mr-2 text-primary" />
+                    Klasse auswählen
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Select value={selectedClassId} onValueChange={setSelectedClassId} data-testid="select-class">
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Wählen Sie eine Klasse aus..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredClasses?.map((cls) => (
+                        <SelectItem key={cls.id} value={cls.id}>
+                          {cls.name} (Stufe {cls.grade})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CardContent>
+              </Card>
 
               {/* Type Filter */}
               <Card>
@@ -1451,6 +1428,27 @@ export default function Stundenplaene() {
                       AGs
                     </button>
                   </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Calendar className="mr-2 text-primary" />
+                    Halbjahr filtern
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Select value={selectedSemester} onValueChange={(value: 'all' | '1' | '2') => setSelectedSemester(value)} data-testid="select-semester-filter-class">
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Beide Halbjahre</SelectItem>
+                      <SelectItem value="1">1. Halbjahr</SelectItem>
+                      <SelectItem value="2">2. Halbjahr</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </CardContent>
               </Card>
 
