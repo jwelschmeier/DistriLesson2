@@ -39,6 +39,7 @@ export default function Stundenplaene() {
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedSemester, setSelectedSemester] = useState<'all' | '1' | '2'>('all');
+  const [selectedClassType, setSelectedClassType] = useState<string>("all");
   
   
   // State for editable table
@@ -69,6 +70,13 @@ export default function Stundenplaene() {
   const { data: classes, isLoading: classesLoading } = useQuery<Class[]>({
     queryKey: ["/api/classes"],
   });
+
+  // Filter classes by type
+  const filteredClasses = useMemo(() => {
+    if (!classes) return [];
+    if (selectedClassType === "all") return classes;
+    return classes.filter(cls => cls.type === selectedClassType);
+  }, [classes, selectedClassType]);
 
   const { data: subjects, isLoading: subjectsLoading } = useQuery<Subject[]>({
     queryKey: ["/api/subjects"],
@@ -1359,7 +1367,7 @@ export default function Stundenplaene() {
                         <SelectValue placeholder="Wählen Sie eine Klasse aus..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {classes?.map((cls) => (
+                        {filteredClasses?.map((cls) => (
                           <SelectItem key={cls.id} value={cls.id}>
                             {cls.name} (Stufe {cls.grade})
                           </SelectItem>
@@ -1390,6 +1398,61 @@ export default function Stundenplaene() {
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Type Filter */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Typ filtern</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center space-x-2 flex-wrap gap-2">
+                    <button
+                      onClick={() => setSelectedClassType("all")}
+                      className={`px-4 py-2 rounded-full text-sm transition-colors ${
+                        selectedClassType === "all" 
+                          ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium" 
+                          : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                      }`}
+                      data-testid="filter-all-classes"
+                    >
+                      Alle
+                    </button>
+                    <button
+                      onClick={() => setSelectedClassType("klasse")}
+                      className={`px-4 py-2 rounded-full text-sm transition-colors ${
+                        selectedClassType === "klasse" 
+                          ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 font-medium" 
+                          : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                      }`}
+                      data-testid="filter-klasse-classes"
+                    >
+                      Klassen
+                    </button>
+                    <button
+                      onClick={() => setSelectedClassType("kurs")}
+                      className={`px-4 py-2 rounded-full text-sm transition-colors ${
+                        selectedClassType === "kurs" 
+                          ? "bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 font-medium" 
+                          : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                      }`}
+                      data-testid="filter-kurs-classes"
+                    >
+                      Kurse
+                    </button>
+                    <button
+                      onClick={() => setSelectedClassType("ag")}
+                      className={`px-4 py-2 rounded-full text-sm transition-colors ${
+                        selectedClassType === "ag" 
+                          ? "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 font-medium" 
+                          : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                      }`}
+                      data-testid="filter-ag-classes"
+                    >
+                      AGs
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
 
               {selectedClass && (
                 <>
