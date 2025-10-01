@@ -1353,29 +1353,6 @@ export default function Stundenplaene() {
 
             {/* Class Tab Content */}
             <TabsContent value="class" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <School className="mr-2 text-primary" />
-                    Klasse auswählen
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Select value={selectedClassId} onValueChange={setSelectedClassId} data-testid="select-class">
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Wählen Sie eine Klasse aus..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredClasses?.map((cls) => (
-                        <SelectItem key={cls.id} value={cls.id}>
-                          {cls.name} (Stufe {cls.grade})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </CardContent>
-              </Card>
-
               {/* Type Filter */}
               <Card>
                 <CardHeader>
@@ -1428,6 +1405,29 @@ export default function Stundenplaene() {
                       AGs
                     </button>
                   </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <School className="mr-2 text-primary" />
+                    Klasse auswählen
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Select value={selectedClassId} onValueChange={setSelectedClassId} data-testid="select-class">
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Wählen Sie eine Klasse aus..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredClasses?.map((cls) => (
+                        <SelectItem key={cls.id} value={cls.id}>
+                          {cls.name} (Stufe {cls.grade})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </CardContent>
               </Card>
 
