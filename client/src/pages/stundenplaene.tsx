@@ -80,8 +80,8 @@ export default function Stundenplaene() {
     
     // Sort by grade (numerically) then by name (alphabetically)
     return filtered.sort((a, b) => {
-      const gradeA = parseInt(a.grade);
-      const gradeB = parseInt(b.grade);
+      const gradeA = parseInt(a.grade, 10);
+      const gradeB = parseInt(b.grade, 10);
       
       if (gradeA !== gradeB) {
         return gradeA - gradeB;
@@ -1436,7 +1436,7 @@ export default function Stundenplaene() {
                         <SelectContent>
                           {filteredClasses?.map((cls) => (
                             <SelectItem key={cls.id} value={cls.id}>
-                              {cls.name} (Stufe {cls.grade})
+                              {cls.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
