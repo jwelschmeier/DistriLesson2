@@ -71,11 +71,24 @@ export default function Stundenplaene() {
     queryKey: ["/api/classes"],
   });
 
-  // Filter classes by type
+  // Filter and sort classes by type
   const filteredClasses = useMemo(() => {
     if (!classes) return [];
-    if (selectedClassType === "all") return classes;
-    return classes.filter(cls => cls.type === selectedClassType);
+    const filtered = selectedClassType === "all" 
+      ? classes 
+      : classes.filter(cls => cls.type === selectedClassType);
+    
+    // Sort by grade (numerically) then by name (alphabetically)
+    return filtered.sort((a, b) => {
+      const gradeA = parseInt(a.grade);
+      const gradeB = parseInt(b.grade);
+      
+      if (gradeA !== gradeB) {
+        return gradeA - gradeB;
+      }
+      
+      return a.name.localeCompare(b.name);
+    });
   }, [classes, selectedClassType]);
 
   const { data: subjects, isLoading: subjectsLoading } = useQuery<Subject[]>({
