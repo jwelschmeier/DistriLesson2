@@ -71,35 +71,14 @@ export default function Stundenplaene() {
     queryKey: ["/api/classes"],
   });
 
-  // Helper function to determine class type from name
-  const getClassTypeFromName = (className: string): "klasse" | "kurs" | "ag" => {
-    // Regular classes: 05A, 06B, 07C, etc. (Pattern: 2 digits + 1 letter)
-    if (/^\d{2}[A-Z]$/.test(className)) {
-      return "klasse";
-    }
-    
-    // Kurse (Differentiation courses): DF, EF, SW, IF, NW, FS, TC, MUS
-    if (/(DF|EF|SW|INF?|NW|FS|TC|MUS)/i.test(className)) {
-      return "kurs";
-    }
-    
-    // AGs (Voluntary activity groups): FÖRS, MF, AG
-    if (/(FÖRS|MF|AG)/i.test(className)) {
-      return "ag";
-    }
-    
-    // Default to klasse if pattern doesn't match
-    return "klasse";
-  };
-
   // Filter and sort classes by type
   const filteredClasses = useMemo(() => {
     if (!classes) return [];
     
-    // Filter by type based on class name pattern
+    // Filter by type using the database type field
     const filtered = selectedClassType === "all" 
       ? classes 
-      : classes.filter(cls => getClassTypeFromName(cls.name) === selectedClassType);
+      : classes.filter(cls => cls.type === selectedClassType);
     
     // Sort by grade (numerically) then by name (alphabetically)
     return filtered.sort((a, b) => {
