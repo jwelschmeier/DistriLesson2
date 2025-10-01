@@ -1355,55 +1355,55 @@ export default function Stundenplaene() {
             <TabsContent value="class" className="space-y-4">
               {/* Type Filter */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Typ filtern</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center space-x-2 flex-wrap gap-2">
-                    <button
-                      onClick={() => setSelectedClassType("all")}
-                      className={`px-4 py-2 rounded-full text-sm transition-colors ${
-                        selectedClassType === "all" 
-                          ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium" 
-                          : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-                      }`}
-                      data-testid="filter-all-classes"
-                    >
-                      Alle
-                    </button>
-                    <button
-                      onClick={() => setSelectedClassType("klasse")}
-                      className={`px-4 py-2 rounded-full text-sm transition-colors ${
-                        selectedClassType === "klasse" 
-                          ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 font-medium" 
-                          : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-                      }`}
-                      data-testid="filter-klasse-classes"
-                    >
-                      Klassen
-                    </button>
-                    <button
-                      onClick={() => setSelectedClassType("kurs")}
-                      className={`px-4 py-2 rounded-full text-sm transition-colors ${
-                        selectedClassType === "kurs" 
-                          ? "bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 font-medium" 
-                          : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-                      }`}
-                      data-testid="filter-kurs-classes"
-                    >
-                      Kurse
-                    </button>
-                    <button
-                      onClick={() => setSelectedClassType("ag")}
-                      className={`px-4 py-2 rounded-full text-sm transition-colors ${
-                        selectedClassType === "ag" 
-                          ? "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 font-medium" 
-                          : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-                      }`}
-                      data-testid="filter-ag-classes"
-                    >
-                      AGs
-                    </button>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <span className="text-base font-semibold">Typ filtern</span>
+                    <div className="flex items-center space-x-2 flex-wrap gap-2">
+                      <button
+                        onClick={() => setSelectedClassType("all")}
+                        className={`px-4 py-2 rounded-full text-sm transition-colors ${
+                          selectedClassType === "all" 
+                            ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium" 
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                        }`}
+                        data-testid="filter-all-classes"
+                      >
+                        Alle
+                      </button>
+                      <button
+                        onClick={() => setSelectedClassType("klasse")}
+                        className={`px-4 py-2 rounded-full text-sm transition-colors ${
+                          selectedClassType === "klasse" 
+                            ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 font-medium" 
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                        }`}
+                        data-testid="filter-klasse-classes"
+                      >
+                        Klassen
+                      </button>
+                      <button
+                        onClick={() => setSelectedClassType("kurs")}
+                        className={`px-4 py-2 rounded-full text-sm transition-colors ${
+                          selectedClassType === "kurs" 
+                            ? "bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 font-medium" 
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                        }`}
+                        data-testid="filter-kurs-classes"
+                      >
+                        Kurse
+                      </button>
+                      <button
+                        onClick={() => setSelectedClassType("ag")}
+                        className={`px-4 py-2 rounded-full text-sm transition-colors ${
+                          selectedClassType === "ag" 
+                            ? "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 font-medium" 
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                        }`}
+                        data-testid="filter-ag-classes"
+                      >
+                        AGs
+                      </button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
