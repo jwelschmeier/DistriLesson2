@@ -1646,7 +1646,10 @@ export default function Stundenplaene() {
                             };
                           });
 
-                          // Add assignment data to the initialized subjects
+                          // Track processed parallel groups to avoid duplicates
+                          const processedParallelGroups = new Set<string>();
+
+                          // Add assignment data and ensure parallel subjects are included
                           classAssignments.forEach(assignment => {
                             const subjectId = assignment.subject?.id || 'unknown';
                             const subjectName = assignment.subject?.name || 'Unbekannt';
@@ -1658,6 +1661,26 @@ export default function Stundenplaene() {
                               'Unbekannt';
                             const teacherShortName = assignment.teacher?.shortName || '??';
                             const isTeamTeaching = !!assignment.teamTeachingId;
+
+                            // If this subject has a parallel group, add all parallel subjects
+                            const assignedSubject = subjects?.find(s => s.id === subjectId);
+                            if (assignedSubject?.parallelGroup && !processedParallelGroups.has(assignedSubject.parallelGroup)) {
+                              processedParallelGroups.add(assignedSubject.parallelGroup);
+                              
+                              // Find all subjects in this parallel group
+                              const parallelSubjects = subjects?.filter(s => s.parallelGroup === assignedSubject.parallelGroup) || [];
+                              
+                              // Add all parallel subjects to groupedAssignments
+                              parallelSubjects.forEach(parallelSubject => {
+                                if (!groupedAssignments[parallelSubject.id]) {
+                                  groupedAssignments[parallelSubject.id] = {
+                                    subjectName: parallelSubject.name,
+                                    subjectShortName: parallelSubject.shortName,
+                                    semesters: {}
+                                  };
+                                }
+                              });
+                            }
 
                             // Create entry if it doesn't exist (for subjects not in requirements)
                             if (!groupedAssignments[subjectId]) {
