@@ -1625,7 +1625,7 @@ export default function Stundenplaene() {
                     <CardContent>
                       <div className="space-y-4">
                         {(() => {
-                          // Group assignments by subject and semester
+                          // Start with all subjects from subjectRequirements (includes parallel subjects)
                           const groupedAssignments: Record<string, {
                             subjectName: string;
                             subjectShortName: string;
@@ -1636,6 +1636,17 @@ export default function Stundenplaene() {
                             }>;
                           }> = {};
 
+                          // Initialize all subjects from requirements (includes parallel subjects)
+                          subjectRequirements.forEach(req => {
+                            const subjectId = req.subject.id;
+                            groupedAssignments[subjectId] = {
+                              subjectName: req.subject.name,
+                              subjectShortName: req.subject.shortName,
+                              semesters: {}
+                            };
+                          });
+
+                          // Add assignment data to the initialized subjects
                           classAssignments.forEach(assignment => {
                             const subjectId = assignment.subject?.id || 'unknown';
                             const subjectName = assignment.subject?.name || 'Unbekannt';
@@ -1648,6 +1659,7 @@ export default function Stundenplaene() {
                             const teacherShortName = assignment.teacher?.shortName || '??';
                             const isTeamTeaching = !!assignment.teamTeachingId;
 
+                            // Create entry if it doesn't exist (for subjects not in requirements)
                             if (!groupedAssignments[subjectId]) {
                               groupedAssignments[subjectId] = {
                                 subjectName,
@@ -1676,58 +1688,76 @@ export default function Stundenplaene() {
 
                           return (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-                              {Object.entries(groupedAssignments).map(([subjectId, data]) => (
-                                <div key={subjectId} className="border rounded px-1 py-0.5 bg-muted/20">
-                                  <div className="flex flex-col items-center mb-0.5 space-y-0.5">
-                                    <div className="bg-gray-100 dark:bg-gray-800 rounded px-1 py-0.5 text-[10px] font-medium border">
-                                      {data.subjectShortName}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground text-center">
-                                      {data.subjectName}
-                                    </div>
-                                  </div>
-                                  
-                                  <div className="space-y-0.5">
-                                    {['1', '2'].map(semester => {
-                                      const semesterData = data.semesters[semester];
-                                      if (!semesterData) return null;
+                              {Object.entries(groupedAssignments).sort(([, a], [, b]) => 
+                                a.subjectShortName.localeCompare(b.subjectShortName)
+                              ).map(([subjectId, data]) => {
+                                const hasSemester1 = !!data.semesters['1'];
+                                const hasSemester2 = !!data.semesters['2'];
+                                const hasAnyAssignments = hasSemester1 || hasSemester2;
 
-                                      return (
-                                        <div key={semester} className="flex items-center justify-center space-x-1 text-xs">
-                                          <span className="text-muted-foreground text-[10px]">
-                                            {semester}.HJ
-                                          </span>
-                                          <div className="bg-blue-100 dark:bg-blue-900 rounded px-1 py-0.5 text-[10px] font-medium border">
-                                            {semesterData.totalHours}h
+                                return (
+                                  <div 
+                                    key={subjectId} 
+                                    className={`border rounded px-1 py-0.5 ${hasAnyAssignments ? 'bg-muted/20' : 'bg-muted/5 opacity-60'}`}
+                                  >
+                                    <div className="flex flex-col items-center mb-0.5 space-y-0.5">
+                                      <div className="bg-gray-100 dark:bg-gray-800 rounded px-1 py-0.5 text-[10px] font-medium border">
+                                        {data.subjectShortName}
+                                      </div>
+                                      <div className="text-xs text-muted-foreground text-center">
+                                        {data.subjectName}
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="space-y-0.5">
+                                      {['1', '2'].map(semester => {
+                                        const semesterData = data.semesters[semester];
+
+                                        return (
+                                          <div key={semester} className="flex items-center justify-center space-x-1 text-xs">
+                                            <span className="text-muted-foreground text-[10px]">
+                                              {semester}.HJ
+                                            </span>
+                                            {semesterData ? (
+                                              <>
+                                                <div className="bg-blue-100 dark:bg-blue-900 rounded px-1 py-0.5 text-[10px] font-medium border">
+                                                  {semesterData.totalHours}h
+                                                </div>
+                                                {semesterData.teachers.slice(0, 2).map((teacher, index) => (
+                                                  <div 
+                                                    key={index} 
+                                                    className="bg-gray-100 dark:bg-gray-800 rounded px-1 py-0.5 text-[10px] font-medium border"
+                                                    title={`${teacher.name} (${teacher.hours}h)${teacher.isTeamTeaching ? ' - Team' : ''}`}
+                                                  >
+                                                    {teacher.shortName}
+                                                  </div>
+                                                ))}
+                                                {semesterData.teachers.length > 2 && (
+                                                  <div 
+                                                    className="bg-gray-100 dark:bg-gray-800 rounded px-1 py-0.5 text-[10px] font-medium border"
+                                                    title={`+${semesterData.teachers.length - 2} weitere: ${semesterData.teachers.slice(2).map(t => t.shortName).join(', ')}`}
+                                                  >
+                                                    +{semesterData.teachers.length - 2}
+                                                  </div>
+                                                )}
+                                              </>
+                                            ) : (
+                                              <div className="bg-gray-100 dark:bg-gray-800 rounded px-1 py-0.5 text-[10px] font-medium border opacity-50">
+                                                -
+                                              </div>
+                                            )}
                                           </div>
-                                          {semesterData.teachers.slice(0, 2).map((teacher, index) => (
-                                            <div 
-                                              key={index} 
-                                              className="bg-gray-100 dark:bg-gray-800 rounded px-1 py-0.5 text-[10px] font-medium border"
-                                              title={`${teacher.name} (${teacher.hours}h)${teacher.isTeamTeaching ? ' - Team' : ''}`}
-                                            >
-                                              {teacher.shortName}
-                                            </div>
-                                          ))}
-                                          {semesterData.teachers.length > 2 && (
-                                            <div 
-                                              className="bg-gray-100 dark:bg-gray-800 rounded px-1 py-0.5 text-[10px] font-medium border"
-                                              title={`+${semesterData.teachers.length - 2} weitere: ${semesterData.teachers.slice(2).map(t => t.shortName).join(', ')}`}
-                                            >
-                                              +{semesterData.teachers.length - 2}
-                                            </div>
-                                          )}
-                                        </div>
-                                      );
-                                    })}
+                                        );
+                                      })}
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           );
                         })()}
                         
-                        {classAssignments.length === 0 && (
+                        {classAssignments.length === 0 && subjectRequirements.length === 0 && (
                           <div className="text-center py-8 text-muted-foreground">
                             <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
                             <p>Noch keine Stundenverteilung vorhanden</p>
