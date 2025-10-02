@@ -538,52 +538,101 @@ export default function Stundenplaene() {
     
     const requirements = [];
     const subjectHours = selectedClass.subjectHours as Record<string, { "1": number; "2": number }>;
+    const processedParallelGroups = new Set<string>();
     
     for (const [subjectShortName, semesters] of Object.entries(subjectHours)) {
       const subject = subjects.find(s => s.shortName === subjectShortName);
       if (!subject) continue;
       
-      // Calculate assigned hours for this subject with team teaching support
-      // Group assignments to prevent double-counting of team teaching hours
-      const subjectAssignments = classAssignments.filter(a => a.subjectId === subject.id);
-      const uniqueSubjectAssignments = new Map<string, { hours: number; semester: string }>();
-      
-      subjectAssignments.forEach(assignment => {
-        const hours = parseFloat(assignment.hoursPerWeek);
-        if (hours <= 0) return;
+      // If this subject has a parallel group, show all subjects in that group
+      if (subject.parallelGroup && !processedParallelGroups.has(subject.parallelGroup)) {
+        processedParallelGroups.add(subject.parallelGroup);
         
-        // Use same grouping logic as classSummary to prevent double-counting team hours
-        const groupKey = assignment.teamTeachingId 
-          ? `team-${assignment.teamTeachingId}-${assignment.subjectId}-${assignment.semester}`
-          : `individual-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
+        // Find all subjects in this parallel group
+        const parallelSubjects = subjects.filter(s => s.parallelGroup === subject.parallelGroup);
         
-        const existing = uniqueSubjectAssignments.get(groupKey);
-        if (!existing || hours > existing.hours) {
-          uniqueSubjectAssignments.set(groupKey, {
-            hours: hours,
-            semester: assignment.semester
+        // Add requirements for each parallel subject
+        parallelSubjects.forEach(parallelSubject => {
+          const subjectAssignments = classAssignments.filter(a => a.subjectId === parallelSubject.id);
+          const uniqueSubjectAssignments = new Map<string, { hours: number; semester: string }>();
+          
+          subjectAssignments.forEach(assignment => {
+            const hours = parseFloat(assignment.hoursPerWeek);
+            if (hours <= 0) return;
+            
+            const groupKey = assignment.teamTeachingId 
+              ? `team-${assignment.teamTeachingId}-${assignment.subjectId}-${assignment.semester}`
+              : `individual-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
+            
+            const existing = uniqueSubjectAssignments.get(groupKey);
+            if (!existing || hours > existing.hours) {
+              uniqueSubjectAssignments.set(groupKey, {
+                hours: hours,
+                semester: assignment.semester
+              });
+            }
           });
-        }
-      });
-      
-      const assignedHours = {
-        "1": Array.from(uniqueSubjectAssignments.values())
-          .filter(a => a.semester === "1")
-          .reduce((sum, a) => sum + a.hours, 0),
-        "2": Array.from(uniqueSubjectAssignments.values())
-          .filter(a => a.semester === "2")
-          .reduce((sum, a) => sum + a.hours, 0)
-      };
-      
-      requirements.push({
-        subject,
-        required: semesters,
-        assigned: assignedHours,
-        deficit: {
-          "1": Math.max(0, semesters["1"] - assignedHours["1"]),
-          "2": Math.max(0, semesters["2"] - assignedHours["2"])
-        }
-      });
+          
+          const assignedHours = {
+            "1": Array.from(uniqueSubjectAssignments.values())
+              .filter(a => a.semester === "1")
+              .reduce((sum, a) => sum + a.hours, 0),
+            "2": Array.from(uniqueSubjectAssignments.values())
+              .filter(a => a.semester === "2")
+              .reduce((sum, a) => sum + a.hours, 0)
+          };
+          
+          requirements.push({
+            subject: parallelSubject,
+            required: semesters, // Same required hours for all parallel subjects
+            assigned: assignedHours,
+            deficit: {
+              "1": Math.max(0, semesters["1"] - assignedHours["1"]),
+              "2": Math.max(0, semesters["2"] - assignedHours["2"])
+            }
+          });
+        });
+      } else if (!subject.parallelGroup) {
+        // No parallel group - process normally
+        const subjectAssignments = classAssignments.filter(a => a.subjectId === subject.id);
+        const uniqueSubjectAssignments = new Map<string, { hours: number; semester: string }>();
+        
+        subjectAssignments.forEach(assignment => {
+          const hours = parseFloat(assignment.hoursPerWeek);
+          if (hours <= 0) return;
+          
+          const groupKey = assignment.teamTeachingId 
+            ? `team-${assignment.teamTeachingId}-${assignment.subjectId}-${assignment.semester}`
+            : `individual-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
+          
+          const existing = uniqueSubjectAssignments.get(groupKey);
+          if (!existing || hours > existing.hours) {
+            uniqueSubjectAssignments.set(groupKey, {
+              hours: hours,
+              semester: assignment.semester
+            });
+          }
+        });
+        
+        const assignedHours = {
+          "1": Array.from(uniqueSubjectAssignments.values())
+            .filter(a => a.semester === "1")
+            .reduce((sum, a) => sum + a.hours, 0),
+          "2": Array.from(uniqueSubjectAssignments.values())
+            .filter(a => a.semester === "2")
+            .reduce((sum, a) => sum + a.hours, 0)
+        };
+        
+        requirements.push({
+          subject,
+          required: semesters,
+          assigned: assignedHours,
+          deficit: {
+            "1": Math.max(0, semesters["1"] - assignedHours["1"]),
+            "2": Math.max(0, semesters["2"] - assignedHours["2"])
+          }
+        });
+      }
     }
     
     return requirements.sort((a, b) => a.subject.shortName.localeCompare(b.subject.shortName));
