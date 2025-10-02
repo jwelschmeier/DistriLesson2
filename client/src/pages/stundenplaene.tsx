@@ -1625,7 +1625,31 @@ export default function Stundenplaene() {
                     <CardContent>
                       <div className="space-y-4">
                         {(() => {
-                          // Start with all subjects from subjectRequirements (includes parallel subjects)
+                          // Get current class grade (e.g., "05" from "05A")
+                          const currentGrade = selectedClass.grade;
+                          const currentGradeNumber = parseInt(currentGrade, 10);
+
+                          // Collect all grade-wide assignments for parallel subjects
+                          // These assignments are shared across ALL classes in the same grade
+                          const gradeWideAssignments = assignments?.filter(a => {
+                            const assignmentClass = classes?.find(c => c.id === a.classId);
+                            if (!assignmentClass) return false;
+                            
+                            const assignmentSubject = subjects?.find(s => s.id === a.subjectId);
+                            if (!assignmentSubject?.parallelGroup) return false;
+                            
+                            // Check if same grade
+                            if (assignmentClass.grade !== currentGrade) return false;
+                            
+                            // For Differenzierung, only show from grade 7+
+                            if (assignmentSubject.parallelGroup === 'Differenzierung' && currentGradeNumber < 7) {
+                              return false;
+                            }
+                            
+                            return true;
+                          }) || [];
+
+                          // Start with all subjects from subjectRequirements
                           const groupedAssignments: Record<string, {
                             subjectName: string;
                             subjectShortName: string;
@@ -1636,7 +1660,7 @@ export default function Stundenplaene() {
                             }>;
                           }> = {};
 
-                          // Initialize all subjects from requirements (includes parallel subjects)
+                          // Initialize all subjects from requirements
                           subjectRequirements.forEach(req => {
                             const subjectId = req.subject.id;
                             groupedAssignments[subjectId] = {
@@ -1646,9 +1670,12 @@ export default function Stundenplaene() {
                             };
                           });
 
-                          // Always show all subjects from grade-wide parallel groups (Religion, Differenzierung)
-                          // These are taught across the entire grade level, not per individual class
-                          const gradeWideParallelGroups = ['Religion', 'Differenzierung'];
+                          // Always show all subjects from grade-wide parallel groups
+                          const gradeWideParallelGroups = ['Religion'];
+                          if (currentGradeNumber >= 7) {
+                            gradeWideParallelGroups.push('Differenzierung');
+                          }
+                          
                           const processedParallelGroups = new Set<string>();
                           
                           gradeWideParallelGroups.forEach(groupName => {
@@ -1668,8 +1695,8 @@ export default function Stundenplaene() {
                             }
                           });
 
-                          // Add assignment data and ensure parallel subjects are included
-                          classAssignments.forEach(assignment => {
+                          // Add grade-wide assignments (from ALL classes in the grade)
+                          gradeWideAssignments.forEach(assignment => {
                             const subjectId = assignment.subject?.id || 'unknown';
                             const subjectName = assignment.subject?.name || 'Unbekannt';
                             const subjectShortName = assignment.subject?.shortName || '??';
@@ -1681,27 +1708,53 @@ export default function Stundenplaene() {
                             const teacherShortName = assignment.teacher?.shortName || '??';
                             const isTeamTeaching = !!assignment.teamTeachingId;
 
-                            // If this subject has a parallel group not yet processed, add all parallel subjects
-                            const assignedSubject = subjects?.find(s => s.id === subjectId);
-                            if (assignedSubject?.parallelGroup && !processedParallelGroups.has(assignedSubject.parallelGroup)) {
-                              processedParallelGroups.add(assignedSubject.parallelGroup);
-                              
-                              // Find all subjects in this parallel group
-                              const parallelSubjects = subjects?.filter(s => s.parallelGroup === assignedSubject.parallelGroup) || [];
-                              
-                              // Add all parallel subjects to groupedAssignments
-                              parallelSubjects.forEach(parallelSubject => {
-                                if (!groupedAssignments[parallelSubject.id]) {
-                                  groupedAssignments[parallelSubject.id] = {
-                                    subjectName: parallelSubject.name,
-                                    subjectShortName: parallelSubject.shortName,
-                                    semesters: {}
-                                  };
-                                }
-                              });
+                            if (!groupedAssignments[subjectId]) {
+                              groupedAssignments[subjectId] = {
+                                subjectName,
+                                subjectShortName,
+                                semesters: {}
+                              };
                             }
 
-                            // Create entry if it doesn't exist (for subjects not in requirements)
+                            if (!groupedAssignments[subjectId].semesters[semester]) {
+                              groupedAssignments[subjectId].semesters[semester] = {
+                                totalHours: 0,
+                                teachers: [],
+                                assignments: []
+                              };
+                            }
+
+                            groupedAssignments[subjectId].semesters[semester].totalHours += hours;
+                            groupedAssignments[subjectId].semesters[semester].teachers.push({
+                              name: teacherName,
+                              shortName: teacherShortName,
+                              hours,
+                              isTeamTeaching
+                            });
+                            groupedAssignments[subjectId].semesters[semester].assignments.push(assignment);
+                          });
+
+                          // Add regular class-specific assignments (non-parallel subjects)
+                          classAssignments.forEach(assignment => {
+                            const assignedSubject = subjects?.find(s => s.id === assignment.subject?.id);
+                            
+                            // Skip parallel subjects (already handled by grade-wide assignments)
+                            if (assignedSubject?.parallelGroup) {
+                              return;
+                            }
+
+                            const subjectId = assignment.subject?.id || 'unknown';
+                            const subjectName = assignment.subject?.name || 'Unbekannt';
+                            const subjectShortName = assignment.subject?.shortName || '??';
+                            const semester = assignment.semester || '1';
+                            const hours = parseFloat(assignment.hoursPerWeek) || 0;
+                            const teacherName = assignment.teacher ? 
+                              `${assignment.teacher.lastName}, ${assignment.teacher.firstName}` : 
+                              'Unbekannt';
+                            const teacherShortName = assignment.teacher?.shortName || '??';
+                            const isTeamTeaching = !!assignment.teamTeachingId;
+
+                            // Create entry if it doesn't exist
                             if (!groupedAssignments[subjectId]) {
                               groupedAssignments[subjectId] = {
                                 subjectName,
