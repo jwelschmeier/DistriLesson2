@@ -476,26 +476,6 @@ export default function Stundenplaene() {
     return { totalHours, s1Hours, s2Hours };
   }, [teacherAssignments]);
 
-  // Calculate available hours after reduction for selected teacher
-  const totalReductionHours = useMemo(() => {
-    if (!selectedTeacher?.reductionHours) return 0;
-    return Object.values(selectedTeacher.reductionHours as Record<string, number>).reduce((sum, hours) => {
-      const numeric = typeof hours === "number" ? hours : parseFloat(hours ?? "0");
-      return sum + (Number.isFinite(numeric) ? numeric : 0);
-    }, 0);
-  }, [selectedTeacher]);
-
-  const availableHours = useMemo(() => {
-    if (!selectedTeacher) return 0;
-    const maxHours = parseFloat(selectedTeacher.maxHours ?? "0");
-    return Math.max(0, maxHours - totalReductionHours);
-  }, [selectedTeacher, totalReductionHours]);
-
-  const workloadPercentage = useMemo(() => {
-    if (availableHours === 0) return 0;
-    return Math.round((teacherSummary.totalHours / availableHours) * 100);
-  }, [availableHours, teacherSummary.totalHours]);
-
   // Calculate class summary statistics with team teaching support
   const classSummary = useMemo(() => {
     // Group assignments to prevent double-counting of team teaching hours
@@ -548,6 +528,26 @@ export default function Stundenplaene() {
 
   const selectedTeacher = selectedTeacherId ? teacherMap.get(selectedTeacherId) : null;
   const selectedClass = selectedClassId ? classMap.get(selectedClassId) : null;
+
+  // Calculate available hours after reduction for selected teacher
+  const totalReductionHours = useMemo(() => {
+    if (!selectedTeacher?.reductionHours) return 0;
+    return Object.values(selectedTeacher.reductionHours as Record<string, number>).reduce((sum, hours) => {
+      const numeric = typeof hours === "number" ? hours : parseFloat(hours ?? "0");
+      return sum + (Number.isFinite(numeric) ? numeric : 0);
+    }, 0);
+  }, [selectedTeacher]);
+
+  const availableHours = useMemo(() => {
+    if (!selectedTeacher) return 0;
+    const maxHours = parseFloat(selectedTeacher.maxHours ?? "0");
+    return Math.max(0, maxHours - totalReductionHours);
+  }, [selectedTeacher, totalReductionHours]);
+
+  const workloadPercentage = useMemo(() => {
+    if (availableHours === 0) return 0;
+    return Math.round((teacherSummary.totalHours / availableHours) * 100);
+  }, [availableHours, teacherSummary.totalHours]);
 
   // Calculate subject hour requirements vs. assignments
   const subjectRequirements = useMemo(() => {
