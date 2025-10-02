@@ -1467,78 +1467,59 @@ export default function Stundenplaene() {
 
               {selectedClass && (
                 <>
-                  {/* Class Summary Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <Card data-testid="card-class-total-hours">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <p className="text-foreground/70 text-sm font-semibold mb-2">Gesamtstunden</p>
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <span className="text-lg font-bold text-foreground" data-testid="text-class-total-hours">
-                                  Gesamt: {classSummary.totalHours}
-                                </span>
-                              </div>
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-foreground/70">1. HJ:</span>
-                                <span className="font-medium text-foreground" data-testid="text-class-s1-hours">
-                                  {classSummary.s1Hours}h
-                                </span>
-                              </div>
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-foreground/70">2. HJ:</span>
-                                <span className="font-medium text-foreground" data-testid="text-class-s2-hours">
-                                  {classSummary.s2Hours}h
-                                </span>
-                              </div>
-                            </div>
+                  {/* Compact Class Summary Card */}
+                  <Card data-testid="card-class-summary">
+                    <CardContent className="p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                        {/* Class Info */}
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <GraduationCap className="text-blue-600 h-5 w-5" />
                           </div>
-                          <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                            <Clock className="text-purple-600 text-xl" />
+                          <div>
+                            <p className="text-xs text-foreground/70">Klasse</p>
+                            <p className="font-bold text-foreground">{selectedClass.name}</p>
+                            <p className="text-xs text-foreground/60">Stufe {selectedClass.grade} • {selectedClass.studentCount} SuS</p>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
 
-                    <Card data-testid="card-class-teachers">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
+                        {/* Total Hours */}
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Clock className="text-purple-600 h-5 w-5" />
+                          </div>
                           <div>
-                            <p className="text-foreground/70 text-sm font-semibold">Lehrkräfte</p>
-                            <p className="text-3xl font-bold text-foreground" data-testid="text-class-teachers">
-                              {classSummary.teacherCount}
+                            <p className="text-xs text-foreground/70">Gesamtstunden</p>
+                            <p className="font-bold text-foreground" data-testid="text-class-total-hours">{classSummary.totalHours}h</p>
+                            <p className="text-xs text-foreground/60">
+                              <span data-testid="text-class-s1-hours">{classSummary.s1Hours}h</span> • <span data-testid="text-class-s2-hours">{classSummary.s2Hours}h</span>
                             </p>
                           </div>
-                          <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                            <Users className="text-green-600 text-xl" />
+                        </div>
+
+                        {/* Teachers */}
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Users className="text-green-600 h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-foreground/70">Lehrkräfte</p>
+                            <p className="font-bold text-foreground text-2xl" data-testid="text-class-teachers">{classSummary.teacherCount}</p>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  </div>
 
-                  {/* Class Information Card */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center">
-                        <GraduationCap className="mr-2 text-primary" />
-                        Klasseninformationen
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                        <div>
-                          <span className="text-foreground/70 font-medium">Klassenname:</span>
-                          <p className="font-medium">{selectedClass.name}</p>
-                        </div>
-                        <div>
-                          <span className="text-foreground/70 font-medium">Jahrgangsstufe:</span>
-                          <p className="font-medium">{selectedClass.grade}</p>
-                        </div>
-                        <div>
-                          <span className="text-foreground/70 font-medium">Schüleranzahl:</span>
-                          <p className="font-medium">{selectedClass.studentCount}</p>
+                        {/* Semester Info */}
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Calendar className="text-orange-600 h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-foreground/70">Halbjahre</p>
+                            <p className="font-bold text-foreground">1. HJ & 2. HJ</p>
+                            <p className="text-xs text-foreground/60">
+                              {selectedClass.targetHoursSemester1}h • {selectedClass.targetHoursSemester2}h
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
