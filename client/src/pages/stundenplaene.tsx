@@ -476,6 +476,26 @@ export default function Stundenplaene() {
     return { totalHours, s1Hours, s2Hours };
   }, [teacherAssignments]);
 
+  // Calculate available hours after reduction for selected teacher
+  const totalReductionHours = useMemo(() => {
+    if (!selectedTeacher?.reductionHours) return 0;
+    return Object.values(selectedTeacher.reductionHours as Record<string, number>).reduce((sum, hours) => {
+      const numeric = typeof hours === "number" ? hours : parseFloat(hours ?? "0");
+      return sum + (Number.isFinite(numeric) ? numeric : 0);
+    }, 0);
+  }, [selectedTeacher]);
+
+  const availableHours = useMemo(() => {
+    if (!selectedTeacher) return 0;
+    const maxHours = parseFloat(selectedTeacher.maxHours ?? "0");
+    return Math.max(0, maxHours - totalReductionHours);
+  }, [selectedTeacher, totalReductionHours]);
+
+  const workloadPercentage = useMemo(() => {
+    if (availableHours === 0) return 0;
+    return Math.round((teacherSummary.totalHours / availableHours) * 100);
+  }, [availableHours, teacherSummary.totalHours]);
+
   // Calculate class summary statistics with team teaching support
   const classSummary = useMemo(() => {
     // Group assignments to prevent double-counting of team teaching hours
@@ -1115,10 +1135,10 @@ export default function Stundenplaene() {
                           <div>
                             <p className="text-xs text-muted-foreground font-medium">Auslastung</p>
                             <p className="text-2xl font-bold" data-testid="text-teacher-workload">
-                              {Math.round(((teacherSummary.s1Hours + teacherSummary.s2Hours) / (2 * parseFloat(selectedTeacher?.maxHours || "25"))) * 100)}%
+                              {workloadPercentage}%
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {(teacherSummary.s1Hours + teacherSummary.s2Hours).toFixed(1)} / {(2 * parseFloat(selectedTeacher?.maxHours || "25")).toFixed(1)}h
+                              {teacherSummary.totalHours.toFixed(1)} / {availableHours.toFixed(1)}h
                             </p>
                           </div>
                         </div>
@@ -1154,7 +1174,7 @@ export default function Stundenplaene() {
                             </p>
                             {selectedTeacher && (
                               <p className="text-xs text-muted-foreground">
-                                {Math.max(0, parseFloat(selectedTeacher.maxHours) - teacherSummary.s1Hours)} verfügbar
+                                {Math.max(0, availableHours - teacherSummary.s1Hours).toFixed(1)} verfügbar
                               </p>
                             )}
                           </div>
@@ -1171,7 +1191,7 @@ export default function Stundenplaene() {
                             </p>
                             {selectedTeacher && (
                               <p className="text-xs text-muted-foreground">
-                                {Math.max(0, parseFloat(selectedTeacher.maxHours) - teacherSummary.s2Hours)} verfügbar
+                                {Math.max(0, availableHours - teacherSummary.s2Hours).toFixed(1)} verfügbar
                               </p>
                             )}
                           </div>
