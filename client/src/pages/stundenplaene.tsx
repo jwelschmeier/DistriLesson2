@@ -67,6 +67,15 @@ export default function Stundenplaene() {
     queryKey: ["/api/teachers"],
   });
 
+  const sortedTeachers = useMemo(() => {
+    if (!teachers) return [];
+    return [...teachers].sort((a, b) => {
+      const lastNameCompare = a.lastName.localeCompare(b.lastName);
+      if (lastNameCompare !== 0) return lastNameCompare;
+      return a.firstName.localeCompare(b.firstName);
+    });
+  }, [teachers]);
+
   const { data: classes, isLoading: classesLoading } = useQuery<Class[]>({
     queryKey: ["/api/classes"],
   });
@@ -1023,7 +1032,7 @@ export default function Stundenplaene() {
                         <SelectValue placeholder="Wählen Sie eine Lehrkraft aus..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {teachers?.map((teacher) => (
+                        {sortedTeachers.map((teacher) => (
                           <SelectItem key={teacher.id} value={teacher.id}>
                             {teacher.lastName}, {teacher.firstName} ({teacher.shortName})
                           </SelectItem>
