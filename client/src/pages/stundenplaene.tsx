@@ -1646,8 +1646,27 @@ export default function Stundenplaene() {
                             };
                           });
 
-                          // Track processed parallel groups to avoid duplicates
+                          // Always show all subjects from grade-wide parallel groups (Religion, Differenzierung)
+                          // These are taught across the entire grade level, not per individual class
+                          const gradeWideParallelGroups = ['Religion', 'Differenzierung'];
                           const processedParallelGroups = new Set<string>();
+                          
+                          gradeWideParallelGroups.forEach(groupName => {
+                            if (subjects && !processedParallelGroups.has(groupName)) {
+                              processedParallelGroups.add(groupName);
+                              const parallelSubjects = subjects.filter(s => s.parallelGroup === groupName);
+                              
+                              parallelSubjects.forEach(parallelSubject => {
+                                if (!groupedAssignments[parallelSubject.id]) {
+                                  groupedAssignments[parallelSubject.id] = {
+                                    subjectName: parallelSubject.name,
+                                    subjectShortName: parallelSubject.shortName,
+                                    semesters: {}
+                                  };
+                                }
+                              });
+                            }
+                          });
 
                           // Add assignment data and ensure parallel subjects are included
                           classAssignments.forEach(assignment => {
@@ -1662,7 +1681,7 @@ export default function Stundenplaene() {
                             const teacherShortName = assignment.teacher?.shortName || '??';
                             const isTeamTeaching = !!assignment.teamTeachingId;
 
-                            // If this subject has a parallel group, add all parallel subjects
+                            // If this subject has a parallel group not yet processed, add all parallel subjects
                             const assignedSubject = subjects?.find(s => s.id === subjectId);
                             if (assignedSubject?.parallelGroup && !processedParallelGroups.has(assignedSubject.parallelGroup)) {
                               processedParallelGroups.add(assignedSubject.parallelGroup);
