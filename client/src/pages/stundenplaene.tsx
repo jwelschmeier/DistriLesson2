@@ -1126,31 +1126,30 @@ export default function Stundenplaene() {
                     </CardContent>
                   </Card>
 
-                  {/* Teacher Hourly Summary Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                    <Card data-testid="card-teacher-max-hours">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
+                  {/* Consolidated Teacher Hours Summary */}
+                  <Card data-testid="card-teacher-hours" className="mb-4">
+                    <CardContent className="p-4">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Clock className="text-blue-600 dark:text-blue-400 h-5 w-5" />
+                          </div>
                           <div>
-                            <p className="text-muted-foreground text-sm font-medium">Max pro Halbjahr</p>
-                            <p className="text-3xl font-bold text-foreground" data-testid="text-teacher-max-hours">
+                            <p className="text-xs text-muted-foreground font-medium">Max pro Halbjahr</p>
+                            <p className="text-2xl font-bold" data-testid="text-teacher-max-hours">
                               {selectedTeacher?.maxHours || 0}
                             </p>
                             <p className="text-xs text-muted-foreground">Wochenstunden</p>
                           </div>
-                          <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <Clock className="text-blue-600 text-xl" />
-                          </div>
                         </div>
-                      </CardContent>
-                    </Card>
 
-                    <Card data-testid="card-teacher-s1-hours">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <BookOpen className="text-green-600 dark:text-green-400 h-5 w-5" />
+                          </div>
                           <div>
-                            <p className="text-muted-foreground text-sm font-medium">1. Halbjahr</p>
-                            <p className="text-3xl font-bold text-foreground" data-testid="text-teacher-s1-hours">
+                            <p className="text-xs text-muted-foreground font-medium">1. Halbjahr</p>
+                            <p className="text-2xl font-bold" data-testid="text-teacher-s1-hours">
                               {teacherSummary.s1Hours}
                             </p>
                             {selectedTeacher && (
@@ -1159,19 +1158,15 @@ export default function Stundenplaene() {
                               </p>
                             )}
                           </div>
-                          <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                            <BookOpen className="text-green-600 text-xl" />
-                          </div>
                         </div>
-                      </CardContent>
-                    </Card>
 
-                    <Card data-testid="card-teacher-s2-hours">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <BookOpen className="text-orange-600 dark:text-orange-400 h-5 w-5" />
+                          </div>
                           <div>
-                            <p className="text-muted-foreground text-sm font-medium">2. Halbjahr</p>
-                            <p className="text-3xl font-bold text-foreground" data-testid="text-teacher-s2-hours">
+                            <p className="text-xs text-muted-foreground font-medium">2. Halbjahr</p>
+                            <p className="text-2xl font-bold" data-testid="text-teacher-s2-hours">
                               {teacherSummary.s2Hours}
                             </p>
                             {selectedTeacher && (
@@ -1180,48 +1175,41 @@ export default function Stundenplaene() {
                               </p>
                             )}
                           </div>
-                          <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                            <BookOpen className="text-orange-600 text-xl" />
-                          </div>
                         </div>
-                      </CardContent>
-                    </Card>
 
-                    <Card data-testid="card-teacher-reduction-hours">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <GraduationCap className="text-purple-600 dark:text-purple-400 h-5 w-5" />
+                          </div>
                           <div>
-                            <p className="text-muted-foreground text-sm font-medium">Ermäßigungsstunden</p>
+                            <p className="text-xs text-muted-foreground font-medium">Ermäßigungsstunden</p>
                             {selectedTeacher?.reductionHours ? (
-                              <div className="space-y-1">
-                                <p className="text-2xl font-bold text-foreground" data-testid="text-teacher-reduction-total">
+                              <div>
+                                <p className="text-2xl font-bold" data-testid="text-teacher-reduction-total">
                                   {Object.values(selectedTeacher.reductionHours as Record<string, number>)
                                     .reduce((sum, hours) => sum + hours, 0)}
                                 </p>
-                                <div className="space-y-0.5">
+                                <div className="text-xs text-muted-foreground">
                                   {Object.entries(selectedTeacher.reductionHours as Record<string, number>)
                                     .filter(([_, hours]) => hours > 0)
                                     .map(([type, hours]) => (
-                                      <p key={type} className="text-xs text-muted-foreground" data-testid={`text-reduction-${type.toLowerCase()}`}>
+                                      <span key={type} className="mr-2" data-testid={`text-reduction-${type.toLowerCase()}`}>
                                         {type}: {hours}h
-                                      </p>
+                                      </span>
                                     ))}
                                 </div>
                               </div>
                             ) : (
-                              <p className="text-2xl font-bold text-foreground" data-testid="text-teacher-reduction-total">
-                                0
-                              </p>
+                              <>
+                                <p className="text-2xl font-bold" data-testid="text-teacher-reduction-total">0</p>
+                                <p className="text-xs text-muted-foreground">Reduzierung</p>
+                              </>
                             )}
-                            <p className="text-xs text-muted-foreground">Reduzierung</p>
-                          </div>
-                          <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                            <GraduationCap className="text-purple-600 text-xl" />
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  </div>
+                      </div>
+                    </CardContent>
+                  </Card>
 
                   {/* Teacher Assignments Table */}
                   <Card>
