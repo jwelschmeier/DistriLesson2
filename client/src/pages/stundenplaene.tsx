@@ -1036,62 +1036,53 @@ export default function Stundenplaene() {
 
               {selectedTeacher && (
                 <>
-                  {/* Assignment Overview Statistics */}
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
-                    <Card data-testid="card-teacher-total-assignments">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
+                  {/* Consolidated Assignment Overview */}
+                  <Card data-testid="card-teacher-overview" className="mb-4">
+                    <CardContent className="p-4">
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <BookOpen className="text-indigo-600 dark:text-indigo-400 h-5 w-5" />
+                          </div>
                           <div>
-                            <p className="text-muted-foreground text-xs font-medium">Zuweisungen</p>
-                            <p className="text-2xl font-bold text-foreground" data-testid="text-teacher-total-assignments">
+                            <p className="text-xs text-muted-foreground font-medium">Zuweisungen</p>
+                            <p className="text-2xl font-bold" data-testid="text-teacher-total-assignments">
                               {teacherAssignments.length}
                             </p>
                           </div>
-                          <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
-                            <BookOpen className="text-indigo-600 text-sm" />
-                          </div>
                         </div>
-                      </CardContent>
-                    </Card>
 
-                    <Card data-testid="card-teacher-subjects">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-cyan-100 dark:bg-cyan-900 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <BookOpen className="text-cyan-600 dark:text-cyan-400 h-5 w-5" />
+                          </div>
                           <div>
-                            <p className="text-muted-foreground text-xs font-medium">Fächer</p>
-                            <p className="text-2xl font-bold text-foreground" data-testid="text-teacher-subjects">
+                            <p className="text-xs text-muted-foreground font-medium">Fächer</p>
+                            <p className="text-2xl font-bold" data-testid="text-teacher-subjects">
                               {new Set(teacherAssignments.map(a => a.subjectId)).size}
                             </p>
                           </div>
-                          <div className="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center">
-                            <BookOpen className="text-cyan-600 text-sm" />
-                          </div>
                         </div>
-                      </CardContent>
-                    </Card>
 
-                    <Card data-testid="card-teacher-classes">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-teal-100 dark:bg-teal-900 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <School className="text-teal-600 dark:text-teal-400 h-5 w-5" />
+                          </div>
                           <div>
-                            <p className="text-muted-foreground text-xs font-medium">Klassen</p>
-                            <p className="text-2xl font-bold text-foreground" data-testid="text-teacher-classes">
+                            <p className="text-xs text-muted-foreground font-medium">Klassen</p>
+                            <p className="text-2xl font-bold" data-testid="text-teacher-classes">
                               {new Set(teacherAssignments.map(a => a.classId)).size}
                             </p>
                           </div>
-                          <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center">
-                            <School className="text-teal-600 text-sm" />
-                          </div>
                         </div>
-                      </CardContent>
-                    </Card>
 
-                    <Card data-testid="card-teacher-conflicts">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <AlertTriangle className="text-red-600 dark:text-red-400 h-5 w-5" />
+                          </div>
                           <div>
-                            <p className="text-muted-foreground text-xs font-medium">Konflikte</p>
-                            <p className="text-2xl font-bold text-foreground" data-testid="text-teacher-conflicts">
+                            <p className="text-xs text-muted-foreground font-medium">Konflikte</p>
+                            <p className="text-2xl font-bold" data-testid="text-teacher-conflicts">
                               {(() => {
                                 const conflicts = teacherAssignments.filter(assignment => {
                                   const teacher = teachers?.find(t => t.id === assignment.teacherId);
@@ -1115,32 +1106,25 @@ export default function Stundenplaene() {
                               })()}
                             </p>
                           </div>
-                          <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-                            <AlertTriangle className="text-red-600 text-sm" />
-                          </div>
                         </div>
-                      </CardContent>
-                    </Card>
 
-                    <Card data-testid="card-teacher-workload">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Users className="text-emerald-600 dark:text-emerald-400 h-5 w-5" />
+                          </div>
                           <div>
-                            <p className="text-muted-foreground text-xs font-medium">Auslastung</p>
-                            <p className="text-2xl font-bold text-foreground" data-testid="text-teacher-workload">
+                            <p className="text-xs text-muted-foreground font-medium">Auslastung</p>
+                            <p className="text-2xl font-bold" data-testid="text-teacher-workload">
                               {Math.round(((teacherSummary.s1Hours + teacherSummary.s2Hours) / (2 * parseFloat(selectedTeacher?.maxHours || "25"))) * 100)}%
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {(teacherSummary.s1Hours + teacherSummary.s2Hours).toFixed(1)} / {(2 * parseFloat(selectedTeacher?.maxHours || "25")).toFixed(1)}h
                             </p>
                           </div>
-                          <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
-                            <Users className="text-emerald-600 text-sm" />
-                          </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  </div>
+                      </div>
+                    </CardContent>
+                  </Card>
 
                   {/* Teacher Hourly Summary Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
