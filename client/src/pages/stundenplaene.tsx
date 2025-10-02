@@ -82,11 +82,8 @@ export default function Stundenplaene() {
     
     // Sort by grade (numerically) then by name (alphabetically)
     return filtered.sort((a, b) => {
-      const gradeA = parseInt(a.grade, 10);
-      const gradeB = parseInt(b.grade, 10);
-      
-      if (gradeA !== gradeB) {
-        return gradeA - gradeB;
+      if (a.grade !== b.grade) {
+        return a.grade - b.grade;
       }
       
       return a.name.localeCompare(b.name);
@@ -1625,9 +1622,9 @@ export default function Stundenplaene() {
                     <CardContent>
                       <div className="space-y-4">
                         {(() => {
-                          // Get current class grade (e.g., "05" from "05A")
+                          // Get current class grade
                           const currentGrade = selectedClass.grade;
-                          const currentGradeNumber = parseInt(currentGrade, 10);
+                          const currentGradeNumber = currentGrade;
 
                           // Collect all grade-wide assignments for parallel subjects
                           // These assignments are shared across ALL classes in the same grade
@@ -1697,15 +1694,17 @@ export default function Stundenplaene() {
 
                           // Add grade-wide assignments (from ALL classes in the grade)
                           gradeWideAssignments.forEach(assignment => {
-                            const subjectId = assignment.subject?.id || 'unknown';
-                            const subjectName = assignment.subject?.name || 'Unbekannt';
-                            const subjectShortName = assignment.subject?.shortName || '??';
+                            const subjectId = assignment.subjectId;
+                            const subject = subjects?.find(s => s.id === subjectId);
+                            const subjectName = subject?.name || 'Unbekannt';
+                            const subjectShortName = subject?.shortName || '??';
                             const semester = assignment.semester || '1';
                             const hours = parseFloat(assignment.hoursPerWeek) || 0;
-                            const teacherName = assignment.teacher ? 
-                              `${assignment.teacher.lastName}, ${assignment.teacher.firstName}` : 
+                            const teacher = teachers?.find(t => t.id === assignment.teacherId);
+                            const teacherName = teacher ? 
+                              `${teacher.lastName}, ${teacher.firstName}` : 
                               'Unbekannt';
-                            const teacherShortName = assignment.teacher?.shortName || '??';
+                            const teacherShortName = teacher?.shortName || '??';
                             const isTeamTeaching = !!assignment.teamTeachingId;
 
                             if (!groupedAssignments[subjectId]) {
