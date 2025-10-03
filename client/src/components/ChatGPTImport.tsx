@@ -103,6 +103,15 @@ export function ChatGPTImport() {
       return response.json();
     },
     onSuccess: (data: ParsedScheduleData) => {
+      // Helper function to normalize class names (e.g., "5a" -> "05A")
+      const normalizeClassName = (className: string): string => {
+        if (!className || typeof className !== 'string') return className;
+        const match = className.match(/^(\d{1,2})([a-zA-Z]*)$/);
+        if (!match) return className;
+        const [, grade, letter] = match;
+        return `${grade.padStart(2, '0')}${letter.toUpperCase()}`;
+      };
+
       // Clean null values and set defaults
       const cleanedData = {
         teachers: data.teachers.map(teacher => ({
@@ -113,7 +122,7 @@ export function ChatGPTImport() {
         })),
         classes: data.classes.map(classItem => ({
           ...classItem,
-          name: classItem.name || "",
+          name: normalizeClassName(classItem.name || ""),
           grade: classItem.grade || 5,
           studentCount: classItem.studentCount || 25
         })),
@@ -126,7 +135,7 @@ export function ChatGPTImport() {
         assignments: data.assignments.map(assignment => ({
           ...assignment,
           teacherShortName: assignment.teacherShortName || "",
-          className: assignment.className || "",
+          className: normalizeClassName(assignment.className || ""),
           subjectShortName: assignment.subjectShortName || "",
           hoursPerWeek: assignment.hoursPerWeek || 1,
           semester: assignment.semester || 1
