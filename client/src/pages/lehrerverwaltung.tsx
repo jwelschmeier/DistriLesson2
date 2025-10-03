@@ -447,7 +447,7 @@ export default function Lehrerverwaltung() {
     }, 0) / teachers.length * 100 : 0;
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex min-h-screen bg-background">
       <Sidebar />
       
       <main className="flex-1 overflow-auto">
