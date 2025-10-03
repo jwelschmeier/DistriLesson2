@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -77,31 +77,54 @@ export default function Klassenverwaltung() {
     queryFn: () => fetch("/api/assignments?minimal=true").then(res => res.json())
   });
 
-  // Calculate actual assigned hours per class from assignments
   // Helper function to parse German-style decimals
   const parseNumber = (value: string | null | undefined): number | undefined => {
     if (!value) return undefined;
     return Number.parseFloat(String(value).replace(',', '.'));
   };
 
+  // PERFORMANCE OPTIMIZATION: Memoized teacher lookup map for O(1) access
+  const teacherMap = useMemo(() => {
+    if (!teachers) return new Map<string, Teacher>();
+    return new Map(teachers.map(t => [t.id, t]));
+  }, [teachers]);
+
+  // PERFORMANCE OPTIMIZATION: Memoized class hours map for O(1) access per semester
+  // Pre-aggregates all assignment hours by classId and semester
+  const classHoursMap = useMemo(() => {
+    const hoursMap = new Map<string, { all: number; '1': number; '2': number }>();
+    
+    if (!assignments) return hoursMap;
+    
+    assignments.forEach(a => {
+      const hours = parseNumber(a.hoursPerWeek) || 0;
+      if (!Number.isFinite(hours)) return;
+      
+      const existing = hoursMap.get(a.classId) || { all: 0, '1': 0, '2': 0 };
+      existing.all += hours;
+      
+      if (a.semester === '1') {
+        existing['1'] += hours;
+      } else if (a.semester === '2') {
+        existing['2'] += hours;
+      }
+      
+      hoursMap.set(a.classId, existing);
+    });
+    
+    return hoursMap;
+  }, [assignments]);
+
   // Check if this is a regular class (like 05A, 09B) vs differentiation course (like 09DF, 10KR1)
   const isRegularClass = (className: string): boolean => {
     return /^\d{2}[A-Z]$/.test(className);
   };
 
-  // Calculate actual assigned hours, optionally filtered by semester
+  // OPTIMIZED: Calculate actual assigned hours using pre-aggregated map for O(1) lookup
   const calculateActualAssignedHours = (classId: string, semester: 'all' | '1' | '2' = 'all'): number => {
-    if (!assignments) return 0;
-    
-    const filteredAssignments = assignments.filter(a => 
-      a.classId === classId && 
-      (semester === 'all' || a.semester === semester)
-    );
-    
-    return filteredAssignments.reduce((sum, assignment) => {
-      const hours = parseNumber(assignment.hoursPerWeek);
-      return sum + (Number.isFinite(hours) ? hours || 0 : 0);
-    }, 0);
+    const hoursData = classHoursMap.get(classId);
+    if (!hoursData) return 0;
+    return hoursData[semester] || 0;
   };
 
   // Calculate target hours from actual assigned subjects instead of empty subjectHours
@@ -893,8 +916,9 @@ export default function Klassenverwaltung() {
                     const actualAssignedHours = calculateActualAssignedHours(classData.id, selectedSemester);
                     const correctHours = getTargetHoursForClass(classData, selectedSemester);
                     
-                    const teacher1 = teachers?.find(t => t.id === classData.classTeacher1Id);
-                    const teacher2 = teachers?.find(t => t.id === classData.classTeacher2Id);
+                    // OPTIMIZED: Use teacherMap for O(1) lookup instead of O(n) find
+                    const teacher1 = classData.classTeacher1Id ? teacherMap.get(classData.classTeacher1Id) : undefined;
+                    const teacher2 = classData.classTeacher2Id ? teacherMap.get(classData.classTeacher2Id) : undefined;
                     
                     let teacherDisplay = "Nicht zugewiesen";
                     if (teacher1 && teacher2) {
