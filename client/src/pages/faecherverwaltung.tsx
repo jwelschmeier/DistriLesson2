@@ -249,7 +249,6 @@ export default function Faecherverwaltung() {
                         <SelectContent>
                           <SelectItem value="Hauptfach">Hauptfach</SelectItem>
                           <SelectItem value="Nebenfach">Nebenfach</SelectItem>
-                          <SelectItem value="Diff-Fach">Diff-Fach</SelectItem>
                           <SelectItem value="Differenzierungsfach">Differenzierungsfach</SelectItem>
                           <SelectItem value="AG">AG</SelectItem>
                           <SelectItem value="Sonderbereich">Sonderbereich</SelectItem>
