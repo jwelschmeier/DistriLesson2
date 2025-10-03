@@ -1111,7 +1111,7 @@ export default function Lehrerverwaltung() {
                                 </div>
                                 <div className="ml-3">
                                   <div className="text-sm font-medium text-foreground">
-                                    {teacher.firstName} {teacher.lastName}
+                                    {teacher.lastName}, {teacher.firstName}
                                   </div>
                                 </div>
                               </div>
