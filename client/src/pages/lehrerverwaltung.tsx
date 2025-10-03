@@ -1082,13 +1082,13 @@ export default function Lehrerverwaltung() {
                           Stunden
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Aktionen
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Auslastung
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Status
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                          Aktionen
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Personalnummer
@@ -1111,7 +1111,10 @@ export default function Lehrerverwaltung() {
                                 </div>
                                 <div className="ml-3">
                                   <div className="text-sm font-medium text-foreground">
-                                    {teacher.lastName}, {teacher.firstName}
+                                    {teacher.lastName}
+                                  </div>
+                                  <div className="text-sm text-foreground">
+                                    {teacher.firstName}
                                   </div>
                                 </div>
                               </div>
@@ -1125,19 +1128,6 @@ export default function Lehrerverwaltung() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                               {actualCurrentHours.toFixed(1)} / {teacher.maxHours}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <Progress value={workloadPercentage} className="w-16 mr-2" />
-                                <span className="text-sm text-muted-foreground">
-                                  {Math.round(workloadPercentage)}%
-                                </span>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <Badge variant={teacher.isActive ? "light" : "destructive"}>
-                                {teacher.isActive ? "Aktiv" : "Inaktiv"}
-                              </Badge>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center space-x-2">
@@ -1168,6 +1158,19 @@ export default function Lehrerverwaltung() {
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <Progress value={workloadPercentage} className="w-16 mr-2" />
+                                <span className="text-sm text-muted-foreground">
+                                  {Math.round(workloadPercentage)}%
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <Badge variant={teacher.isActive ? "light" : "destructive"}>
+                                {teacher.isActive ? "Aktiv" : "Inaktiv"}
+                              </Badge>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className="text-sm text-foreground font-mono">
