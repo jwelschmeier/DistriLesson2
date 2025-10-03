@@ -248,12 +248,24 @@ export default function LehrerFaecherZuordnung() {
       teachersBySubjectShort.set(subject.shortName.toLowerCase(), qualified);
     });
 
-    // Remaining hours by teacher
+    // PERFORMANCE OPTIMIZATION: Pre-aggregate hours by teacher and semester for O(1) lookup
+    // Use combined key to include semester, avoiding per-teacher filtering
+    const hoursByTeacherAndSemester = new Map<string, number>();
+    assignments.forEach(assignment => {
+      // Skip assignments without a teacherId
+      if (!assignment.teacherId) return;
+      
+      const key = `${assignment.teacherId}-${assignment.semester}`;
+      const currentHours = hoursByTeacherAndSemester.get(key) || 0;
+      const additionalHours = parseFloat(assignment.hoursPerWeek) || 0;
+      hoursByTeacherAndSemester.set(key, currentHours + additionalHours);
+    });
+
+    // OPTIMIZED: Remaining hours by teacher - O(1) lookup per teacher
     const remainingHoursByTeacher = new Map<string, number>();
     teachers.forEach(teacher => {
-      const assignedHours = assignments
-        .filter(a => a.teacherId === teacher.id && a.semester === selectedSemester)
-        .reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
+      const key = `${teacher.id}-${selectedSemester}`;
+      const assignedHours = hoursByTeacherAndSemester.get(key) || 0;
       
       const maxHours = parseFloat(teacher.maxHours);
       const remaining = Math.max(0, maxHours - assignedHours);
