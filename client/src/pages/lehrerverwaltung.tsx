@@ -1069,7 +1069,7 @@ export default function Lehrerverwaltung() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="min-w-full table-auto">
                     <thead className="bg-muted">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -1116,8 +1116,8 @@ export default function Lehrerverwaltung() {
                                 </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex flex-wrap gap-1">
+                            <td className="px-6 py-4">
+                              <div className="flex flex-wrap gap-1 max-w-xs">
                                 {teacher.subjects.map((subject, index) => (
                                   <Badge key={index} variant="light">{subject}</Badge>
                                 ))}
