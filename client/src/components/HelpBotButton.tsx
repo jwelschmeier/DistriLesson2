@@ -28,6 +28,7 @@ export function HelpBotButton() {
           onClick={handleOpen}
           className="fixed bottom-4 right-4 z-40 h-14 w-14 rounded-full shadow-lg"
           data-testid="button-open-helpbot"
+          aria-label="Hilfe-Bot öffnen"
         >
           <MessageCircle className="h-6 w-6" />
         </Button>

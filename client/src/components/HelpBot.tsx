@@ -101,6 +101,7 @@ export function HelpBot({ isOpen, onClose, onMinimize, isMinimized }: HelpBotPro
               size="sm"
               onClick={onMinimize}
               data-testid="button-minimize-helpbot"
+              aria-label={isMinimized ? "Hilfe-Bot maximieren" : "Hilfe-Bot minimieren"}
             >
               {isMinimized ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
             </Button>
@@ -109,6 +110,7 @@ export function HelpBot({ isOpen, onClose, onMinimize, isMinimized }: HelpBotPro
               size="sm"
               onClick={onClose}
               data-testid="button-close-helpbot"
+              aria-label="Hilfe-Bot schließen"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -182,6 +184,7 @@ export function HelpBot({ isOpen, onClose, onMinimize, isMinimized }: HelpBotPro
                 onClick={handleSendMessage}
                 disabled={askMutation.isPending || !currentQuestion.trim()}
                 data-testid="button-send-question"
+                aria-label="Frage absenden"
               >
                 <Send className="h-4 w-4" />
               </Button>
