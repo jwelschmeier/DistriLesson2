@@ -1433,6 +1433,10 @@ export class DatabaseStorage implements IStorage {
         this.getSubjects()
       ]);
 
+      // PERFORMANCE OPTIMIZATION: Create lookup maps for O(1) access
+      const subjectMap = new Map(allSubjects.map(s => [s.id, s]));
+      const classMap = new Map(currentClasses.map(c => [c.id, c]));
+
       const classTransitions: ClassTransition[] = [];
       const assignmentMigrations: AssignmentMigration[] = [];
       const newClasses = [
@@ -1478,8 +1482,9 @@ export class DatabaseStorage implements IStorage {
       let nonMigratable = 0;
 
       for (const assignment of currentAssignments) {
-        const subject = allSubjects.find(s => s.id === assignment.subjectId);
-        const currentClass = currentClasses.find(c => c.id === assignment.classId);
+        // OPTIMIZED: Use lookup maps for O(1) access instead of O(n) find
+        const subject = subjectMap.get(assignment.subjectId);
+        const currentClass = classMap.get(assignment.classId);
         
         if (!subject || !currentClass) continue;
 
