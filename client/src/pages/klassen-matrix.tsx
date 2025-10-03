@@ -101,7 +101,7 @@ export default function KlassenMatrix() {
   });
 
   // Subject order for consistent display
-  const SUBJECT_ORDER = ['D', 'M', 'E', 'Fs', 'SW', 'PK', 'GE', 'EK', 'BI', 'PH', 'CH', 'TC', 'If', 'HW', 'KU', 'MU', 'Tx', 'ER', 'KR', 'PP', 'SO', 'BO', 'SP'];
+  const SUBJECT_ORDER = ['D', 'M', 'E', 'FS', 'NW', 'SW', 'IF', 'TC', 'PK', 'GE', 'EK', 'BI', 'PH', 'CH', 'HW', 'KU', 'MU', 'TX', 'ER', 'KR', 'PP', 'SO', 'BO', 'SP'];
   
   // Sort subjects according to predefined order
   const sortedSubjects = useMemo(() => {
