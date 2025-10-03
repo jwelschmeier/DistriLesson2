@@ -101,12 +101,39 @@ export default function MasterStundenplan() {
     }));
   }, [assignments, teacherMap, classMap, subjectMap]);
 
-  // Calculate teacher workload statistics
+  // PERFORMANCE OPTIMIZATION: Pre-aggregate assignments by teacher and class for O(1) lookup
+  const teacherAssignmentsMap = useMemo(() => {
+    const map = new Map<string, ExtendedAssignment[]>();
+    if (!extendedAssignments) return map;
+    
+    extendedAssignments.forEach(assignment => {
+      const existing = map.get(assignment.teacherId) || [];
+      existing.push(assignment);
+      map.set(assignment.teacherId, existing);
+    });
+    
+    return map;
+  }, [extendedAssignments]);
+
+  const classAssignmentsMap = useMemo(() => {
+    const map = new Map<string, ExtendedAssignment[]>();
+    if (!extendedAssignments) return map;
+    
+    extendedAssignments.forEach(assignment => {
+      const existing = map.get(assignment.classId) || [];
+      existing.push(assignment);
+      map.set(assignment.classId, existing);
+    });
+    
+    return map;
+  }, [extendedAssignments]);
+
+  // OPTIMIZED: Calculate teacher workload statistics using pre-aggregated map
   const teacherWorkloads = useMemo((): TeacherWorkload[] => {
     if (!teachers) return [];
 
     return teachers.map(teacher => {
-      const teacherAssignments = extendedAssignments.filter(a => a.teacherId === teacher.id);
+      const teacherAssignments = teacherAssignmentsMap.get(teacher.id) || [];
       
       const semester1Hours = teacherAssignments
         .filter(a => a.semester === "1")
@@ -131,14 +158,14 @@ export default function MasterStundenplan() {
         isOverloaded,
       };
     });
-  }, [teachers, extendedAssignments]);
+  }, [teachers, teacherAssignmentsMap]);
 
-  // Calculate class coverage statistics
+  // OPTIMIZED: Calculate class coverage statistics using pre-aggregated map
   const classCoverages = useMemo((): ClassCoverage[] => {
     if (!classes) return [];
 
     return classes.map(classItem => {
-      const classAssignments = extendedAssignments.filter(a => a.classId === classItem.id);
+      const classAssignments = classAssignmentsMap.get(classItem.id) || [];
       const totalAssignments = classAssignments.length;
       // Use correct calculation that handles parallel subjects
       const correctHours = calculateCorrectHours(classItem.subjectHours, classItem.grade);
@@ -164,7 +191,14 @@ export default function MasterStundenplan() {
         missingSubjects,
       };
     });
-  }, [classes, subjects, extendedAssignments]);
+  }, [classes, subjects, classAssignmentsMap]);
+
+  // PERFORMANCE OPTIMIZATION: Create teacherWorkload lookup map for O(1) access
+  const teacherWorkloadMap = useMemo(() => {
+    const map = new Map<string, TeacherWorkload>();
+    teacherWorkloads.forEach(tw => map.set(tw.teacher.id, tw));
+    return map;
+  }, [teacherWorkloads]);
 
   // Filtered and sorted assignments
   const filteredAssignments = useMemo(() => {
@@ -187,15 +221,16 @@ export default function MasterStundenplan() {
       filtered = filtered.filter(a => a.subjectId === selectedSubject);
     }
 
+    // OPTIMIZED: Use teacherWorkloadMap for O(1) lookup instead of O(n) find
     if (conflictFilter !== 'all') {
       if (conflictFilter === 'conflicts') {
         filtered = filtered.filter(a => {
-          const teacher = teacherWorkloads.find(tw => tw.teacher.id === a.teacherId);
+          const teacher = teacherWorkloadMap.get(a.teacherId);
           return teacher?.isOverloaded;
         });
       } else {
         filtered = filtered.filter(a => {
-          const teacher = teacherWorkloads.find(tw => tw.teacher.id === a.teacherId);
+          const teacher = teacherWorkloadMap.get(a.teacherId);
           return !teacher?.isOverloaded;
         });
       }
@@ -247,7 +282,7 @@ export default function MasterStundenplan() {
     });
 
     return filtered;
-  }, [extendedAssignments, selectedSemester, selectedTeacher, selectedClass, selectedSubject, conflictFilter, searchTerm, sortBy, sortOrder, teacherWorkloads]);
+  }, [extendedAssignments, selectedSemester, selectedTeacher, selectedClass, selectedSubject, conflictFilter, searchTerm, sortBy, sortOrder, teacherWorkloadMap]);
 
   // Calculate overall statistics
   const overallStats = useMemo(() => {
