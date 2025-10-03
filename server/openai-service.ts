@@ -264,17 +264,6 @@ ${trimmedText}`;
           if (!exists) {
             await storage.createTeacher(validatedTeacher);
             result.teachers++;
-          } else {
-            // Update existing teacher with new qualifications
-            const allQualifications = [...exists.qualifications, ...teacherData.qualifications];
-            const uniqueQualifications = allQualifications.filter((qual, index) => allQualifications.indexOf(qual) === index);
-            const updatedTeacher = {
-              ...exists,
-              qualifications: uniqueQualifications,
-              notes: exists.notes + " | Aktualisiert via ChatGPT"
-            };
-            await storage.updateTeacher(exists.id, updatedTeacher);
-            result.teachers++;
           }
         } catch (error) {
           result.errors.push(`Lehrer ${teacherData.shortName}: ${(error as Error).message}`);
@@ -305,14 +294,6 @@ ${trimmedText}`;
           
           if (!exists) {
             await storage.createClass(validatedClass);
-            result.classes++;
-          } else {
-            // Update existing class
-            const updatedClass = {
-              ...exists,
-              studentCount: classData.studentCount || exists.studentCount
-            };
-            await storage.updateClass(exists.id, updatedClass);
             result.classes++;
           }
         } catch (error) {
@@ -400,19 +381,7 @@ ${trimmedText}`;
           );
 
           if (exists) {
-            // Update existing assignment with new hours  
-            const updatedAssignment = {
-              hoursPerWeek: assignmentData.hoursPerWeek.toString(), // Storage update braucht String
-              teacherId: exists.teacherId,
-              classId: exists.classId,
-              subjectId: exists.subjectId,
-              semester: exists.semester as "1" | "2",
-              schoolYearId: exists.schoolYearId,
-              isOptimized: exists.isOptimized,
-              teamTeachingId: exists.teamTeachingId
-            };
-            await storage.updateAssignment(exists.id, updatedAssignment);
-            result.assignments++;
+            // Assignment already exists, skip it
             continue;
           }
 
