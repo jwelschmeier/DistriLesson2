@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Plus, Edit, Trash2, BookOpen, Filter } from "lucide-react";
+import { Plus, Edit, Trash2, BookOpen, Filter, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { insertSubjectSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -49,11 +49,16 @@ const CATEGORIES = {
   'Differenzierungsfach': { label: 'Differenzierungsfach', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' },
 } as const;
 
+type SortField = 'name' | 'shortName' | 'category';
+type SortDirection = 'asc' | 'desc';
+
 export default function Faecherverwaltung() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const { data: subjects = [], isLoading } = useQuery<Subject[]>({
     queryKey: ["/api/subjects"],
@@ -151,12 +156,46 @@ export default function Faecherverwaltung() {
     setIsDialogOpen(true);
   };
 
+  const handleSort = (field: SortField) => {
+    if (sortBy === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortBy !== field) {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    return sortDirection === 'asc' ? 
+      <ArrowUp className="ml-2 h-4 w-4" /> : 
+      <ArrowDown className="ml-2 h-4 w-4" />;
+  };
+
   if (isLoading) {
     return <div className="flex justify-center items-center h-64">Lädt...</div>;
   }
 
   const categories = Array.from(new Set(subjects.map(s => s.category)));
+  
+  // Filter subjects
   const filteredSubjects = selectedCategory === 'all' ? subjects : subjects.filter(s => s.category === selectedCategory);
+  
+  // Sort subjects
+  const sortedSubjects = [...filteredSubjects].sort((a, b) => {
+    let aValue = a[sortBy];
+    let bValue = b[sortBy];
+    
+    // Handle string comparison
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      const comparison = aValue.localeCompare(bValue);
+      return sortDirection === 'asc' ? comparison : -comparison;
+    }
+    
+    return 0;
+  });
 
   const getCategoryBadge = (category: string) => {
     const categoryConfig = CATEGORIES[category as keyof typeof CATEGORIES];
@@ -287,7 +326,7 @@ export default function Faecherverwaltung() {
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <BookOpen className="h-5 w-5" />
-                Fächer ({filteredSubjects.length} von {subjects.length})
+                Fächer ({sortedSubjects.length} von {subjects.length})
               </CardTitle>
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4" />
@@ -312,14 +351,38 @@ export default function Faecherverwaltung() {
               <Table data-testid="table-subjects">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-1/3">Fachname</TableHead>
-                    <TableHead className="w-16">Kürzel</TableHead>
-                    <TableHead className="w-32">Kategorie</TableHead>
+                    <TableHead 
+                      className="w-1/3 cursor-pointer hover:bg-accent/50 transition-colors"
+                      onClick={() => handleSort('name')}
+                    >
+                      <div className="flex items-center">
+                        Fachname
+                        {getSortIcon('name')}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="w-16 cursor-pointer hover:bg-accent/50 transition-colors"
+                      onClick={() => handleSort('shortName')}
+                    >
+                      <div className="flex items-center">
+                        Kürzel
+                        {getSortIcon('shortName')}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="w-32 cursor-pointer hover:bg-accent/50 transition-colors"
+                      onClick={() => handleSort('category')}
+                    >
+                      <div className="flex items-center">
+                        Kategorie
+                        {getSortIcon('category')}
+                      </div>
+                    </TableHead>
                     <TableHead className="w-20">Aktionen</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredSubjects.map((subject) => (
+                  {sortedSubjects.map((subject) => (
                     <TableRow key={subject.id} data-testid={`row-subject-${subject.id}`}>
                       <TableCell className="font-medium py-2" data-testid={`text-subject-name-${subject.id}`}>
                         {subject.name}
