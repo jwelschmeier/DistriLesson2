@@ -432,6 +432,10 @@ export default function Lehrerverwaltung() {
       teacher.subjects.includes(filterSubject);
 
     return matchesSearch && matchesSubject;
+  }).sort((a, b) => {
+    const lastNameCompare = a.lastName.localeCompare(b.lastName);
+    if (lastNameCompare !== 0) return lastNameCompare;
+    return a.firstName.localeCompare(b.firstName);
   }) || [];
 
   const totalTeachers = teachers?.length || 0;
