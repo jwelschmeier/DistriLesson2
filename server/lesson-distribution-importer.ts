@@ -168,6 +168,7 @@ export class LessonDistributionImporter {
         if (!existingClassNames.has(className)) {
           const classData: InsertClass = {
             name: className,
+            type: "klasse",
             grade: classInfo.grade,
             studentCount: classInfo.studentCount,
             schoolYearId: schoolYearId,
@@ -218,12 +219,15 @@ export class LessonDistributionImporter {
             subjectId: subject.id,
             classId: classObj.id,
             schoolYearId: schoolYearId,
-            hoursPerWeek: record.hoursPerWeek,
+            hoursPerWeek: record.hoursPerWeek.toString(),
             semester: "1" // Default to first semester
           };
           
           await this.storage.createAssignment(assignment);
+          assignmentSet.add(assignmentKey); // Add to set to prevent duplicates from Excel data
           result.imported.assignments++;
+        } else {
+          result.warnings.push(`Duplikat übersprungen: ${record.teacherShort} -> ${record.subjectShort} in ${record.className}`);
         }
       }
 
@@ -504,6 +508,7 @@ export class LessonDistributionImporter {
         if (!existingClassNames.has(className)) {
           const classData: InsertClass = {
             name: className,
+            type: "klasse",
             grade: classInfo.grade,
             studentCount: classInfo.studentCount,
             schoolYearId: schoolYearId,
@@ -534,6 +539,9 @@ export class LessonDistributionImporter {
       const teacherMap = new Map(updatedTeachers.map(t => [t.shortName, t]));
       const subjectMap = new Map(updatedSubjects.map(s => [s.shortName, s]));
       const classMap = new Map(updatedClasses.map(c => [c.name, c]));
+      
+      // Create set to prevent duplicate assignments from Excel data
+      const createdAssignments = new Set<string>();
 
       // OPTIMIZED: Create teacher-subject-class assignments using maps (only for validated records)
       for (const record of records) {
@@ -546,16 +554,24 @@ export class LessonDistributionImporter {
           continue;
         }
 
+        // O(1) check to prevent duplicate assignments from Excel data
+        const assignmentKey = `${teacher.id}-${subject.id}-${classObj.id}`;
+        if (createdAssignments.has(assignmentKey)) {
+          result.warnings.push(`Duplikat übersprungen: ${record.teacherShort} -> ${record.subjectShort} in ${record.className}`);
+          continue;
+        }
+
         const assignment: InsertAssignment = {
           teacherId: teacher.id,
           subjectId: subject.id,
           classId: classObj.id,
           schoolYearId: schoolYearId,
-          hoursPerWeek: record.hoursPerWeek,
+          hoursPerWeek: record.hoursPerWeek.toString(),
           semester: "1" // Default to first semester
         };
         
         await this.storage.createAssignment(assignment);
+        createdAssignments.add(assignmentKey);
         result.imported.assignments++;
       }
 
