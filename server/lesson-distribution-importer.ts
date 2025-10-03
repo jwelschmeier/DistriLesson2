@@ -181,33 +181,38 @@ export class LessonDistributionImporter {
         }
       }
 
-      // Refresh data after creating entities
-      const [updatedTeachers, updatedSubjects, updatedClasses] = await Promise.all([
+      // PERFORMANCE OPTIMIZATION: Load all data once and create lookup maps
+      const [updatedTeachers, updatedSubjects, updatedClasses, existingAssignments] = await Promise.all([
         this.storage.getTeachers(),
         this.storage.getSubjects(),
-        this.storage.getClassesBySchoolYear(schoolYearId)
+        this.storage.getClassesBySchoolYear(schoolYearId),
+        this.storage.getAssignmentsBySchoolYear(schoolYearId)
       ]);
 
-      // Create teacher-subject-class assignments
+      // Create O(1) lookup maps
+      const teacherMap = new Map(updatedTeachers.map(t => [t.shortName, t]));
+      const subjectMap = new Map(updatedSubjects.map(s => [s.shortName, s]));
+      const classMap = new Map(updatedClasses.map(c => [c.name, c]));
+      
+      // Create assignment existence set for O(1) lookup
+      const assignmentSet = new Set(
+        existingAssignments.map(a => `${a.teacherId}-${a.subjectId}-${a.classId}`)
+      );
+
+      // OPTIMIZED: Create teacher-subject-class assignments using maps
       for (const record of records) {
-        const teacher = updatedTeachers.find(t => t.shortName === record.teacherShort);
-        const subject = updatedSubjects.find(s => s.shortName === record.subjectShort);
-        const classObj = updatedClasses.find(c => c.name === record.className);
+        const teacher = teacherMap.get(record.teacherShort);
+        const subject = subjectMap.get(record.subjectShort);
+        const classObj = classMap.get(record.className);
 
         if (!teacher || !subject || !classObj) {
           result.warnings.push(`Zuordnung übersprungen: ${record.teacherShort} -> ${record.subjectShort} in ${record.className} (fehlende Entität)`);
           continue;
         }
 
-        // Check if assignment already exists
-        const existingAssignments = await this.storage.getAssignmentsBySchoolYear(schoolYearId);
-        const assignmentExists = existingAssignments.some(a => 
-          a.teacherId === teacher.id && 
-          a.subjectId === subject.id && 
-          a.classId === classObj.id
-        );
-
-        if (!assignmentExists) {
+        // O(1) lookup to check if assignment already exists
+        const assignmentKey = `${teacher.id}-${subject.id}-${classObj.id}`;
+        if (!assignmentSet.has(assignmentKey)) {
           const assignment: InsertAssignment = {
             teacherId: teacher.id,
             subjectId: subject.id,
@@ -518,18 +523,23 @@ export class LessonDistributionImporter {
         await this.storage.deleteAssignment(assignment.id);
       }
 
-      // Refresh data after creating entities
+      // PERFORMANCE OPTIMIZATION: Load all data once and create lookup maps
       const [updatedTeachers, updatedSubjects, updatedClasses] = await Promise.all([
         this.storage.getTeachers(),
         this.storage.getSubjects(),
         this.storage.getClassesBySchoolYear(schoolYearId)
       ]);
 
-      // Create teacher-subject-class assignments (only for validated records)
+      // Create O(1) lookup maps
+      const teacherMap = new Map(updatedTeachers.map(t => [t.shortName, t]));
+      const subjectMap = new Map(updatedSubjects.map(s => [s.shortName, s]));
+      const classMap = new Map(updatedClasses.map(c => [c.name, c]));
+
+      // OPTIMIZED: Create teacher-subject-class assignments using maps (only for validated records)
       for (const record of records) {
-        const teacher = updatedTeachers.find(t => t.shortName === record.teacherShort);
-        const subject = updatedSubjects.find(s => s.shortName === record.subjectShort);
-        const classObj = updatedClasses.find(c => c.name === record.className);
+        const teacher = teacherMap.get(record.teacherShort);
+        const subject = subjectMap.get(record.subjectShort);
+        const classObj = classMap.get(record.className);
 
         if (!teacher || !subject || !classObj) {
           result.warnings.push(`Zuordnung übersprungen: ${record.teacherShort} -> ${record.subjectShort} in ${record.className} (fehlende Entität)`);
