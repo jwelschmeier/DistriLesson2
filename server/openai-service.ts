@@ -278,6 +278,7 @@ ${trimmedText}`;
           
           const validatedClass = insertClassSchema.parse({
             name: normalizedClassName,
+            type: "klasse", // Standard-Type für importierte Klassen
             grade: classData.grade,
             studentCount: classData.studentCount || 25,
             subjectHours: {},
