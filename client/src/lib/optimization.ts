@@ -82,7 +82,7 @@ const NRW_CURRICULUM_HOURS: Record<number, Record<string, number>> = createCorre
 interface AssignmentIndices {
   byTeacherId: Map<string, Assignment[]>;
   byClassId: Map<string, Assignment[]>;
-  byClassAndSubject: Map<string, Assignment>; // Key: classId|subjectId
+  byClassAndSubject: Map<string, Assignment[]>; // Key: classId|subjectId - supports co-teaching
   all: Assignment[];
 }
 
@@ -90,7 +90,7 @@ interface AssignmentIndices {
 function buildAssignmentIndices(assignments: Assignment[]): AssignmentIndices {
   const byTeacherId = new Map<string, Assignment[]>();
   const byClassId = new Map<string, Assignment[]>();
-  const byClassAndSubject = new Map<string, Assignment>();
+  const byClassAndSubject = new Map<string, Assignment[]>();
   
   assignments.forEach(assignment => {
     // Index by teacherId
@@ -103,12 +103,77 @@ function buildAssignmentIndices(assignments: Assignment[]): AssignmentIndices {
     classAssignments.push(assignment);
     byClassId.set(assignment.classId, classAssignments);
     
-    // Index by class + subject composite key
+    // Index by class + subject composite key - CRITICAL: store array to support co-teaching
     const compositeKey = `${assignment.classId}|${assignment.subjectId}`;
-    byClassAndSubject.set(compositeKey, assignment);
+    const existingAssignments = byClassAndSubject.get(compositeKey) || [];
+    existingAssignments.push(assignment);
+    byClassAndSubject.set(compositeKey, existingAssignments);
   });
   
   return { byTeacherId, byClassId, byClassAndSubject, all: assignments };
+}
+
+// Helper: Convert RecommendedAssignment to Assignment-like for indexing
+// CRITICAL: Fully aggregates current assignments + recommendations by composite key
+// This ensures validation sees the complete projected workload including all pending changes
+function mergeAssignmentsWithRecommendations(
+  currentAssignments: Assignment[],
+  recommendations: RecommendedAssignment[]
+): Assignment[] {
+  // Aggregate hours by composite key across BOTH current assignments AND recommendations
+  const keyHoursMap = new Map<string, number>();
+  const keyInfoMap = new Map<string, { teacherId: string; classId: string; subjectId: string }>();
+  const keyAssignmentsMap = new Map<string, Assignment[]>(); // Track original assignments per key
+  
+  // Aggregate current assignments
+  currentAssignments.forEach(a => {
+    const compositeKey = `${a.teacherId}|${a.classId}|${a.subjectId}`;
+    const existingHours = keyHoursMap.get(compositeKey) || 0;
+    keyHoursMap.set(compositeKey, existingHours + parseFloat(a.hoursPerWeek));
+    keyInfoMap.set(compositeKey, {
+      teacherId: a.teacherId,
+      classId: a.classId,
+      subjectId: a.subjectId
+    });
+    
+    // Track original assignments
+    const assignments = keyAssignmentsMap.get(compositeKey) || [];
+    assignments.push(a);
+    keyAssignmentsMap.set(compositeKey, assignments);
+  });
+  
+  // Aggregate recommendation hours ON TOP of current hours
+  recommendations.forEach(rec => {
+    const compositeKey = `${rec.teacherId}|${rec.classId}|${rec.subjectId}`;
+    const existingHours = keyHoursMap.get(compositeKey) || 0;
+    keyHoursMap.set(compositeKey, existingHours + rec.hoursPerWeek);
+    keyInfoMap.set(compositeKey, {
+      teacherId: rec.teacherId,
+      classId: rec.classId,
+      subjectId: rec.subjectId
+    });
+  });
+  
+  // Build merged array with aggregated hours
+  const merged: Assignment[] = [];
+  keyInfoMap.forEach((info, compositeKey) => {
+    const originalAssignments = keyAssignmentsMap.get(compositeKey);
+    merged.push({
+      // Use original ID if exists, otherwise create temp ID
+      id: originalAssignments && originalAssignments.length > 0 ? originalAssignments[0].id : `temp-${compositeKey}`,
+      teacherId: info.teacherId,
+      classId: info.classId,
+      subjectId: info.subjectId,
+      hoursPerWeek: keyHoursMap.get(compositeKey)!.toString(),
+      semester: "beide",
+      isOptimized: true,
+      createdAt: originalAssignments?.[0]?.createdAt || null,
+      schoolYearId: originalAssignments?.[0]?.schoolYearId || null,
+      teamTeachingId: originalAssignments?.[0]?.teamTeachingId || null,
+    });
+  });
+  
+  return merged;
 }
 
 export function runOptimization(constraints: OptimizationConstraints): OptimizationResult {
@@ -208,10 +273,10 @@ function calculateClassRequirements(
       const requiredHours = curriculumHours[subject.name] || 0;
       if (requiredHours === 0) return;
       
-      // OPTIMIZATION: O(1) lookup instead of O(n) find
+      // OPTIMIZATION: O(1) lookup instead of O(n) find - sum all assignments (supports co-teaching)
       const compositeKey = `${classData.id}|${subject.id}`;
-      const currentAssignment = indices.byClassAndSubject.get(compositeKey);
-      const currentHours = currentAssignment ? parseFloat(currentAssignment.hoursPerWeek) : 0;
+      const currentAssignments = indices.byClassAndSubject.get(compositeKey) || [];
+      const currentHours = currentAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
       
       if (currentHours < requiredHours) {
         const deficit = requiredHours - currentHours;
@@ -440,12 +505,14 @@ function analyzeConflicts(
 }
 
 // NEW: Function to detect conflicts for potential assignments before they are made
+// Supports co-teaching by optionally including pending recommendations in the calculation
 export function detectAssignmentConflicts(
   potentialAssignment: RecommendedAssignment,
   teachers: Teacher[],
   classes: Class[],
   subjects: Subject[],
-  currentAssignments: Assignment[]
+  currentAssignments: Assignment[],
+  pendingRecommendations: RecommendedAssignment[] = []
 ): { hasConflicts: boolean; conflicts: string[]; warnings: string[] } {
   const conflicts: string[] = [];
   const warnings: string[] = [];
@@ -459,8 +526,11 @@ export function detectAssignmentConflicts(
     return { hasConflicts: true, conflicts, warnings };
   }
   
+  // CRITICAL: Merge current assignments with pending recommendations for accurate hour calculations
+  const allAssignments = mergeAssignmentsWithRecommendations(currentAssignments, pendingRecommendations);
+  
   // Check teacher workload conflicts
-  const teacherAssignments = currentAssignments.filter(a => a.teacherId === teacher.id);
+  const teacherAssignments = allAssignments.filter(a => a.teacherId === teacher.id);
   const teacherCurrentHours = teacherAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
   const projectedTeacherHours = teacherCurrentHours + potentialAssignment.hoursPerWeek;
   const maxHours = parseFloat(teacher.maxHours);
@@ -477,7 +547,7 @@ export function detectAssignmentConflicts(
   // CRITICAL: Check total hours constraint conflicts
   if (classData.targetHoursTotal) {
     const targetTotalHours = parseFloat(classData.targetHoursTotal);
-    const classAssignments = currentAssignments.filter(a => a.classId === classData.id);
+    const classAssignments = allAssignments.filter(a => a.classId === classData.id);
     const currentClassHours = classAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
     const projectedClassHours = currentClassHours + potentialAssignment.hoursPerWeek;
     
@@ -491,8 +561,8 @@ export function detectAssignmentConflicts(
     }
   }
   
-  // Check for duplicate assignments
-  const duplicateAssignment = currentAssignments.find(
+  // Check for duplicate assignments (same teacher + class + subject)
+  const duplicateAssignment = allAssignments.find(
     a => a.teacherId === potentialAssignment.teacherId && 
          a.classId === potentialAssignment.classId && 
          a.subjectId === potentialAssignment.subjectId
@@ -787,10 +857,12 @@ function calculateCoverageScore(
     const deficit = req.requiredHours - req.currentHours;
     totalRequired += deficit;
     
-    const assignment = recommendations.find(
+    // CRITICAL: Sum ALL recommendations for this class+subject (supports co-teaching)
+    const relevantRecommendations = recommendations.filter(
       rec => rec.classId === req.classId && rec.subjectId === req.subjectId
     );
-    totalAssigned += assignment?.hoursPerWeek || 0;
+    const assignedHours = relevantRecommendations.reduce((sum, rec) => sum + rec.hoursPerWeek, 0);
+    totalAssigned += assignedHours;
   });
   
   return totalRequired > 0 ? (totalAssigned / totalRequired) * 100 : 100;
@@ -972,13 +1044,15 @@ export function validateAssignment(
 }
 
 // Enhanced validation function that checks assignment against complete constraint context
+// Supports co-teaching by optionally including pending recommendations in the calculation
 export function validateAssignmentWithContext(
   assignment: RecommendedAssignment,
   teachers: Teacher[],
   subjects: Subject[],
   classes: Class[],
   currentAssignments: Assignment[],
-  classTotalHoursConstraints: ClassTotalHoursConstraint[]
+  classTotalHoursConstraints: ClassTotalHoursConstraint[],
+  pendingRecommendations: RecommendedAssignment[] = []
 ): { isValid: boolean; violations: string[]; warnings: string[] } {
   const violations: string[] = [];
   const warnings: string[] = [];
@@ -1004,12 +1078,15 @@ export function validateAssignmentWithContext(
     return { isValid: false, violations, warnings };
   }
   
+  // CRITICAL: Merge current assignments with pending recommendations for accurate hour calculations
+  const allAssignments = mergeAssignmentsWithRecommendations(currentAssignments, pendingRecommendations);
+  
   // Calculate current teacher hours
-  const teacherAssignments = currentAssignments.filter(a => a.teacherId === teacher.id);
+  const teacherAssignments = allAssignments.filter(a => a.teacherId === teacher.id);
   const teacherCurrentHours = teacherAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
   
   // Calculate current class hours
-  const classAssignments = currentAssignments.filter(a => a.classId === assignment.classId);
+  const classAssignments = allAssignments.filter(a => a.classId === assignment.classId);
   const currentClassTotalHours = classAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
   
   // Use basic validation first
