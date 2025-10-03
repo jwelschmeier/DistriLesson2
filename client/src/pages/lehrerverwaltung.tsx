@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -129,47 +129,65 @@ export default function Lehrerverwaltung() {
     queryFn: () => fetch("/api/assignments?minimal=true").then(res => res.json())
   });
 
-  // Calculate actual current hours per teacher from assignments with team teaching support
-  // Uses same logic as stundenplaene.tsx - max of semester hours to prevent double-counting
-  const calculateActualCurrentHours = (teacherId: string): number => {
-    const teacherAssignments = assignments.filter(a => a.teacherId === teacherId);
+  // OPTIMIZATION: Build teacherId->assignments index with single O(n) pass instead of O(n·m) filters
+  const teacherAssignmentsMap = useMemo(() => {
+    const map = new Map<string, Assignment[]>();
+    assignments.forEach(assignment => {
+      const teacherAssignments = map.get(assignment.teacherId) || [];
+      teacherAssignments.push(assignment);
+      map.set(assignment.teacherId, teacherAssignments);
+    });
+    return map;
+  }, [assignments]);
+
+  // OPTIMIZATION: Pre-calculate hours for all teachers once instead of on-demand per teacher
+  const teacherHoursMap = useMemo(() => {
+    const hoursMap = new Map<string, number>();
     
-    // Group assignments to prevent double-counting of team teaching hours
-    const processedAssignments = new Map<string, { hours: number; semester: string }>();
-    
-    teacherAssignments.forEach(assignment => {
-      const hours = Number.parseFloat(assignment.hoursPerWeek);
+    teacherAssignmentsMap.forEach((teacherAssignments, teacherId) => {
+      // Group assignments to prevent double-counting of team teaching hours
+      const processedAssignments = new Map<string, { hours: number; semester: string }>();
       
-      // Skip 0-hour assignments as they're often placeholders
-      if (!Number.isFinite(hours) || hours <= 0) return;
+      teacherAssignments.forEach(assignment => {
+        const hours = Number.parseFloat(assignment.hoursPerWeek);
+        
+        // Skip 0-hour assignments as they're often placeholders
+        if (!Number.isFinite(hours) || hours <= 0) return;
+        
+        // For team teaching, we need to count the hours for each teacher individually
+        // but avoid double-counting within the same teacher's workload
+        const groupKey = assignment.teamTeachingId 
+          ? `team-${assignment.teamTeachingId}-${assignment.classId}-${assignment.subjectId}-${assignment.semester}-${assignment.teacherId}`
+          : `individual-${assignment.classId}-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
+        
+        const existing = processedAssignments.get(groupKey);
+        
+        // Keep the assignment with maximum hours (handles duplicates)
+        if (!existing || hours > existing.hours) {
+          processedAssignments.set(groupKey, { hours: hours, semester: assignment.semester });
+        }
+      });
       
-      // For team teaching, we need to count the hours for each teacher individually
-      // but avoid double-counting within the same teacher's workload
-      const groupKey = assignment.teamTeachingId 
-        ? `team-${assignment.teamTeachingId}-${assignment.classId}-${assignment.subjectId}-${assignment.semester}-${assignment.teacherId}`
-        : `individual-${assignment.classId}-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
+      // Calculate semester hours separately
+      const s1Hours = Array.from(processedAssignments.values())
+        .filter(p => p.semester === "1")
+        .reduce((sum, p) => sum + p.hours, 0);
+        
+      const s2Hours = Array.from(processedAssignments.values())
+        .filter(p => p.semester === "2")
+        .reduce((sum, p) => sum + p.hours, 0);
       
-      const existing = processedAssignments.get(groupKey);
-      
-      // Keep the assignment with maximum hours (handles duplicates)
-      if (!existing || hours > existing.hours) {
-        processedAssignments.set(groupKey, { hours: hours, semester: assignment.semester });
-      }
+      // Store the maximum of the two semesters (teacher's weekly workload)
+      hoursMap.set(teacherId, Math.max(s1Hours, s2Hours));
     });
     
-    // Calculate semester hours separately
-    const s1Hours = Array.from(processedAssignments.values())
-      .filter(p => p.semester === "1")
-      .reduce((sum, p) => sum + p.hours, 0);
-      
-    const s2Hours = Array.from(processedAssignments.values())
-      .filter(p => p.semester === "2")
-      .reduce((sum, p) => sum + p.hours, 0);
-    
-    // Return the maximum of the two semesters (teacher's weekly workload)
-    // This matches the logic in stundenplaene.tsx
-    return Math.max(s1Hours, s2Hours);
-  };
+    return hoursMap;
+  }, [teacherAssignmentsMap]);
+
+  // OPTIMIZATION: Use memoized lookup instead of recalculating on every call
+  const calculateActualCurrentHours = useCallback((teacherId: string): number => {
+    return teacherHoursMap.get(teacherId) || 0;
+  }, [teacherHoursMap]);
 
   // Extract subject names for the form (using subject names consistently)
   const availableSubjects = subjects.map(subject => subject.name);

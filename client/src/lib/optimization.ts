@@ -163,7 +163,7 @@ function calculateTeacherWorkloads(teachers: Teacher[], indices: AssignmentIndic
   return teachers.map(teacher => {
     // OPTIMIZATION: O(1) lookup instead of O(n) filter
     const teacherAssignments = indices.byTeacherId.get(teacher.id) || [];
-    const currentHours = teacherAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+    const currentHours = teacherAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
     
     return {
       teacherId: teacher.id,
@@ -188,7 +188,7 @@ function calculateClassRequirements(
     
     // OPTIMIZATION: O(1) lookup instead of O(n) filter
     const classAssignments = indices.byClassId.get(classData.id) || [];
-    const currentTotalHours = classAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+    const currentTotalHours = classAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
     
     // Check if targetHoursTotal is set as a hard constraint
     const targetTotalHours = classData.targetHoursTotal ? parseFloat(classData.targetHoursTotal) : null;
@@ -211,7 +211,7 @@ function calculateClassRequirements(
       // OPTIMIZATION: O(1) lookup instead of O(n) find
       const compositeKey = `${classData.id}|${subject.id}`;
       const currentAssignment = indices.byClassAndSubject.get(compositeKey);
-      const currentHours = currentAssignment?.hoursPerWeek || 0;
+      const currentHours = currentAssignment ? parseFloat(currentAssignment.hoursPerWeek) : 0;
       
       if (currentHours < requiredHours) {
         const deficit = requiredHours - currentHours;
@@ -284,7 +284,7 @@ function calculateClassTotalHoursConstraints(
     if (targetTotalHours !== null) {
       // OPTIMIZATION: O(1) lookup instead of O(n) filter
       const classAssignments = indices.byClassId.get(classData.id) || [];
-      const currentTotalHours = classAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+      const currentTotalHours = classAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
       
       constraints.push({
         classId: classData.id,
@@ -325,7 +325,7 @@ function analyzeConflicts(
   // OPTIMIZATION: Pre-calculate teacher workload totals once instead of per-assignment
   const teacherTotalHours = new Map<string, number>();
   indices.byTeacherId.forEach((assignments, teacherId) => {
-    const totalHours = assignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+    const totalHours = assignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
     teacherTotalHours.set(teacherId, totalHours);
   });
   
@@ -370,7 +370,7 @@ function analyzeConflicts(
     
     // OPTIMIZATION: O(1) lookup instead of O(n) filter
     const classAssignments = indices.byClassId.get(classData.id) || [];
-    const currentTotalHours = classAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+    const currentTotalHours = classAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
     const remainingHours = targetTotalHours - currentTotalHours;
     
     // CRITICAL: Hard constraint violation detection
@@ -461,7 +461,7 @@ export function detectAssignmentConflicts(
   
   // Check teacher workload conflicts
   const teacherAssignments = currentAssignments.filter(a => a.teacherId === teacher.id);
-  const teacherCurrentHours = teacherAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+  const teacherCurrentHours = teacherAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
   const projectedTeacherHours = teacherCurrentHours + potentialAssignment.hoursPerWeek;
   const maxHours = parseFloat(teacher.maxHours);
   
@@ -478,7 +478,7 @@ export function detectAssignmentConflicts(
   if (classData.targetHoursTotal) {
     const targetTotalHours = parseFloat(classData.targetHoursTotal);
     const classAssignments = currentAssignments.filter(a => a.classId === classData.id);
-    const currentClassHours = classAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+    const currentClassHours = classAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
     const projectedClassHours = currentClassHours + potentialAssignment.hoursPerWeek;
     
     if (projectedClassHours > targetTotalHours) {
@@ -867,7 +867,7 @@ function calculateEfficiencyGain(
 ): number {
   // Calculate efficiency improvement based on various factors
   const newHours = recommendations.reduce((sum, r) => sum + r.hoursPerWeek, 0);
-  const currentHours = currentAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+  const currentHours = currentAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
   
   if (currentHours === 0) return newHours > 0 ? 100 : 0;
   
@@ -1006,11 +1006,11 @@ export function validateAssignmentWithContext(
   
   // Calculate current teacher hours
   const teacherAssignments = currentAssignments.filter(a => a.teacherId === teacher.id);
-  const teacherCurrentHours = teacherAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+  const teacherCurrentHours = teacherAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
   
   // Calculate current class hours
   const classAssignments = currentAssignments.filter(a => a.classId === assignment.classId);
-  const currentClassTotalHours = classAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+  const currentClassTotalHours = classAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
   
   // Use basic validation first
   const basicValidation = validateAssignment(
