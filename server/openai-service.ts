@@ -145,8 +145,19 @@ Antworte AUSSCHLIESSLICH mit einem gültigen JSON-Objekt in diesem Format:
 Wichtige Regeln:
 - Lehrer-Kürzel sind meist 2-4 Buchstaben (z.B. "MÜL", "SCH")
 - Klassen wie "5a", "10b", "Q1" normalisieren
-- Standard-Fächer: D, M, E, BIO, CH, PH, KU, MU, SP, REL, PP, SoWi, GE, EK
 - Semester: 1 = erstes Halbjahr, 2 = zweites Halbjahr
+
+Fachkürzel (GENAU verwenden):
+- PK = Politik (NICHT PP!)
+- PP = Praktische Philosophie
+- KR = Katholische Religion, ER = Evangelische Religion
+- D = Deutsch, M = Mathe, E = Englisch
+- FS = Französisch, SW = Sozialwissenschaften, NW = Naturwissenschaften
+- IF = Informatik, TC = Technik
+- BI = Biologie, CH = Chemie, PH = Physik
+- GE = Geschichte, EK = Erdkunde
+- KU = Kunst, MU = Musik, SP = Sport
+- HW = Hauswirtschaft, TX = Textil
 
 Stundenplan-Text:
 ${trimmedText}`;
