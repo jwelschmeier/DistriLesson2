@@ -89,6 +89,7 @@ export function Sidebar() {
             isCollapsed ? "" : "ml-2"
           )}
           data-testid="button-toggle-sidebar"
+          aria-label={isCollapsed ? "Sidebar erweitern" : "Sidebar ausblenden"}
           title={isCollapsed ? "Sidebar erweitern" : "Sidebar ausblenden"}
         >
           {isCollapsed ? <Menu className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
@@ -117,6 +118,7 @@ export function Sidebar() {
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               )}
               data-testid={`nav-${item.href.replace('/', '') || 'dashboard'}`}
+              aria-label={item.label}
               title={isCollapsed ? item.label : undefined}
             >
               <Icon className="w-5 h-5 flex-shrink-0" />
@@ -158,6 +160,7 @@ export function Sidebar() {
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   )}
                   data-testid={`nav-admin-${item.href.replace('/', '')}`}
+                  aria-label={item.label}
                   title={isCollapsed ? item.label : undefined}
                 >
                   <Icon className="w-5 h-5 flex-shrink-0" />
@@ -191,6 +194,7 @@ export function Sidebar() {
             "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
           )}
           data-testid="button-theme-toggle"
+          aria-label={theme === "dark" ? "Zum Light Mode wechseln" : "Zum Dark Mode wechseln"}
           title={isCollapsed ? (theme === "dark" ? "Zum Light Mode wechseln" : "Zum Dark Mode wechseln") : undefined}
         >
           {theme === "dark" ? (
