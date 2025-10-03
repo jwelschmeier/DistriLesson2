@@ -78,14 +78,50 @@ interface ConflictMatrix {
 // NRW Realschule curriculum requirements (Stundentafel) - korrigiert für parallele Fächer
 const NRW_CURRICULUM_HOURS: Record<number, Record<string, number>> = createCorrectedCurriculumHours();
 
+// Assignment indices for O(1) lookups instead of repeated O(n) filters
+interface AssignmentIndices {
+  byTeacherId: Map<string, Assignment[]>;
+  byClassId: Map<string, Assignment[]>;
+  byClassAndSubject: Map<string, Assignment>; // Key: classId|subjectId
+  all: Assignment[];
+}
+
+// Build assignment indices with a single O(n) pass
+function buildAssignmentIndices(assignments: Assignment[]): AssignmentIndices {
+  const byTeacherId = new Map<string, Assignment[]>();
+  const byClassId = new Map<string, Assignment[]>();
+  const byClassAndSubject = new Map<string, Assignment>();
+  
+  assignments.forEach(assignment => {
+    // Index by teacherId
+    const teacherAssignments = byTeacherId.get(assignment.teacherId) || [];
+    teacherAssignments.push(assignment);
+    byTeacherId.set(assignment.teacherId, teacherAssignments);
+    
+    // Index by classId
+    const classAssignments = byClassId.get(assignment.classId) || [];
+    classAssignments.push(assignment);
+    byClassId.set(assignment.classId, classAssignments);
+    
+    // Index by class + subject composite key
+    const compositeKey = `${assignment.classId}|${assignment.subjectId}`;
+    byClassAndSubject.set(compositeKey, assignment);
+  });
+  
+  return { byTeacherId, byClassId, byClassAndSubject, all: assignments };
+}
+
 export function runOptimization(constraints: OptimizationConstraints): OptimizationResult {
   const { teachers, classes, subjects, currentAssignments, settings } = constraints;
   
-  // Initialize optimization state
-  const teacherWorkloads = calculateTeacherWorkloads(teachers, currentAssignments);
-  const classRequirements = calculateClassRequirements(classes, subjects, currentAssignments);
-  const classTotalHoursConstraints = calculateClassTotalHoursConstraints(classes, currentAssignments);
-  const conflictMatrix = analyzeConflicts(teachers, classes, subjects, currentAssignments);
+  // OPTIMIZATION: Build indices once with single O(n) pass instead of repeated O(n·m) filters
+  const indices = buildAssignmentIndices(currentAssignments);
+  
+  // Initialize optimization state using precomputed indices
+  const teacherWorkloads = calculateTeacherWorkloads(teachers, indices);
+  const classRequirements = calculateClassRequirements(classes, subjects, indices);
+  const classTotalHoursConstraints = calculateClassTotalHoursConstraints(classes, indices);
+  const conflictMatrix = analyzeConflicts(teachers, classes, subjects, indices);
   
   // Generate recommended assignments using constraint satisfaction
   const recommendations = generateRecommendations(
@@ -123,9 +159,10 @@ export function runOptimization(constraints: OptimizationConstraints): Optimizat
   };
 }
 
-function calculateTeacherWorkloads(teachers: Teacher[], currentAssignments: Assignment[]): TeacherWorkload[] {
+function calculateTeacherWorkloads(teachers: Teacher[], indices: AssignmentIndices): TeacherWorkload[] {
   return teachers.map(teacher => {
-    const teacherAssignments = currentAssignments.filter(a => a.teacherId === teacher.id);
+    // OPTIMIZATION: O(1) lookup instead of O(n) filter
+    const teacherAssignments = indices.byTeacherId.get(teacher.id) || [];
     const currentHours = teacherAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
     
     return {
@@ -142,15 +179,15 @@ function calculateTeacherWorkloads(teachers: Teacher[], currentAssignments: Assi
 function calculateClassRequirements(
   classes: Class[],
   subjects: Subject[],
-  currentAssignments: Assignment[]
+  indices: AssignmentIndices
 ): ClassRequirement[] {
   const requirements: ClassRequirement[] = [];
   
   classes.forEach(classData => {
     const curriculumHours = NRW_CURRICULUM_HOURS[classData.grade] || {};
     
-    // Calculate current total hours for this class
-    const classAssignments = currentAssignments.filter(a => a.classId === classData.id);
+    // OPTIMIZATION: O(1) lookup instead of O(n) filter
+    const classAssignments = indices.byClassId.get(classData.id) || [];
     const currentTotalHours = classAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
     
     // Check if targetHoursTotal is set as a hard constraint
@@ -171,9 +208,9 @@ function calculateClassRequirements(
       const requiredHours = curriculumHours[subject.name] || 0;
       if (requiredHours === 0) return;
       
-      const currentAssignment = currentAssignments.find(
-        a => a.classId === classData.id && a.subjectId === subject.id
-      );
+      // OPTIMIZATION: O(1) lookup instead of O(n) find
+      const compositeKey = `${classData.id}|${subject.id}`;
+      const currentAssignment = indices.byClassAndSubject.get(compositeKey);
       const currentHours = currentAssignment?.hoursPerWeek || 0;
       
       if (currentHours < requiredHours) {
@@ -237,7 +274,7 @@ function calculateClassRequirements(
 
 function calculateClassTotalHoursConstraints(
   classes: Class[],
-  currentAssignments: Assignment[]
+  indices: AssignmentIndices
 ): ClassTotalHoursConstraint[] {
   const constraints: ClassTotalHoursConstraint[] = [];
   
@@ -245,7 +282,8 @@ function calculateClassTotalHoursConstraints(
     const targetTotalHours = classData.targetHoursTotal ? parseFloat(classData.targetHoursTotal) : null;
     
     if (targetTotalHours !== null) {
-      const classAssignments = currentAssignments.filter(a => a.classId === classData.id);
+      // OPTIMIZATION: O(1) lookup instead of O(n) filter
+      const classAssignments = indices.byClassId.get(classData.id) || [];
       const currentTotalHours = classAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
       
       constraints.push({
@@ -276,13 +314,24 @@ function analyzeConflicts(
   teachers: Teacher[],
   classes: Class[],
   subjects: Subject[],
-  currentAssignments: Assignment[]
+  indices: AssignmentIndices
 ): ConflictMatrix {
   const conflicts: ConflictMatrix = {};
   
-  currentAssignments.forEach(assignment => {
-    const teacher = teachers.find(t => t.id === assignment.teacherId);
-    const subject = subjects.find(s => s.id === assignment.subjectId);
+  // OPTIMIZATION: Build lookup maps for teachers and subjects once
+  const teacherMap = new Map(teachers.map(t => [t.id, t]));
+  const subjectMap = new Map(subjects.map(s => [s.id, s]));
+  
+  // OPTIMIZATION: Pre-calculate teacher workload totals once instead of per-assignment
+  const teacherTotalHours = new Map<string, number>();
+  indices.byTeacherId.forEach((assignments, teacherId) => {
+    const totalHours = assignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+    teacherTotalHours.set(teacherId, totalHours);
+  });
+  
+  indices.all.forEach(assignment => {
+    const teacher = teacherMap.get(assignment.teacherId);
+    const subject = subjectMap.get(assignment.subjectId);
     
     if (!teacher || !subject) return;
     
@@ -295,9 +344,8 @@ function analyzeConflicts(
       };
     }
     
-    // Check workload conflicts
-    const teacherAssignments = currentAssignments.filter(a => a.teacherId === teacher.id);
-    const totalHours = teacherAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+    // OPTIMIZATION: Use pre-calculated total hours instead of filter + reduce
+    const totalHours = teacherTotalHours.get(teacher.id) || 0;
     const maxHours = parseFloat(teacher.maxHours);
     
     if (totalHours > maxHours) {
@@ -320,7 +368,8 @@ function analyzeConflicts(
     const targetTotalHours = classData.targetHoursTotal ? parseFloat(classData.targetHoursTotal) : null;
     if (targetTotalHours === null) return;
     
-    const classAssignments = currentAssignments.filter(a => a.classId === classData.id);
+    // OPTIMIZATION: O(1) lookup instead of O(n) filter
+    const classAssignments = indices.byClassId.get(classData.id) || [];
     const currentTotalHours = classAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
     const remainingHours = targetTotalHours - currentTotalHours;
     
@@ -366,8 +415,8 @@ function analyzeConflicts(
   
   // ENHANCED: Check for assignment attempt conflicts that would violate constraints
   teachers.forEach(teacher => {
-    const teacherAssignments = currentAssignments.filter(a => a.teacherId === teacher.id);
-    const teacherCurrentHours = teacherAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+    // OPTIMIZATION: O(1) lookup + use pre-calculated total hours
+    const teacherCurrentHours = teacherTotalHours.get(teacher.id) || 0;
     const maxHours = parseFloat(teacher.maxHours);
     const teacherRemainingHours = maxHours - teacherCurrentHours;
     
