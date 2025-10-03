@@ -31,12 +31,32 @@ const adminNavigationItems = [
 
 export function Sidebar() {
   const [location] = useLocation();
-  const { isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const toggleCollapsed = () => {
     setIsCollapsed(!isCollapsed);
+  };
+
+  // Get user initials from firstName and lastName
+  const getUserInitials = () => {
+    if (!user) return "?";
+    const firstInitial = user.firstName?.charAt(0).toUpperCase() || "";
+    const lastInitial = user.lastName?.charAt(0).toUpperCase() || "";
+    return firstInitial + lastInitial || "?";
+  };
+
+  // Get user display name
+  const getUserDisplayName = () => {
+    if (!user) return "Benutzer";
+    return `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email;
+  };
+
+  // Get user role display text
+  const getUserRole = () => {
+    if (!user) return "";
+    return user.role === "admin" ? "Administrator" : "Benutzer";
   };
 
   return (
@@ -194,12 +214,12 @@ export function Sidebar() {
           isCollapsed ? "justify-center" : "space-x-3"
         )}>
           <div className="w-8 h-8 bg-secondary rounded-full flex items-center justify-center flex-shrink-0">
-            <span className="text-secondary-foreground text-sm font-medium">DS</span>
+            <span className="text-secondary-foreground text-sm font-medium">{getUserInitials()}</span>
           </div>
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground">Dr. Schmidt</p>
-              <p className="text-xs text-muted-foreground">Administrator</p>
+              <p className="text-sm font-medium text-foreground">{getUserDisplayName()}</p>
+              <p className="text-xs text-muted-foreground">{getUserRole()}</p>
             </div>
           )}
         </div>
