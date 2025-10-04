@@ -568,12 +568,15 @@ export class DatabaseStorage implements IStorage {
     // Remove subject references from all teachers in a single UPDATE statement
     await db.execute(sql`
       UPDATE ${teachers}
-      SET subjects = (
-        SELECT array_agg(elem)
-        FROM unnest(subjects) AS elem
-        WHERE elem != ${id} 
-          AND elem != ${subjectToDelete.shortName} 
-          AND elem != ${subjectToDelete.name}
+      SET subjects = COALESCE(
+        (
+          SELECT array_agg(elem)
+          FROM unnest(subjects) AS elem
+          WHERE elem != ${id} 
+            AND elem != ${subjectToDelete.shortName} 
+            AND elem != ${subjectToDelete.name}
+        ),
+        ARRAY[]::text[]
       )
       WHERE subjects && ARRAY[${id}, ${subjectToDelete.shortName}, ${subjectToDelete.name}]::text[]
     `);
@@ -582,10 +585,12 @@ export class DatabaseStorage implements IStorage {
     // Remove subject references from all classes' subjectHours in a single UPDATE statement
     await db.execute(sql`
       UPDATE ${classes}
-      SET subject_hours = subject_hours 
-        - ${id} 
-        - ${subjectToDelete.shortName} 
-        - ${subjectToDelete.name}
+      SET subject_hours = (
+        COALESCE(subject_hours, '{}'::jsonb)
+          - ${id} 
+          - ${subjectToDelete.shortName} 
+          - ${subjectToDelete.name}
+      )
       WHERE subject_hours ?| ARRAY[${id}, ${subjectToDelete.shortName}, ${subjectToDelete.name}]
     `);
 
@@ -623,10 +628,13 @@ export class DatabaseStorage implements IStorage {
     // This requires a more complex approach as we need to filter JSONB keys
     await db.execute(sql`
       UPDATE ${classes}
-      SET subject_hours = (
-        SELECT jsonb_object_agg(key, value)
-        FROM jsonb_each(subject_hours)
-        WHERE key = ANY(${validSubjectRefs}::text[])
+      SET subject_hours = COALESCE(
+        (
+          SELECT jsonb_object_agg(key, value)
+          FROM jsonb_each(subject_hours)
+          WHERE key = ANY(${validSubjectRefs}::text[])
+        ),
+        '{}'::jsonb
       )
       WHERE subject_hours IS NOT NULL
         AND EXISTS (
