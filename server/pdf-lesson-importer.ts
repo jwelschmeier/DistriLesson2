@@ -64,9 +64,21 @@ export class PdfLessonImporter {
     const teacherMap = this.createTeacherMap(existingTeachers);
     const subjectMap = this.createSubjectMap(existingSubjects);
 
+    // PERFORMANCE OPTIMIZATION: Create Set for O(1) duplicate assignment detection
+    const existingAssignmentKeys = new Set(
+      existingAssignments.map(a => 
+        `${a.classId}-${a.teacherId}-${a.subjectId}-${a.semester}`
+      )
+    );
+
     const matches: ImportMatch[] = [];
     const conflicts: ImportConflict[] = [];
     const allLessons: ParsedLesson[] = [];
+    
+    // PERFORMANCE OPTIMIZATION: Incremental summary counters instead of post-processing filters
+    let matchedClassesCount = 0;
+    let matchedTeachersCount = 0;
+    let matchedSubjectsCount = 0;
 
     // Process each class
     for (const classData of parseResult.classes) {
@@ -87,6 +99,7 @@ export class PdfLessonImporter {
         const matchedClass = classMap.get(normalizedClassName);
         if (matchedClass) {
           match.classId = matchedClass.id;
+          matchedClassesCount++; // OPTIMIZED: Increment counter instead of filtering later
         } else {
           conflicts.push({
             type: 'class_not_found',
@@ -100,6 +113,7 @@ export class PdfLessonImporter {
         const matchedTeacher = teacherMap.get(lesson.teacherShortName.toUpperCase());
         if (matchedTeacher) {
           match.teacherId = matchedTeacher.id;
+          matchedTeachersCount++; // OPTIMIZED: Increment counter instead of filtering later
         } else {
           conflicts.push({
             type: 'teacher_not_found',
@@ -113,6 +127,7 @@ export class PdfLessonImporter {
         const mappingResult = await this.intelligentMapping.mapSubject(lesson.subject, existingSubjects);
         if (mappingResult.autoResolved && mappingResult.subjectId) {
           match.subjectId = mappingResult.subjectId;
+          matchedSubjectsCount++; // OPTIMIZED: Increment counter instead of filtering later
         } else if (mappingResult.conflict) {
           // Add intelligent mapping conflict
           conflicts.push({
@@ -129,6 +144,7 @@ export class PdfLessonImporter {
           const matchedSubject = subjectMap.get(lesson.subject.toLowerCase());
           if (matchedSubject) {
             match.subjectId = matchedSubject.id;
+            matchedSubjectsCount++; // OPTIMIZED: Increment counter instead of filtering later
           } else {
             conflicts.push({
               type: 'subject_not_found',
@@ -139,22 +155,18 @@ export class PdfLessonImporter {
           }
         }
 
-        // Check for duplicate assignments
+        // OPTIMIZED: O(1) Set lookup with composite key instead of O(n) .find()
         if (match.classId && match.teacherId && match.subjectId) {
-          const existingAssignment = existingAssignments.find(a => 
-            a.classId === match.classId && 
-            a.teacherId === match.teacherId && 
-            a.subjectId === match.subjectId && 
-            a.semester === lesson.semester.toString() as "1" | "2"
-          );
+          const semesterStr = lesson.semester.toString() as "1" | "2";
+          const assignmentKey = `${match.classId}-${match.teacherId}-${match.subjectId}-${semesterStr}`;
           
-          if (existingAssignment) {
+          if (existingAssignmentKeys.has(assignmentKey)) {
             conflicts.push({
               type: 'duplicate_assignment',
               message: `Zuweisung bereits vorhanden: ${lesson.subject} bei ${lesson.teacherShortName} für Klasse ${lesson.className} (Semester ${lesson.semester})`,
               data: { 
                 lesson,
-                existingAssignment,
+                existingAssignment: null, // Not needed for duplicate detection
                 action: 'update_or_skip'
               }
             });
@@ -165,11 +177,12 @@ export class PdfLessonImporter {
       }
     }
 
+    // OPTIMIZED: Use pre-computed counters instead of O(n) filter operations
     const summary = {
       totalLessons: allLessons.length,
-      matchedClasses: matches.filter(m => m.classId).length,
-      matchedTeachers: matches.filter(m => m.teacherId).length,
-      matchedSubjects: matches.filter(m => m.subjectId).length,
+      matchedClasses: matchedClassesCount,
+      matchedTeachers: matchedTeachersCount,
+      matchedSubjects: matchedSubjectsCount,
       conflicts: conflicts.length
     };
 
