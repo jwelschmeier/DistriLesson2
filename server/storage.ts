@@ -1649,14 +1649,33 @@ export class DatabaseStorage implements IStorage {
           `);
         }
 
-        // OPTIMIZED: Batch update continuing students by new class
-        for (const update of continuingStudentUpdates) {
+        // OPTIMIZED: Batch update ALL continuing students in a single SQL statement
+        if (continuingStudentUpdates.length > 0) {
+          // Flatten all student updates into parallel arrays for UNNEST
+          const allStudentIds: string[] = [];
+          const allNewClassIds: string[] = [];
+          const allNewGrades: number[] = [];
+          
+          for (const update of continuingStudentUpdates) {
+            for (const studentId of update.studentIds) {
+              allStudentIds.push(studentId);
+              allNewClassIds.push(update.newClassId);
+              allNewGrades.push(update.newGrade);
+            }
+          }
+          
+          // Single UPDATE using UNNEST to map each student to their new class/grade
           await tx.execute(sql`
             UPDATE ${students}
-            SET class_id = ${update.newClassId},
-                grade = ${update.newGrade},
+            SET class_id = updates.new_class_id,
+                grade = updates.new_grade,
                 school_year_id = ${newSchoolYear.id}
-            WHERE id = ANY(${update.studentIds}::text[])
+            FROM UNNEST(
+              ${allStudentIds}::text[],
+              ${allNewClassIds}::text[],
+              ${allNewGrades}::integer[]
+            ) AS updates(student_id, new_class_id, new_grade)
+            WHERE id = updates.student_id
           `);
         }
 
