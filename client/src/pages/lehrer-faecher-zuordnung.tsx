@@ -450,23 +450,30 @@ export default function LehrerFaecherZuordnung() {
     const subject = subjects.find(s => s.id === subjectId);
     const currentClass = classes.find(c => c.id === classId);
     
+    console.log('🔧 updateAssignment called:', { 
+      classId, 
+      subjectId, 
+      teacherId,
+      subjectFound: !!subject, 
+      classFound: !!currentClass,
+      subjectName: subject?.shortName,
+      className: currentClass?.name
+    });
+    
     // Differenzierungsfächer für Jahrgänge 7-10 (normalisiert auf Großbuchstaben)
     const differenzierungsFaecher = ['FS', 'SW', 'NW', 'IF', 'TC', 'MUS'];
     const isDifferenzierungsfach = subject && differenzierungsFaecher.includes(subject.shortName.toUpperCase().trim());
     const isGrade7to10 = currentClass && currentClass.grade >= 7 && currentClass.grade <= 10;
 
-    // DEBUG: Log für Differenzierungsfach-Erkennung
-    if (subject && currentClass) {
-      console.log('🔍 Differenzierungsfach-Check:', {
-        subject: subject.shortName,
-        normalized: subject.shortName.toUpperCase().trim(),
-        isDiff: isDifferenzierungsfach,
-        class: currentClass.name,
-        grade: currentClass.grade,
-        isGrade7to10,
-        willReplicate: isDifferenzierungsfach && isGrade7to10
-      });
-    }
+    console.log('🔍 Differenzierungsfach-Check:', {
+      subject: subject?.shortName,
+      normalized: subject?.shortName.toUpperCase().trim(),
+      isDiff: isDifferenzierungsfach,
+      class: currentClass?.name,
+      grade: currentClass?.grade,
+      isGrade7to10,
+      willReplicate: isDifferenzierungsfach && isGrade7to10
+    });
 
     if (teacherId === null || teacherId === 'unassigned') {
       if (existingAssignment) {
