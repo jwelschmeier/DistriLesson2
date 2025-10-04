@@ -564,53 +564,30 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Subject not found");
     }
 
-    // Clean up teachers: remove this subject from their subjects arrays
-    const allTeachers = await db.select().from(teachers);
-    for (const teacher of allTeachers) {
-      const updatedSubjects = teacher.subjects.filter(
-        (subjectRef: string) => 
-          subjectRef !== id && 
-          subjectRef !== subjectToDelete.shortName && 
-          subjectRef !== subjectToDelete.name
-      );
-      
-      // Only update if the subjects array changed
-      if (updatedSubjects.length !== teacher.subjects.length) {
-        await db
-          .update(teachers)
-          .set({ subjects: updatedSubjects })
-          .where(eq(teachers.id, teacher.id));
-      }
-    }
+    // OPTIMIZED: Batch cleanup teachers using SQL array operations
+    // Remove subject references from all teachers in a single UPDATE statement
+    await db.execute(sql`
+      UPDATE ${teachers}
+      SET subjects = (
+        SELECT array_agg(elem)
+        FROM unnest(subjects) AS elem
+        WHERE elem != ${id} 
+          AND elem != ${subjectToDelete.shortName} 
+          AND elem != ${subjectToDelete.name}
+      )
+      WHERE subjects && ARRAY[${id}, ${subjectToDelete.shortName}, ${subjectToDelete.name}]::text[]
+    `);
 
-    // Clean up classes: remove this subject from their subjectHours objects
-    const allClasses = await db.select().from(classes);
-    for (const classRecord of allClasses) {
-      const subjectHours = { ...classRecord.subjectHours };
-      let hasChanges = false;
-
-      // Remove subject by various possible identifiers
-      if (subjectHours[id]) {
-        delete subjectHours[id];
-        hasChanges = true;
-      }
-      if (subjectHours[subjectToDelete.shortName]) {
-        delete subjectHours[subjectToDelete.shortName];
-        hasChanges = true;
-      }
-      if (subjectHours[subjectToDelete.name]) {
-        delete subjectHours[subjectToDelete.name];
-        hasChanges = true;
-      }
-
-      // Only update if the subjectHours object changed
-      if (hasChanges) {
-        await db
-          .update(classes)
-          .set({ subjectHours })
-          .where(eq(classes.id, classRecord.id));
-      }
-    }
+    // OPTIMIZED: Batch cleanup classes using JSONB operations
+    // Remove subject references from all classes' subjectHours in a single UPDATE statement
+    await db.execute(sql`
+      UPDATE ${classes}
+      SET subject_hours = subject_hours 
+        - ${id} 
+        - ${subjectToDelete.shortName} 
+        - ${subjectToDelete.name}
+      WHERE subject_hours ?| ARRAY[${id}, ${subjectToDelete.shortName}, ${subjectToDelete.name}]
+    `);
 
     // Finally, delete the subject itself (assignments will be cascade deleted automatically)
     await db.delete(subjects).where(eq(subjects.id, id));
@@ -619,48 +596,44 @@ export class DatabaseStorage implements IStorage {
   async cleanupOrphanedSubjectReferences(): Promise<void> {
     // Get all existing subject short names and names
     const allSubjects = await this.getSubjects();
-    const validSubjectRefs = new Set([
+    const validSubjectRefs = [
       ...allSubjects.map(s => s.id),
       ...allSubjects.map(s => s.shortName),
       ...allSubjects.map(s => s.name)
-    ]);
+    ];
 
-    // Clean up teachers
-    const allTeachers = await db.select().from(teachers);
-    for (const teacher of allTeachers) {
-      const cleanedSubjects = teacher.subjects.filter(
-        (subjectRef: string) => validSubjectRefs.has(subjectRef)
-      );
-      
-      if (cleanedSubjects.length !== teacher.subjects.length) {
-        await db
-          .update(teachers)
-          .set({ subjects: cleanedSubjects })
-          .where(eq(teachers.id, teacher.id));
-      }
-    }
+    // OPTIMIZED: Batch cleanup teachers using SQL array operations
+    // Keep only valid subject references in a single UPDATE statement
+    await db.execute(sql`
+      UPDATE ${teachers}
+      SET subjects = (
+        SELECT COALESCE(array_agg(elem), ARRAY[]::text[])
+        FROM unnest(subjects) AS elem
+        WHERE elem = ANY(${validSubjectRefs}::text[])
+      )
+      WHERE subjects IS NOT NULL
+        AND EXISTS (
+          SELECT 1 FROM unnest(subjects) AS elem
+          WHERE elem != ALL(${validSubjectRefs}::text[])
+        )
+    `);
 
-    // Clean up classes
-    const allClasses = await db.select().from(classes);
-    for (const classRecord of allClasses) {
-      const subjectHours = { ...classRecord.subjectHours };
-      let hasChanges = false;
-
-      // Remove any keys that don't match valid subject references
-      for (const key in subjectHours) {
-        if (!validSubjectRefs.has(key)) {
-          delete subjectHours[key];
-          hasChanges = true;
-        }
-      }
-
-      if (hasChanges) {
-        await db
-          .update(classes)
-          .set({ subjectHours })
-          .where(eq(classes.id, classRecord.id));
-      }
-    }
+    // OPTIMIZED: Batch cleanup classes using JSONB operations
+    // Remove invalid keys from all classes' subjectHours in a single UPDATE statement
+    // This requires a more complex approach as we need to filter JSONB keys
+    await db.execute(sql`
+      UPDATE ${classes}
+      SET subject_hours = (
+        SELECT jsonb_object_agg(key, value)
+        FROM jsonb_each(subject_hours)
+        WHERE key = ANY(${validSubjectRefs}::text[])
+      )
+      WHERE subject_hours IS NOT NULL
+        AND EXISTS (
+          SELECT 1 FROM jsonb_object_keys(subject_hours) AS key
+          WHERE key != ALL(${validSubjectRefs}::text[])
+        )
+    `);
   }
 
   // Assignments - Optimized with JOIN to avoid N+1 problem
