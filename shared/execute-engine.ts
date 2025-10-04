@@ -912,11 +912,11 @@ async function validateGermanSchoolRules(
   
   // Teacher Workload Warnings
   const overloadedTeachers: Array<{ teacherId: string; hours: number }> = [];
-  for (const [teacherId, hours] of teacherAssignmentCounts.entries()) {
+  teacherAssignmentCounts.forEach((hours, teacherId) => {
     if (hours > 28) { // Standard teaching load is ~25-28 hours
       overloadedTeachers.push({ teacherId, hours });
     }
-  }
+  });
   
   if (overloadedTeachers.length > 0) {
     warnings.push(
