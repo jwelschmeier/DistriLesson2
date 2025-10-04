@@ -306,6 +306,35 @@ export default function LehrerFaecherZuordnung() {
     return subjects.filter(s => s.id === subjectFilter);
   }, [subjects, subjectFilter]);
 
+  // Helper: Extract subject short name from course name (e.g., "10FS" -> "FS")
+  const extractSubjectFromCourseName = (courseName: string): string | null => {
+    // Course names like 10FS, 10SW, 10NW, etc. - extract the letters after the grade
+    const match = courseName.match(/^\d{2}([A-Z]+)$/i);
+    return match ? match[1].toUpperCase() : null;
+  };
+
+  // Get subjects relevant for a specific class
+  const getSubjectsForClass = useCallback((classData: Class): Subject[] => {
+    // For courses (type='kurs'), only show the subject that matches the course name
+    if (classData.type === 'kurs') {
+      const courseSubject = extractSubjectFromCourseName(classData.name);
+      if (courseSubject) {
+        const subject = subjects.find(s => s.shortName.toUpperCase() === courseSubject);
+        if (subject) {
+          // Apply subject filter if set
+          if (subjectFilter === 'alle' || subject.id === subjectFilter) {
+            return [subject];
+          }
+          return [];
+        }
+      }
+      return [];
+    }
+    
+    // For regular classes (type='klasse'), show all subjects (or filtered)
+    return filteredSubjects;
+  }, [subjects, filteredSubjects, subjectFilter]);
+
   // O(1) lookup functions
   const getAssignment = useCallback((classId: string, subjectId: string) => {
     const key = `${classId}-${subjectId}-${selectedSemester}`;
@@ -621,7 +650,8 @@ export default function LehrerFaecherZuordnung() {
                         <p className="text-2xl font-bold text-foreground" data-testid="text-classes-count">
                           {isLoading ? '...' : filteredClasses.filter(classData => {
                             if (searchQuery === '') return true;
-                            const classAssignments = filteredSubjects.map(subject => 
+                            const classSubjects = getSubjectsForClass(classData);
+                            const classAssignments = classSubjects.map(subject => 
                               getAssignment(classData.id, subject.id)
                             ).filter(Boolean);
                             return classAssignments.some(assignment => {
@@ -847,8 +877,11 @@ export default function LehrerFaecherZuordnung() {
                     </thead>
                     <tbody>
                       {filteredClasses.map(classData => {
+                        // Get subjects relevant for this specific class
+                        const classSubjects = getSubjectsForClass(classData);
+                        
                         // Prüfe ob Klasse basierend auf Suchquery angezeigt werden soll
-                        const classAssignments = filteredSubjects.map(subject => 
+                        const classAssignments = classSubjects.map(subject => 
                           getAssignment(classData.id, subject.id)
                         ).filter(Boolean);
                         
@@ -871,6 +904,18 @@ export default function LehrerFaecherZuordnung() {
                               {classData.name}
                             </td>
                             {filteredSubjects.map(subject => {
+                              // Check if this subject is relevant for this class
+                              const isRelevant = classSubjects.some(cs => cs.id === subject.id);
+                              
+                              if (!isRelevant) {
+                                // Don't show interactive cell for irrelevant subjects
+                                return (
+                                  <td key={`${classData.id}-${subject.id}`} className="p-3 text-center border-r bg-muted/5">
+                                    <span className="text-muted-foreground text-xs">—</span>
+                                  </td>
+                                );
+                              }
+                              
                               const assignment = getAssignment(classData.id, subject.id);
                               const qualifiedTeachers = getQualifiedTeachers(subject.shortName);
                               
