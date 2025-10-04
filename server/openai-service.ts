@@ -240,9 +240,73 @@ ${trimmedText}`;
     };
 
     try {
+      // PERFORMANCE OPTIMIZATION: Load all master data once before loops
+      console.log('[PERF] Loading master data for ChatGPT import...');
+      const [
+        existingTeachers,
+        existingClasses,
+        existingSubjects,
+        schoolYears,
+        existingAssignments
+      ] = await Promise.all([
+        storage.getTeachers(),
+        storage.getClasses(),
+        storage.getSubjects(),
+        storage.getSchoolYears(),
+        storage.getAssignments()
+      ]);
+
+      // Find current school year
+      const currentSchoolYear = schoolYears.find(sy => sy.isCurrent);
+      if (!currentSchoolYear) {
+        result.errors.push("Kein aktuelles Schuljahr gefunden. Import abgebrochen.");
+        return result;
+      }
+
+      // PERFORMANCE OPTIMIZATION: Create lookup Maps for O(1) access
+      const teachersByShortName = new Map(
+        existingTeachers.map(t => [t.shortName, t])
+      );
+      const classesByName = new Map(
+        existingClasses.map(c => [c.name, c])
+      );
+      const subjectsByShortName = new Map(
+        existingSubjects.map(s => [s.shortName, s])
+      );
+
+      // PERFORMANCE OPTIMIZATION: Create duplicate detection Sets with composite keys
+      const existingTeacherShortNames = new Set(
+        existingTeachers.map(t => t.shortName)
+      );
+      const existingClassNames = new Set(
+        existingClasses.map(c => c.name)
+      );
+      const existingSubjectShortNames = new Set(
+        existingSubjects.map(s => s.shortName)
+      );
+      const existingAssignmentKeys = new Set(
+        existingAssignments.map(a => 
+          `${a.teacherId}-${a.classId}-${a.subjectId}-${a.schoolYearId}-${a.semester}`
+        )
+      );
+
+      console.log('[PERF] Master data loaded:', {
+        teachers: existingTeachers.length,
+        classes: existingClasses.length,
+        subjects: existingSubjects.length,
+        assignments: existingAssignments.length
+      });
+
       // 1. Import Teachers
       for (const teacherData of parsedData.teachers) {
         try {
+          const shortName = teacherData.shortName || "";
+          
+          // OPTIMIZED: O(1) Set lookup instead of O(n) .find()
+          if (existingTeacherShortNames.has(shortName)) {
+            continue; // Teacher already exists, skip
+          }
+
           // Handle null/undefined teacher names safely
           const fullName = teacherData.name || teacherData.shortName || "Unbekannt";
           const nameParts = fullName.split(' ');
@@ -250,21 +314,19 @@ ${trimmedText}`;
           const validatedTeacher = insertTeacherSchema.parse({
             firstName: nameParts[0] || teacherData.shortName || "Unbekannt",
             lastName: nameParts.slice(1).join(' ') || "",
-            shortName: teacherData.shortName || "",
-            email: `${(teacherData.shortName || '').toLowerCase()}@schule.de`,
+            shortName: shortName,
+            email: `${shortName.toLowerCase()}@schule.de`,
             currentHours: "0",
             qualifications: teacherData.qualifications || [],
             notes: "Importiert via ChatGPT"
           });
 
-          // Check if teacher already exists
-          const existingTeachers = await storage.getTeachers();
-          const exists = existingTeachers.find(t => t.shortName === teacherData.shortName);
+          const newTeacher = await storage.createTeacher(validatedTeacher);
+          result.teachers++;
           
-          if (!exists) {
-            await storage.createTeacher(validatedTeacher);
-            result.teachers++;
-          }
+          // Update lookup structures for subsequent operations
+          teachersByShortName.set(shortName, newTeacher);
+          existingTeacherShortNames.add(shortName);
         } catch (error) {
           result.errors.push(`Lehrer ${teacherData.shortName}: ${(error as Error).message}`);
         }
@@ -276,9 +338,14 @@ ${trimmedText}`;
           // Normalize class name to match database format (e.g., "5a" -> "05A")
           const normalizedClassName = this.normalizeClassName(classData.name);
           
+          // OPTIMIZED: O(1) Set lookup instead of O(n) .find()
+          if (existingClassNames.has(normalizedClassName)) {
+            continue; // Class already exists, skip
+          }
+          
           const validatedClass = insertClassSchema.parse({
             name: normalizedClassName,
-            type: "klasse", // Standard-Type für importierte Klassen
+            type: "klasse",
             grade: classData.grade,
             studentCount: classData.studentCount || 25,
             subjectHours: {},
@@ -290,13 +357,12 @@ ${trimmedText}`;
             schoolYearId: null
           });
 
-          const existingClasses = await storage.getClasses();
-          const exists = existingClasses.find(c => c.name === normalizedClassName);
+          const newClass = await storage.createClass(validatedClass);
+          result.classes++;
           
-          if (!exists) {
-            await storage.createClass(validatedClass);
-            result.classes++;
-          }
+          // Update lookup structures for subsequent operations
+          classesByName.set(normalizedClassName, newClass);
+          existingClassNames.add(normalizedClassName);
         } catch (error) {
           result.errors.push(`Klasse ${classData.name} (normalisiert zu ${this.normalizeClassName(classData.name)}): ${(error as Error).message}`);
         }
@@ -305,44 +371,34 @@ ${trimmedText}`;
       // 3. Import Subjects
       for (const subjectData of parsedData.subjects) {
         try {
+          const shortName = subjectData.shortName;
+          
+          // OPTIMIZED: O(1) Set lookup instead of O(n) .find()
+          if (existingSubjectShortNames.has(shortName)) {
+            result.subjects++; // Count as processed
+            continue;
+          }
+          
           const validatedSubject = insertSubjectSchema.parse({
             name: subjectData.name,
-            shortName: subjectData.shortName,
+            shortName: shortName,
             category: subjectData.category || "Hauptfach",
             hoursPerWeek: {},
             parallelGroup: null
           });
 
-          const existingSubjects = await storage.getSubjects();
-          const exists = existingSubjects.find(s => s.shortName === subjectData.shortName);
+          const newSubject = await storage.createSubject(validatedSubject);
+          result.subjects++;
           
-          if (!exists) {
-            await storage.createSubject(validatedSubject);
-            result.subjects++;
-          } else {
-            // Subject exists, count as processed
-            result.subjects++;
-          }
+          // Update lookup structures for subsequent operations
+          subjectsByShortName.set(shortName, newSubject);
+          existingSubjectShortNames.add(shortName);
         } catch (error) {
           result.errors.push(`Fach ${subjectData.shortName}: ${(error as Error).message}`);
         }
       }
 
       // 4. Import Assignments
-      const teachers = await storage.getTeachers();
-      const classes = await storage.getClasses();
-      const subjects = await storage.getSubjects();
-      const schoolYears = await storage.getSchoolYears();
-      const currentSchoolYear = schoolYears.find(sy => sy.isCurrent);
-
-      if (!currentSchoolYear) {
-        result.errors.push("Kein aktuelles Schuljahr gefunden. Zuweisungen können nicht importiert werden.");
-        return result;
-      }
-
-      // Get existing assignments to check for duplicates
-      const existingAssignments = await storage.getAssignments();
-
       for (const assignmentData of parsedData.assignments) {
         try {
           // Skip assignments with null/empty className (e.g., AGs without specific class)
@@ -354,9 +410,10 @@ ${trimmedText}`;
           // Normalize class name for matching
           const normalizedClassName = this.normalizeClassName(assignmentData.className);
           
-          const teacher = teachers.find(t => t.shortName === assignmentData.teacherShortName);
-          const classObj = classes.find(c => c.name === normalizedClassName);
-          const subject = subjects.find(s => s.shortName === assignmentData.subjectShortName);
+          // OPTIMIZED: O(1) Map lookups instead of O(n) .find()
+          const teacher = teachersByShortName.get(assignmentData.teacherShortName);
+          const classObj = classesByName.get(normalizedClassName);
+          const subject = subjectsByShortName.get(assignmentData.subjectShortName);
 
           if (!teacher) {
             result.errors.push(`Lehrer mit Kürzel "${assignmentData.teacherShortName}" nicht gefunden`);
@@ -371,19 +428,12 @@ ${trimmedText}`;
             continue;
           }
 
-          // Check for duplicate assignment
+          // OPTIMIZED: O(1) Set lookup with composite key instead of O(n) .find()
           const semesterStr = (assignmentData.semester || 1).toString() as "1" | "2";
-          const exists = existingAssignments.find(a => 
-            a.teacherId === teacher.id &&
-            a.classId === classObj.id &&
-            a.subjectId === subject.id &&
-            a.schoolYearId === currentSchoolYear.id &&
-            a.semester === semesterStr
-          );
-
-          if (exists) {
-            // Assignment already exists, skip it
-            continue;
+          const assignmentKey = `${teacher.id}-${classObj.id}-${subject.id}-${currentSchoolYear.id}-${semesterStr}`;
+          
+          if (existingAssignmentKeys.has(assignmentKey)) {
+            continue; // Assignment already exists, skip
           }
 
           const validatedAssignment = insertAssignmentSchema.parse({
@@ -391,19 +441,23 @@ ${trimmedText}`;
             classId: classObj.id,
             subjectId: subject.id,
             schoolYearId: currentSchoolYear.id,
-            hoursPerWeek: assignmentData.hoursPerWeek, // Schema erwartet Number, nicht String!
+            hoursPerWeek: assignmentData.hoursPerWeek,
             semester: semesterStr,
             teamTeachingId: null
           });
 
           await storage.createAssignment(validatedAssignment);
           result.assignments++;
+          
+          // Update duplicate detection Set
+          existingAssignmentKeys.add(assignmentKey);
         } catch (error) {
           const normalizedClassName = this.normalizeClassName(assignmentData.className);
           result.errors.push(`Zuweisung ${assignmentData.teacherShortName}-${assignmentData.className}(→${normalizedClassName})-${assignmentData.subjectShortName}: ${(error as Error).message}`);
         }
       }
 
+      console.log('[PERF] ChatGPT import completed:', result);
       return result;
     } catch (error) {
       result.errors.push("Allgemeiner Import-Fehler: " + (error as Error).message);
