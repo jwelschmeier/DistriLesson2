@@ -17,6 +17,23 @@ export default function KlassenAuswahl() {
     staleTime: 60000 // 1 minute cache
   });
 
+  // Differenzierungsfächer (FS, SW, NW, IF, TC, MUS)
+  const DIFF_SUBJECTS = ['FS', 'SW', 'NW', 'IF', 'TC', 'MUS'];
+  
+  // Helper: Check if a course is a Diff-Kurs (grade 7-9, one of the diff subjects)
+  const isDiffKurs = (classItem: Class): boolean => {
+    if (classItem.type !== 'kurs') return false;
+    const grade = classItem.grade;
+    if (grade < 7 || grade > 9) return false;
+    
+    // Extract subject from course name (e.g., "07FS" -> "FS")
+    const match = classItem.name.match(/^\d{2}([A-Z]+)$/i);
+    if (!match) return false;
+    
+    const subject = match[1].toUpperCase();
+    return DIFF_SUBJECTS.includes(subject);
+  };
+
   // Group classes by grade level (Jahrgang)
   const classesByGrade = classes.reduce((acc, classItem) => {
     const grade = classItem.grade;
@@ -31,7 +48,19 @@ export default function KlassenAuswahl() {
   const filteredClasses = classes.filter(classItem => {
     const matchesSearch = classItem.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       classItem.grade.toString().includes(searchTerm);
-    const matchesType = selectedType === "all" || classItem.type === selectedType;
+    
+    let matchesType = false;
+    if (selectedType === "all") {
+      matchesType = true;
+    } else if (selectedType === "diff-kurse") {
+      matchesType = isDiffKurs(classItem);
+    } else if (selectedType === "kurs") {
+      // Regular Kurse exclude Diff-Kurse
+      matchesType = classItem.type === "kurs" && !isDiffKurs(classItem);
+    } else {
+      matchesType = classItem.type === selectedType;
+    }
+    
     return matchesSearch && matchesType;
   });
 
@@ -110,6 +139,17 @@ export default function KlassenAuswahl() {
                 data-testid="filter-kurs"
               >
                 Kurse
+              </button>
+              <button
+                onClick={() => setSelectedType("diff-kurse")}
+                className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                  selectedType === "diff-kurse" 
+                    ? "bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300" 
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                }`}
+                data-testid="filter-diff-kurse"
+              >
+                Diff-Kurse
               </button>
               <button
                 onClick={() => setSelectedType("ag")}
