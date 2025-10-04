@@ -168,6 +168,7 @@ export default function Klassenverwaltung() {
     defaultValues: {
       name: "",
       grade: 5,
+      type: "klasse",
       studentCount: 0,
       subjectHours: {},
       targetHoursTotal: null,
@@ -422,6 +423,7 @@ export default function Klassenverwaltung() {
     classForm.reset({
       name: classData.name,
       grade: classData.grade,
+      type: classData.type as "klasse" | "kurs" | "ag",
       studentCount: classData.studentCount,
       subjectHours: classData.subjectHours,
       targetHoursTotal: classData.targetHoursTotal,
