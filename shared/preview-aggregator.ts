@@ -323,18 +323,33 @@ export function calculateTeacherWorkloadAnalysis(
     if (!teacher) return;
     
     const currentTeacherAssignments = currentByTeacher.get(teacherId) || [];
-    const currentHours = currentTeacherAssignments.reduce((sum, a) => sum + a.hoursPerWeek, 0);
+    // FIXED: Parse string hoursPerWeek to number
+    const currentHours = currentTeacherAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek || '0'), 0);
     
-    // Calculate projected hours based on migration decisions
-    const autoDecisions = decisions.filter(d => d.decision === 'auto');
-    const projectedHours = autoDecisions.reduce((sum, d) => sum + d.hoursPerWeek, 0);
+    // OPTIMIZED: Single pass to calculate projected hours AND count decision types
+    let projectedHours = 0;
+    let autoCount = 0;
+    let manualCount = 0;
+    let impossibleCount = 0;
+    
+    for (const decision of decisions) {
+      if (decision.decision === 'auto') {
+        autoCount++;
+        projectedHours += decision.hoursPerWeek;
+      } else if (decision.decision === 'manual') {
+        manualCount++;
+      } else if (decision.decision === 'impossible') {
+        impossibleCount++;
+      }
+    }
+    
     const hoursDelta = projectedHours - currentHours;
     
-    // Analyze assignment changes
+    // Assignment changes (already counted in single pass above)
     const assignmentChanges = {
-      auto: decisions.filter(d => d.decision === 'auto').length,
-      manual: decisions.filter(d => d.decision === 'manual').length,
-      impossible: decisions.filter(d => d.decision === 'impossible').length,
+      auto: autoCount,
+      manual: manualCount,
+      impossible: impossibleCount,
       total: decisions.length,
     };
     
