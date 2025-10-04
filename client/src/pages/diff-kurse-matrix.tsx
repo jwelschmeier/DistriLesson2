@@ -53,10 +53,17 @@ export default function DiffKurseMatrix() {
       if (c.type !== 'kurs') return false;
       if (c.grade < 7 || c.grade > 10) return false;
       
-      const match = c.name.match(/^\d{2}([A-Z]+)$/i);
+      // Match patterns like "10FS", "10INF_IF", "07TC1", "07TC2"
+      const match = c.name.match(/^\d{2}([A-Z_0-9]+)$/i);
       if (!match) return false;
       
-      const subject = match[1].toUpperCase();
+      // Extract subject: take part after underscore if present, otherwise remove trailing digits
+      const extracted = match[1].toUpperCase();
+      const underscoreIndex = extracted.indexOf('_');
+      const subject = underscoreIndex !== -1 
+        ? extracted.substring(underscoreIndex + 1) 
+        : extracted.replace(/\d+$/, ''); // Remove trailing digits like "TC1" -> "TC"
+      
       return DIFF_SUBJECTS.includes(subject);
     }).sort((a, b) => {
       if (a.grade !== b.grade) return a.grade - b.grade;
@@ -90,8 +97,16 @@ export default function DiffKurseMatrix() {
 
   // Helper: Get subject from course name
   const getSubjectFromCourseName = (courseName: string): string | null => {
-    const match = courseName.match(/^\d{2}([A-Z]+)$/i);
-    return match ? match[1].toUpperCase() : null;
+    // Match patterns like "10FS", "10INF_IF", "07TC1", "07TC2"
+    const match = courseName.match(/^\d{2}([A-Z_0-9]+)$/i);
+    if (!match) return null;
+    
+    // Extract subject: take part after underscore if present, otherwise remove trailing digits
+    const extracted = match[1].toUpperCase();
+    const underscoreIndex = extracted.indexOf('_');
+    return underscoreIndex !== -1 
+      ? extracted.substring(underscoreIndex + 1)  // "INF_IF" -> "IF"
+      : extracted.replace(/\d+$/, '');            // "TC1" -> "TC", "TC2" -> "TC"
   };
 
   // Helper: Get current teacher (with changes)
