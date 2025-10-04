@@ -102,6 +102,7 @@ export default function KlassenMatrix() {
 
   // Subject order for consistent display
   const SUBJECT_ORDER = ['D', 'M', 'E', 'FS', 'NW', 'SW', 'IF', 'TC', 'PK', 'GE', 'EK', 'BI', 'PH', 'CH', 'HW', 'KU', 'MU', 'TX', 'ER', 'KR', 'PP', 'SO', 'BO', 'SP'];
+  const RELIGION_SUBJECTS = new Set(['ER', 'KR', 'PP']);
   
   // Sort subjects according to predefined order
   const sortedSubjects = useMemo(() => {
@@ -132,10 +133,37 @@ export default function KlassenMatrix() {
   // Handle teacher assignment changes
   const handleTeacherChange = (classItemId: string, semester: "1" | "2", subjectId: string, teacherId: string | null) => {
     const key = `${classItemId}::${subjectId}::${semester}`;
-    if (semester === "1") {
-      setChanges1(prev => ({ ...prev, [key]: teacherId }));
+    
+    // Ermittle das betroffene Fach und die zugehörige Klasse
+    const subject = subjects.find(s => s.id === subjectId);
+    const classInfo = allClasses.find(c => c.id === classItemId);
+    
+    // Falls es ein Religionsfach ist, synchronisiere alle Parallelklassen des Jahrgangs
+    if (subject && classInfo && RELIGION_SUBJECTS.has(subject.shortName)) {
+      const jahrgangClasses = allClasses.filter(c => 
+        c.grade === classInfo.grade && c.type === 'klasse'
+      );
+      
+      // Baue Updates für alle Parallelklassen
+      const updates: Record<string, string | null> = {};
+      for (const klasse of jahrgangClasses) {
+        const updateKey = `${klasse.id}::${subjectId}::${semester}`;
+        updates[updateKey] = teacherId;
+      }
+      
+      // Setze alle Updates gleichzeitig
+      if (semester === "1") {
+        setChanges1(prev => ({ ...prev, ...updates }));
+      } else {
+        setChanges2(prev => ({ ...prev, ...updates }));
+      }
     } else {
-      setChanges2(prev => ({ ...prev, [key]: teacherId }));
+      // Normales Verhalten für nicht-Religionsfächer
+      if (semester === "1") {
+        setChanges1(prev => ({ ...prev, [key]: teacherId }));
+      } else {
+        setChanges2(prev => ({ ...prev, [key]: teacherId }));
+      }
     }
   };
 
