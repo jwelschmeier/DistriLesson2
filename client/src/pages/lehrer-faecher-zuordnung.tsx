@@ -7,7 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Grid3X3, RefreshCw, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Grid3X3, RefreshCw, AlertTriangle, CheckCircle, Users, BookOpen, Filter, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Teacher, Class, Subject, Assignment } from '@shared/schema';
 
@@ -84,6 +86,7 @@ export default function LehrerFaecherZuordnung() {
   const [selectedSemester, setSelectedSemester] = useState<"1" | "2">("1");
   const [gradeFilter, setGradeFilter] = useState<string>("alle");
   const [subjectFilter, setSubjectFilter] = useState<string>("alle");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Definierte Reihenfolge der deutschen Schulfächer
   const SUBJECT_ORDER = ['D', 'M', 'E', 'Fs', 'SW', 'PK', 'GE', 'EK', 'BI', 'PH', 'CH', 'TC', 'If', 'HW', 'KU', 'MU', 'Tx', 'ER', 'KR', 'PP', 'SO', 'BO', 'SP'];
@@ -443,9 +446,32 @@ export default function LehrerFaecherZuordnung() {
     const hours = getRequiredHours(subjectId);
     const existingAssignment = getAssignment(classId, subjectId);
 
+    // Finde das Fach und die Klasse für Differenzierungsfach-Logik
+    const subject = subjects.find(s => s.id === subjectId);
+    const currentClass = classes.find(c => c.id === classId);
+    
+    // Differenzierungsfächer für Jahrgänge 7-10 (normalisiert auf Großbuchstaben)
+    const differenzierungsFaecher = ['FS', 'SW', 'NW', 'IF', 'TC', 'MUS'];
+    const isDifferenzierungsfach = subject && differenzierungsFaecher.includes(subject.shortName.toUpperCase().trim());
+    const isGrade7to10 = currentClass && currentClass.grade >= 7 && currentClass.grade <= 10;
+
     if (teacherId === null || teacherId === 'unassigned') {
       if (existingAssignment) {
         deleteAssignmentMutation.mutate(existingAssignment.id);
+      }
+      
+      // Bei Differenzierungsfächern auch für alle anderen Klassen der Jahrgangsstufe löschen
+      if (isDifferenzierungsfach && isGrade7to10 && currentClass) {
+        const sameGradeClasses = classes.filter(c => 
+          c.grade === currentClass.grade && c.id !== currentClass.id
+        );
+        
+        sameGradeClasses.forEach(cls => {
+          const otherAssignment = getAssignment(cls.id, subjectId);
+          if (otherAssignment) {
+            deleteAssignmentMutation.mutate(otherAssignment.id);
+          }
+        });
       }
     } else if (existingAssignment) {
       updateAssignmentMutation.mutate({
@@ -453,6 +479,32 @@ export default function LehrerFaecherZuordnung() {
         teacherId,
         hoursPerWeek: hours
       });
+      
+      // Bei Differenzierungsfächern auch für alle anderen Klassen der Jahrgangsstufe aktualisieren
+      if (isDifferenzierungsfach && isGrade7to10 && currentClass) {
+        const sameGradeClasses = classes.filter(c => 
+          c.grade === currentClass.grade && c.id !== currentClass.id
+        );
+        
+        sameGradeClasses.forEach(cls => {
+          const otherAssignment = getAssignment(cls.id, subjectId);
+          if (otherAssignment) {
+            updateAssignmentMutation.mutate({
+              id: otherAssignment.id,
+              teacherId,
+              hoursPerWeek: hours
+            });
+          } else {
+            createAssignmentMutation.mutate({
+              teacherId,
+              classId: cls.id,
+              subjectId,
+              hoursPerWeek: hours,
+              semester: selectedSemester
+            });
+          }
+        });
+      }
     } else {
       createAssignmentMutation.mutate({
         teacherId,
@@ -461,8 +513,28 @@ export default function LehrerFaecherZuordnung() {
         hoursPerWeek: hours,
         semester: selectedSemester
       });
+      
+      // Bei Differenzierungsfächern auch für alle anderen Klassen der Jahrgangsstufe erstellen
+      if (isDifferenzierungsfach && isGrade7to10 && currentClass) {
+        const sameGradeClasses = classes.filter(c => 
+          c.grade === currentClass.grade && c.id !== currentClass.id
+        );
+        
+        sameGradeClasses.forEach(cls => {
+          const otherAssignment = getAssignment(cls.id, subjectId);
+          if (!otherAssignment) {
+            createAssignmentMutation.mutate({
+              teacherId,
+              classId: cls.id,
+              subjectId,
+              hoursPerWeek: hours,
+              semester: selectedSemester
+            });
+          }
+        });
+      }
     }
-  }, [selectedSemester, getRequiredHours, getAssignment, createAssignmentMutation, updateAssignmentMutation, deleteAssignmentMutation]);
+  }, [selectedSemester, getRequiredHours, getAssignment, createAssignmentMutation, updateAssignmentMutation, deleteAssignmentMutation, subjects, classes]);
 
   return (
     <div className="flex h-screen bg-muted/50 dark:bg-muted/20">
@@ -494,6 +566,115 @@ export default function LehrerFaecherZuordnung() {
             </TabsList>
 
             <TabsContent value={selectedSemester} className="space-y-6">
+              {/* Statistik-Kacheln */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card data-testid="card-assignments">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-muted-foreground text-xs font-medium">Zuordnungen</p>
+                        <p className="text-2xl font-bold text-foreground" data-testid="text-assignments-count">
+                          {isLoading ? '...' : assignments.filter(a => {
+                            // Filter by current filters and search
+                            const matchesGrade = gradeFilter === 'alle' || classes.find(c => c.id === a.classId)?.grade.toString() === gradeFilter;
+                            const matchesSubject = subjectFilter === 'alle' || a.subjectId === subjectFilter;
+                            const matchesSearch = searchQuery === '' || (() => {
+                              const teacher = teachers.find(t => t.id === a.teacherId);
+                              if (!teacher) return false;
+                              const query = searchQuery.toLowerCase();
+                              return teacher.firstName.toLowerCase().includes(query) ||
+                                     teacher.lastName.toLowerCase().includes(query) ||
+                                     teacher.shortName.toLowerCase().includes(query);
+                            })();
+                            return matchesGrade && matchesSubject && matchesSearch;
+                          }).length}
+                        </p>
+                      </div>
+                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-950 rounded-lg flex items-center justify-center">
+                        <Grid3X3 className="text-blue-600 dark:text-blue-400 h-5 w-5" />
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      {selectedSemester}. Halbjahr
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="card-classes">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-muted-foreground text-xs font-medium">Klassen</p>
+                        <p className="text-2xl font-bold text-foreground" data-testid="text-classes-count">
+                          {isLoading ? '...' : filteredClasses.filter(classData => {
+                            if (searchQuery === '') return true;
+                            const classAssignments = filteredSubjects.map(subject => 
+                              getAssignment(classData.id, subject.id)
+                            ).filter(Boolean);
+                            return classAssignments.some(assignment => {
+                              const teacher = teachers.find(t => t.id === assignment?.teacherId);
+                              if (!teacher) return false;
+                              const query = searchQuery.toLowerCase();
+                              return (
+                                teacher.firstName.toLowerCase().includes(query) ||
+                                teacher.lastName.toLowerCase().includes(query) ||
+                                teacher.shortName.toLowerCase().includes(query)
+                              );
+                            });
+                          }).length}
+                        </p>
+                      </div>
+                      <div className="w-10 h-10 bg-green-100 dark:bg-green-950 rounded-lg flex items-center justify-center">
+                        <Users className="text-green-600 dark:text-green-400 h-5 w-5" />
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      {gradeFilter === 'alle' ? 'Alle Jahrgänge' : `Jahrgang ${gradeFilter}`}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="card-subjects">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-muted-foreground text-xs font-medium">Fächer</p>
+                        <p className="text-2xl font-bold text-foreground" data-testid="text-subjects-count">
+                          {filteredSubjects.length}
+                        </p>
+                      </div>
+                      <div className="w-10 h-10 bg-orange-100 dark:bg-orange-950 rounded-lg flex items-center justify-center">
+                        <BookOpen className="text-orange-600 dark:text-orange-400 h-5 w-5" />
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      {subjectFilter === 'alle' ? 'Alle Fächer' : 'Gefiltert'}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="card-search">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <p className="text-muted-foreground text-xs font-medium">Suche / Filter</p>
+                      </div>
+                      <div className="w-10 h-10 bg-purple-100 dark:bg-purple-950 rounded-lg flex items-center justify-center">
+                        <Search className="text-purple-600 dark:text-purple-400 h-5 w-5" />
+                      </div>
+                    </div>
+                    <Input
+                      type="text"
+                      placeholder="Lehrer suchen..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="h-8 text-xs"
+                      data-testid="input-search-teacher"
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+
               {/* Filter Controls */}
               <div className="flex gap-6 items-center">
                 <div className="flex flex-col gap-2">
@@ -652,30 +833,50 @@ export default function LehrerFaecherZuordnung() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredClasses.map(classData => (
-                        <tr key={classData.id} className="border-b hover:bg-muted/20">
-                          <td className="p-3 font-medium border-r bg-muted/30 text-sm">
-                            {classData.name}
-                          </td>
-                          {filteredSubjects.map(subject => {
-                            const assignment = getAssignment(classData.id, subject.id);
-                            const qualifiedTeachers = getQualifiedTeachers(subject.shortName);
-                            
-                            return (
-                              <MatrixCell
-                                key={`${classData.id}-${subject.id}`}
-                                classId={classData.id}
-                                subjectId={subject.id}
-                                subjectShortName={subject.shortName}
-                                assignment={assignment}
-                                qualifiedTeachers={qualifiedTeachers}
-                                remainingHoursByTeacher={computedData.remainingHoursByTeacher}
-                                onUpdate={updateAssignment}
-                              />
-                            );
-                          })}
-                        </tr>
-                      ))}
+                      {filteredClasses.map(classData => {
+                        // Prüfe ob Klasse basierend auf Suchquery angezeigt werden soll
+                        const classAssignments = filteredSubjects.map(subject => 
+                          getAssignment(classData.id, subject.id)
+                        ).filter(Boolean);
+                        
+                        const hasMatchingTeacher = searchQuery === '' || classAssignments.some(assignment => {
+                          const teacher = teachers.find(t => t.id === assignment?.teacherId);
+                          if (!teacher) return false;
+                          const query = searchQuery.toLowerCase();
+                          return (
+                            teacher.firstName.toLowerCase().includes(query) ||
+                            teacher.lastName.toLowerCase().includes(query) ||
+                            teacher.shortName.toLowerCase().includes(query)
+                          );
+                        });
+
+                        if (!hasMatchingTeacher) return null;
+
+                        return (
+                          <tr key={classData.id} className="border-b hover:bg-muted/20">
+                            <td className="p-3 font-medium border-r bg-muted/30 text-sm">
+                              {classData.name}
+                            </td>
+                            {filteredSubjects.map(subject => {
+                              const assignment = getAssignment(classData.id, subject.id);
+                              const qualifiedTeachers = getQualifiedTeachers(subject.shortName);
+                              
+                              return (
+                                <MatrixCell
+                                  key={`${classData.id}-${subject.id}`}
+                                  classId={classData.id}
+                                  subjectId={subject.id}
+                                  subjectShortName={subject.shortName}
+                                  assignment={assignment}
+                                  qualifiedTeachers={qualifiedTeachers}
+                                  remainingHoursByTeacher={computedData.remainingHoursByTeacher}
+                                  onUpdate={updateAssignment}
+                                />
+                              );
+                            })}
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
