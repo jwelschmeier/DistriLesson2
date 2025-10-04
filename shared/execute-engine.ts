@@ -1399,8 +1399,22 @@ async function createAssignments(
       manualDecisionMap.set(decision.itemId, decision);
     });
     
+    // OPTIMIZED: Group assignment decisions by type in single pass
+    const autoAssignments: AssignmentDecision[] = [];
+    const manualAssignments: AssignmentDecision[] = [];
+    const impossibleAssignments: AssignmentDecision[] = [];
+    
+    for (const decision of assignmentDecisions) {
+      if (decision.decision === 'auto') {
+        autoAssignments.push(decision);
+      } else if (decision.decision === 'manual') {
+        manualAssignments.push(decision);
+      } else if (decision.decision === 'impossible') {
+        impossibleAssignments.push(decision);
+      }
+    }
+    
     // Process automatic assignments
-    const autoAssignments = assignmentDecisions.filter(d => d.decision === 'auto');
     for (const assignmentDecision of autoAssignments) {
       const newClassId = createdClasses.get(assignmentDecision.oldClassId);
       if (!newClassId) {
@@ -1444,7 +1458,6 @@ async function createAssignments(
     }
     
     // Process manual assignments with override decisions
-    const manualAssignments = assignmentDecisions.filter(d => d.decision === 'manual');
     for (const assignmentDecision of manualAssignments) {
       const manualDecision = manualDecisionMap.get(assignmentDecision.assignmentId);
       
@@ -1506,7 +1519,6 @@ async function createAssignments(
     }
     
     // Process impossible assignments with manual override decisions
-    const impossibleAssignments = assignmentDecisions.filter(d => d.decision === 'impossible');
     for (const assignmentDecision of impossibleAssignments) {
       const manualDecision = manualDecisionMap.get(assignmentDecision.assignmentId);
       
