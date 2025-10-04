@@ -284,15 +284,41 @@ export default function MasterStundenplan() {
     return filtered;
   }, [extendedAssignments, selectedSemester, selectedTeacher, selectedClass, selectedSubject, conflictFilter, searchTerm, sortBy, sortOrder, teacherWorkloadMap]);
 
+  // PERFORMANCE OPTIMIZATION: Pre-split filtered assignments by semester for O(1) access
+  const filteredAssignmentsBySemester = useMemo(() => {
+    const semester1 = filteredAssignments.filter(a => a.semester === "1");
+    const semester2 = filteredAssignments.filter(a => a.semester === "2");
+    return { semester1, semester2 };
+  }, [filteredAssignments]);
+
+  // PERFORMANCE OPTIMIZATION: Pre-group filtered assignments by class and semester for O(1) access
+  const filteredAssignmentsByClassAndSemester = useMemo(() => {
+    const map = new Map<string, { semester1: ExtendedAssignment[]; semester2: ExtendedAssignment[] }>();
+    
+    filteredAssignments.forEach(assignment => {
+      const key = assignment.classId;
+      if (!map.has(key)) {
+        map.set(key, { semester1: [], semester2: [] });
+      }
+      const entry = map.get(key)!;
+      if (assignment.semester === "1") {
+        entry.semester1.push(assignment);
+      } else if (assignment.semester === "2") {
+        entry.semester2.push(assignment);
+      }
+    });
+    
+    return map;
+  }, [filteredAssignments]);
+
   // Calculate overall statistics
   const overallStats = useMemo(() => {
     const totalAssignments = filteredAssignments.length;
     const totalHours = filteredAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
-    const semester1Hours = filteredAssignments
-      .filter(a => a.semester === "1")
+    // OPTIMIZED: Use pre-filtered semester assignments
+    const semester1Hours = filteredAssignmentsBySemester.semester1
       .reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
-    const semester2Hours = filteredAssignments
-      .filter(a => a.semester === "2")
+    const semester2Hours = filteredAssignmentsBySemester.semester2
       .reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
     
     const overloadedTeachers = teacherWorkloads.filter(tw => tw.isOverloaded).length;
@@ -321,7 +347,7 @@ export default function MasterStundenplan() {
         `"${a.subject?.shortName}"`,
         a.hoursPerWeek,
         a.semester,
-        teacherWorkloads.find(tw => tw.teacher.id === a.teacherId)?.isOverloaded ? 'Überlastet' : 'Normal'
+        teacherWorkloadMap.get(a.teacherId)?.isOverloaded ? 'Überlastet' : 'Normal'
       ].join(','))
     ].join('\n');
 
@@ -335,7 +361,7 @@ export default function MasterStundenplan() {
       title: "Export erfolgreich",
       description: `${filteredAssignments.length} Zuweisungen als CSV exportiert.`,
     });
-  }, [filteredAssignments, teacherWorkloads, toast]);
+  }, [filteredAssignments, teacherWorkloadMap, toast]);
 
   const printView = useCallback(() => {
     window.print();
@@ -653,7 +679,7 @@ export default function MasterStundenplan() {
                     </TableHeader>
                     <TableBody>
                       {filteredAssignments.map((assignment) => {
-                        const teacherWorkload = teacherWorkloads.find(tw => tw.teacher.id === assignment.teacherId);
+                        const teacherWorkload = teacherWorkloadMap.get(assignment.teacherId);
                         const isOverloaded = teacherWorkload?.isOverloaded || false;
                         
                         return (
@@ -734,11 +760,16 @@ export default function MasterStundenplan() {
                     {teacherWorkloads
                       .filter(tw => {
                         if (selectedTeacher !== 'all' && tw.teacher.id !== selectedTeacher) return false;
-                        const teacherAssignments = extendedAssignments.filter(a => a.teacherId === tw.teacher.id);
+                        const teacherAssignments = teacherAssignmentsMap.get(tw.teacher.id) || [];
                         return teacherAssignments.length > 0;
                       })
                       .map((teacherWorkload) => {
-                        const teacherAssignments = filteredAssignments.filter(a => a.teacherId === teacherWorkload.teacher.id);
+                        const allTeacherAssignments = teacherAssignmentsMap.get(teacherWorkload.teacher.id) || [];
+                        const teacherAssignments = allTeacherAssignments.filter(a => 
+                          (selectedSemester === 'all' || a.semester === selectedSemester) &&
+                          (selectedClass === 'all' || a.classId === selectedClass) &&
+                          (selectedSubject === 'all' || a.subjectId === selectedSubject)
+                        );
                         const semester1Assignments = teacherAssignments.filter(a => a.semester === "1");
                         const semester2Assignments = teacherAssignments.filter(a => a.semester === "2");
                         
@@ -872,7 +903,7 @@ export default function MasterStundenplan() {
                   
                   {teacherWorkloads.filter(tw => {
                     if (selectedTeacher !== 'all' && tw.teacher.id !== selectedTeacher) return false;
-                    const teacherAssignments = extendedAssignments.filter(a => a.teacherId === tw.teacher.id);
+                    const teacherAssignments = teacherAssignmentsMap.get(tw.teacher.id) || [];
                     return teacherAssignments.length > 0;
                   }).length === 0 && (
                     <div className="text-center py-12">
@@ -901,7 +932,7 @@ export default function MasterStundenplan() {
                         1. Semester
                       </span>
                       <Badge variant="light" className="text-sm">
-                        {filteredAssignments.filter(a => a.semester === "1").length} Zuweisungen
+                        {filteredAssignmentsBySemester.semester1.length} Zuweisungen
                       </Badge>
                     </CardTitle>
                     <div className="flex justify-between text-sm text-muted-foreground">
@@ -916,16 +947,12 @@ export default function MasterStundenplan() {
                       {/* Group by class for Semester 1 */}
                       {classes
                         ?.filter(cls => {
-                          const classAssignments = filteredAssignments.filter(
-                            a => a.classId === cls.id && a.semester === "1"
-                          );
+                          const classAssignments = filteredAssignmentsByClassAndSemester.get(cls.id)?.semester1 || [];
                           return classAssignments.length > 0;
                         })
                         .sort((a, b) => a.name.localeCompare(b.name))
                         .map(cls => {
-                          const classAssignments = filteredAssignments.filter(
-                            a => a.classId === cls.id && a.semester === "1"
-                          );
+                          const classAssignments = filteredAssignmentsByClassAndSemester.get(cls.id)?.semester1 || [];
                           
                           return (
                             <div key={cls.id} className="border rounded-lg p-3 bg-card">
@@ -960,7 +987,7 @@ export default function MasterStundenplan() {
                                         <span className="font-mono">
                                           {assignment.hoursPerWeek}h
                                         </span>
-                                        {teacherWorkloads.find(tw => tw.teacher.id === assignment.teacherId)?.isOverloaded && (
+                                        {teacherWorkloadMap.get(assignment.teacherId)?.isOverloaded && (
                                           <AlertTriangle className="h-3 w-3 text-destructive" />
                                         )}
                                       </div>
@@ -971,7 +998,7 @@ export default function MasterStundenplan() {
                           );
                         })}
                       
-                      {filteredAssignments.filter(a => a.semester === "1").length === 0 && (
+                      {filteredAssignmentsBySemester.semester1.length === 0 && (
                         <div className="text-center py-8">
                           <Calendar className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                           <p className="text-sm text-muted-foreground">Keine Zuweisungen im 1. Semester</p>
@@ -990,7 +1017,7 @@ export default function MasterStundenplan() {
                         2. Semester
                       </span>
                       <Badge variant="light" className="text-sm">
-                        {filteredAssignments.filter(a => a.semester === "2").length} Zuweisungen
+                        {filteredAssignmentsBySemester.semester2.length} Zuweisungen
                       </Badge>
                     </CardTitle>
                     <div className="flex justify-between text-sm text-muted-foreground">
@@ -1005,16 +1032,12 @@ export default function MasterStundenplan() {
                       {/* Group by class for Semester 2 */}
                       {classes
                         ?.filter(cls => {
-                          const classAssignments = filteredAssignments.filter(
-                            a => a.classId === cls.id && a.semester === "2"
-                          );
+                          const classAssignments = filteredAssignmentsByClassAndSemester.get(cls.id)?.semester2 || [];
                           return classAssignments.length > 0;
                         })
                         .sort((a, b) => a.name.localeCompare(b.name))
                         .map(cls => {
-                          const classAssignments = filteredAssignments.filter(
-                            a => a.classId === cls.id && a.semester === "2"
-                          );
+                          const classAssignments = filteredAssignmentsByClassAndSemester.get(cls.id)?.semester2 || [];
                           
                           return (
                             <div key={cls.id} className="border rounded-lg p-3 bg-card">
@@ -1049,7 +1072,7 @@ export default function MasterStundenplan() {
                                         <span className="font-mono">
                                           {assignment.hoursPerWeek}h
                                         </span>
-                                        {teacherWorkloads.find(tw => tw.teacher.id === assignment.teacherId)?.isOverloaded && (
+                                        {teacherWorkloadMap.get(assignment.teacherId)?.isOverloaded && (
                                           <AlertTriangle className="h-3 w-3 text-destructive" />
                                         )}
                                       </div>
@@ -1060,7 +1083,7 @@ export default function MasterStundenplan() {
                           );
                         })}
                       
-                      {filteredAssignments.filter(a => a.semester === "2").length === 0 && (
+                      {filteredAssignmentsBySemester.semester2.length === 0 && (
                         <div className="text-center py-8">
                           <Calendar className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                           <p className="text-sm text-muted-foreground">Keine Zuweisungen im 2. Semester</p>
@@ -1094,13 +1117,13 @@ export default function MasterStundenplan() {
                     
                     <div className="text-center p-4 border rounded-lg">
                       <h4 className="font-semibold text-lg text-secondary">
-                        {filteredAssignments.filter(a => a.semester === "1").length + 
-                         filteredAssignments.filter(a => a.semester === "2").length}
+                        {filteredAssignmentsBySemester.semester1.length + 
+                         filteredAssignmentsBySemester.semester2.length}
                       </h4>
                       <p className="text-sm text-muted-foreground">Gesamt Zuweisungen</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        S1: {filteredAssignments.filter(a => a.semester === "1").length} | 
-                        S2: {filteredAssignments.filter(a => a.semester === "2").length}
+                        S1: {filteredAssignmentsBySemester.semester1.length} | 
+                        S2: {filteredAssignmentsBySemester.semester2.length}
                       </p>
                     </div>
                     
