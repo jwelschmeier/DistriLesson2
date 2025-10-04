@@ -822,11 +822,63 @@ async function validateGermanSchoolRules(
   errors: string[],
   warnings: string[]
 ): Promise<void> {
-  // Grade Progression Rules (5-10 for Realschule)
-  const invalidGradeProgression = migrationPreview.classPromotions.filter(
-    c => c.newGrade !== c.oldGrade + 1 && c.newGrade <= 10
-  );
+  // OPTIMIZED: Single pass through classPromotions to collect all class-related metrics
+  const invalidGradeProgression: typeof migrationPreview.classPromotions = [];
+  const grade10Classes: typeof migrationPreview.classPromotions = [];
+  const largeSizeClasses: typeof migrationPreview.classPromotions = [];
   
+  for (const classPromotion of migrationPreview.classPromotions) {
+    // Check for invalid grade progression (5-10 for Realschule)
+    if (classPromotion.newGrade !== classPromotion.oldGrade + 1 && classPromotion.newGrade <= 10) {
+      invalidGradeProgression.push(classPromotion);
+    }
+    
+    // Check for grade 10 classes (graduation)
+    if (classPromotion.oldGrade === 10) {
+      grade10Classes.push(classPromotion);
+    }
+    
+    // Check for large class sizes (>32 students)
+    if (classPromotion.studentCount > 32) {
+      largeSizeClasses.push(classPromotion);
+    }
+  }
+  
+  // OPTIMIZED: Single pass through assignmentDecisions to collect all assignment-related metrics
+  let grade10AssignmentsCount = 0;
+  const breakSubjectAssignments: typeof migrationPreview.assignmentDecisions = [];
+  let manualBreakSubjectsCount = 0;
+  const teacherAssignmentCounts = new Map<string, number>();
+  
+  for (const assignment of migrationPreview.assignmentDecisions) {
+    // Check for grade 10 assignments
+    if (assignment.oldGrade === 10) {
+      grade10AssignmentsCount++;
+    }
+    
+    // Check for break subjects (Biology Grade 7, Physics Grade 9)
+    const isBreakSubject = (
+      (assignment.subjectShortName === 'Bio' && assignment.oldGrade === 6 && assignment.newGrade === 7) ||
+      (assignment.subjectShortName === 'Ph' && assignment.oldGrade === 8 && assignment.newGrade === 9)
+    );
+    
+    if (isBreakSubject) {
+      breakSubjectAssignments.push(assignment);
+      if (assignment.decision === 'manual') {
+        manualBreakSubjectsCount++;
+      }
+    }
+    
+    // Calculate teacher workload (only for auto assignments)
+    if (assignment.decision === 'auto') {
+      const current = teacherAssignmentCounts.get(assignment.teacherId) || 0;
+      teacherAssignmentCounts.set(assignment.teacherId, current + assignment.hoursPerWeek);
+    }
+  }
+  
+  // Generate warnings based on collected metrics
+  
+  // Grade Progression Rules
   if (invalidGradeProgression.length > 0) {
     warnings.push(
       `${invalidGradeProgression.length} Klassen haben ungewöhnliche Stufenübergänge. ` +
@@ -835,36 +887,22 @@ async function validateGermanSchoolRules(
   }
   
   // Grade 10 Graduation Validation
-  const grade10Classes = migrationPreview.classPromotions.filter(c => c.oldGrade === 10);
-  const grade10Assignments = migrationPreview.assignmentDecisions.filter(a => a.oldGrade === 10);
-  
-  if (grade10Classes.length > 0 && grade10Assignments.length > 0) {
+  if (grade10Classes.length > 0 && grade10AssignmentsCount > 0) {
     warnings.push(
       `${grade10Classes.length} Klassen der Stufe 10 werden abgeschlossen. ` +
-      `${grade10Assignments.length} Lehrerzuweisungen sollten überprüft werden.`
+      `${grade10AssignmentsCount} Lehrerzuweisungen sollten überprüft werden.`
     );
   }
   
-  // Break Subject Validation (Biology Grade 7, Physics Grade 9)
-  const breakSubjectAssignments = migrationPreview.assignmentDecisions.filter(a => {
-    return (
-      (a.subjectShortName === 'Bio' && a.oldGrade === 6 && a.newGrade === 7) ||
-      (a.subjectShortName === 'Ph' && a.oldGrade === 8 && a.newGrade === 9)
+  // Break Subject Validation
+  if (manualBreakSubjectsCount > 0) {
+    warnings.push(
+      `${manualBreakSubjectsCount} Stundenwechselfächer (Bio Stufe 7, Physik Stufe 9) ` +
+      `erfordern manuelle Überprüfung der Stundenanzahl.`
     );
-  });
-  
-  if (breakSubjectAssignments.length > 0) {
-    const manualBreakSubjects = breakSubjectAssignments.filter(a => a.decision === 'manual');
-    if (manualBreakSubjects.length > 0) {
-      warnings.push(
-        `${manualBreakSubjects.length} Stundenwechselfächer (Bio Stufe 7, Physik Stufe 9) ` +
-        `erfordern manuelle Überprüfung der Stundenanzahl.`
-      );
-    }
   }
   
   // Class Size Validation
-  const largeSizeClasses = migrationPreview.classPromotions.filter(c => c.studentCount > 32);
   if (largeSizeClasses.length > 0) {
     warnings.push(
       `${largeSizeClasses.length} Klassen überschreiten empfohlene Klassengröße (32 Schüler): ` +
@@ -872,18 +910,13 @@ async function validateGermanSchoolRules(
     );
   }
   
-  // Teacher Workload Warnings (if available in migration data)
-  const teacherAssignmentCounts = new Map<string, number>();
-  migrationPreview.assignmentDecisions
-    .filter(a => a.decision === 'auto')
-    .forEach(a => {
-      const current = teacherAssignmentCounts.get(a.teacherId) || 0;
-      teacherAssignmentCounts.set(a.teacherId, current + a.hoursPerWeek);
-    });
-  
-  const overloadedTeachers = Array.from(teacherAssignmentCounts.entries())
-    .filter(([_, hours]) => hours > 28) // Standard teaching load is ~25-28 hours
-    .map(([teacherId, hours]) => ({ teacherId, hours }));
+  // Teacher Workload Warnings
+  const overloadedTeachers: Array<{ teacherId: string; hours: number }> = [];
+  for (const [teacherId, hours] of teacherAssignmentCounts.entries()) {
+    if (hours > 28) { // Standard teaching load is ~25-28 hours
+      overloadedTeachers.push({ teacherId, hours });
+    }
+  }
   
   if (overloadedTeachers.length > 0) {
     warnings.push(
