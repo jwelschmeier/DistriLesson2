@@ -270,6 +270,9 @@ export function detectNamingConflicts(
   const conflicts: Conflict[] = [];
   const nameCount = new Map<string, ClassPromotionPlan[]>();
   
+  // OPTIMIZED: Create Set for O(1) name lookups instead of O(m) includes()
+  const existingNamesSet = new Set(existingClassNames);
+  
   // Group promotions by target name
   promotions.forEach(promotion => {
     const name = promotion.newClassName;
@@ -292,9 +295,9 @@ export function detectNamingConflicts(
     }
   });
   
-  // Check for conflicts with existing classes in target year
+  // OPTIMIZED: Use Set.has() for O(1) lookup instead of Array.includes() O(m)
   promotions.forEach(promotion => {
-    if (existingClassNames.includes(promotion.newClassName)) {
+    if (existingNamesSet.has(promotion.newClassName)) {
       conflicts.push({
         type: 'class_name_collision',
         severity: 'error',
