@@ -710,6 +710,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/assignments/:id", async (req, res) => {
+    try {
+      const assignmentData = insertAssignmentSchema.partial().parse(req.body);
+      const assignment = await storage.updateAssignment(req.params.id, assignmentData);
+      res.json(assignment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update assignment" });
+    }
+  });
+
   // Bulk delete assignments - MUST be before /:id route!
   app.delete("/api/assignments/bulk", async (req, res) => {
     try {

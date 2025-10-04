@@ -4,12 +4,11 @@ import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Grid3X3, RefreshCw, AlertTriangle, CheckCircle, Users, BookOpen, Filter, Search } from 'lucide-react';
+import { Grid3X3, RefreshCw, AlertTriangle, CheckCircle, Users, BookOpen, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Teacher, Class, Subject, Assignment } from '@shared/schema';
 
@@ -36,54 +35,89 @@ type AssignmentData = Assignment & {
   subject?: Subject;
 };
 
-// Memoized matrix cell component for performance
+// Memoized matrix cell component for performance - NOW WITH TWO DROPDOWNS
 const MatrixCell = React.memo(({ 
   classId, 
   subjectId, 
   subjectShortName,
-  assignment, 
+  assignmentSem1,
+  assignmentSem2, 
   qualifiedTeachers,
-  remainingHoursByTeacher,
+  remainingHoursByTeacherSem1,
+  remainingHoursByTeacherSem2,
   onUpdate 
 }: {
   classId: string;
   subjectId: string;
   subjectShortName: string;
-  assignment?: AssignmentData;
+  assignmentSem1?: AssignmentData;
+  assignmentSem2?: AssignmentData;
   qualifiedTeachers: Teacher[];
-  remainingHoursByTeacher: Map<string, number>;
-  onUpdate: (classId: string, subjectId: string, teacherId: string | null) => void;
+  remainingHoursByTeacherSem1: Map<string, number>;
+  remainingHoursByTeacherSem2: Map<string, number>;
+  onUpdate: (classId: string, subjectId: string, semester: "1" | "2", teacherId: string | null) => void;
 }) => {
   return (
     <td className="p-2 border-r">
-      <Select
-        value={assignment?.teacherId || 'unassigned'}
-        onValueChange={(teacherId) => 
-          onUpdate(classId, subjectId, teacherId === 'unassigned' ? null : teacherId)
-        }
-      >
-        <SelectTrigger className="w-full h-8 text-xs">
-          <SelectValue placeholder="--" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="unassigned">--</SelectItem>
-          {qualifiedTeachers.map(teacher => {
-            const remainingHours = remainingHoursByTeacher.get(teacher.id) || 0;
-            return (
-              <SelectItem key={teacher.id} value={teacher.id}>
-                {teacher.shortName} ({remainingHours}h frei)
-              </SelectItem>
-            );
-          })}
-        </SelectContent>
-      </Select>
+      <div className="flex flex-col gap-1">
+        {/* 1. Halbjahr Dropdown */}
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-muted-foreground font-medium w-8">1.HJ</span>
+          <Select
+            value={assignmentSem1?.teacherId || 'unassigned'}
+            onValueChange={(teacherId) => 
+              onUpdate(classId, subjectId, "1", teacherId === 'unassigned' ? null : teacherId)
+            }
+          >
+            <SelectTrigger className="w-full h-7 text-xs">
+              <SelectValue placeholder="--" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unassigned">--</SelectItem>
+              {qualifiedTeachers.map(teacher => {
+                const remainingHours = remainingHoursByTeacherSem1.get(teacher.id) || 0;
+                return (
+                  <SelectItem key={teacher.id} value={teacher.id}>
+                    {teacher.shortName} ({remainingHours}h frei)
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        {/* 2. Halbjahr Dropdown */}
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-muted-foreground font-medium w-8">2.HJ</span>
+          <Select
+            value={assignmentSem2?.teacherId || 'unassigned'}
+            onValueChange={(teacherId) => 
+              onUpdate(classId, subjectId, "2", teacherId === 'unassigned' ? null : teacherId)
+            }
+          >
+            <SelectTrigger className="w-full h-7 text-xs">
+              <SelectValue placeholder="--" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unassigned">--</SelectItem>
+              {qualifiedTeachers.map(teacher => {
+                const remainingHours = remainingHoursByTeacherSem2.get(teacher.id) || 0;
+                return (
+                  <SelectItem key={teacher.id} value={teacher.id}>
+                    {teacher.shortName} ({remainingHours}h frei)
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
     </td>
   );
 });
 
 export default function LehrerFaecherZuordnung() {
   const { toast } = useToast();
-  const [selectedSemester, setSelectedSemester] = useState<"1" | "2">("1");
   const [gradeFilter, setGradeFilter] = useState<string>("alle");
   const [subjectFilter, setSubjectFilter] = useState<string>("alle");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -135,9 +169,10 @@ export default function LehrerFaecherZuordnung() {
     classesRef.current = classes;
   }, [classes]);
 
+  // Load assignments for BOTH semesters
   const { data: assignments = [], isLoading: assignmentsLoading } = useQuery<AssignmentData[]>({ 
-    queryKey: ['/api/assignments', selectedSemester],
-    queryFn: () => fetch(`/api/assignments?semester=${selectedSemester}&minimal=true`).then(res => res.json()),
+    queryKey: ['/api/assignments'],
+    queryFn: () => fetch(`/api/assignments?minimal=true`).then(res => res.json()),
     staleTime: 30000,
     retry: false
   });
@@ -147,9 +182,9 @@ export default function LehrerFaecherZuordnung() {
 
   // Abgleich mit Stundenpläne-Daten (vollständige API)
   const { refetch: refetchFullAssignments } = useQuery<AssignmentData[]>({ 
-    queryKey: ['/api/assignments-full', selectedSemester],
-    queryFn: () => fetch(`/api/assignments?semester=${selectedSemester}`).then(res => res.json()),
-    enabled: false // Nur auf Anfrage laden
+    queryKey: ['/api/assignments-full'],
+    queryFn: () => fetch(`/api/assignments`).then(res => res.json()),
+    enabled: false
   });
 
   // Datenabgleich zwischen Matrix und Stundenplänen
@@ -160,19 +195,17 @@ export default function LehrerFaecherZuordnung() {
   const performDataComparison = useCallback(async () => {
     setIsComparingData(true);
     try {
-      // Hole frische Daten von der vollständigen API
       const { data: schedules = [] } = await refetchFullAssignments();
       
       const differences: DataComparison['differences'] = [];
       const summary = { 
         total: 0, 
-        missing: 0,      // Nur in Matrix
-        conflicts: 0,    // Unterschiedliche Daten
-        consistent: 0,   // Gleiche Daten
-        extraInSchedules: 0 // Nur in Stundenplänen
+        missing: 0,
+        conflicts: 0,
+        consistent: 0,
+        extraInSchedules: 0
       };
 
-      // Erstelle Maps für einfachen Vergleich
       const matrixMap = new Map<string, AssignmentData>();
       const schedulesMap = new Map<string, AssignmentData>();
 
@@ -186,7 +219,6 @@ export default function LehrerFaecherZuordnung() {
         schedulesMap.set(key, a);
       });
 
-      // Vergleiche alle Matrix-Einträge
       matrixMap.forEach((matrixAssignment, key) => {
         summary.total++;
         const scheduleAssignment = schedulesMap.get(key);
@@ -216,7 +248,6 @@ export default function LehrerFaecherZuordnung() {
         }
       });
 
-      // Prüfe auf zusätzliche Einträge in Stundenplänen
       schedulesMap.forEach((scheduleAssignment, key) => {
         if (!matrixMap.has(key)) {
           summary.extraInSchedules++;
@@ -243,16 +274,14 @@ export default function LehrerFaecherZuordnung() {
   }, [assignments, refetchFullAssignments, toast]);
 
 
-  // Pre-computed indexes for O(1) lookups
+  // Pre-computed indexes for O(1) lookups (for BOTH semesters)
   const computedData = useMemo(() => {
-    // Assignment index: classId-subjectId-semester -> assignment
     const assignmentIndex = new Map<string, AssignmentData>();
     assignments.forEach(assignment => {
       const key = `${assignment.classId}-${assignment.subjectId}-${assignment.semester}`;
       assignmentIndex.set(key, assignment);
     });
 
-    // Teachers by subject short name (lowercased)
     const teachersBySubjectShort = new Map<string, Teacher[]>();
     subjects.forEach(subject => {
       const qualified = teachers.filter(teacher => 
@@ -264,11 +293,8 @@ export default function LehrerFaecherZuordnung() {
       teachersBySubjectShort.set(subject.shortName.toLowerCase(), qualified);
     });
 
-    // PERFORMANCE OPTIMIZATION: Pre-aggregate hours by teacher and semester for O(1) lookup
-    // Use combined key to include semester, avoiding per-teacher filtering
     const hoursByTeacherAndSemester = new Map<string, number>();
     assignments.forEach(assignment => {
-      // Skip assignments without a teacherId
       if (!assignment.teacherId) return;
       
       const key = `${assignment.teacherId}-${assignment.semester}`;
@@ -277,23 +303,27 @@ export default function LehrerFaecherZuordnung() {
       hoursByTeacherAndSemester.set(key, currentHours + additionalHours);
     });
 
-    // OPTIMIZED: Remaining hours by teacher - O(1) lookup per teacher
-    const remainingHoursByTeacher = new Map<string, number>();
+    // Create separate maps for remaining hours by teacher for each semester
+    const remainingHoursByTeacherSem1 = new Map<string, number>();
+    const remainingHoursByTeacherSem2 = new Map<string, number>();
+    
     teachers.forEach(teacher => {
-      const key = `${teacher.id}-${selectedSemester}`;
-      const assignedHours = hoursByTeacherAndSemester.get(key) || 0;
-      
+      const assignedHoursSem1 = hoursByTeacherAndSemester.get(`${teacher.id}-1`) || 0;
+      const assignedHoursSem2 = hoursByTeacherAndSemester.get(`${teacher.id}-2`) || 0;
       const maxHours = parseFloat(teacher.maxHours);
-      const remaining = Math.max(0, maxHours - assignedHours);
-      remainingHoursByTeacher.set(teacher.id, remaining);
+      
+      remainingHoursByTeacherSem1.set(teacher.id, Math.max(0, maxHours - assignedHoursSem1));
+      remainingHoursByTeacherSem2.set(teacher.id, Math.max(0, maxHours - assignedHoursSem2));
     });
 
     return {
       assignmentIndex,
       teachersBySubjectShort,
-      remainingHoursByTeacher
+      hoursByTeacherAndSemester,
+      remainingHoursByTeacherSem1,
+      remainingHoursByTeacherSem2
     };
-  }, [assignments, teachers, subjects, selectedSemester]);
+  }, [assignments, teachers, subjects]);
 
   // Filter logic
   const filteredClasses = useMemo(() => {
@@ -306,22 +336,19 @@ export default function LehrerFaecherZuordnung() {
     return subjects.filter(s => s.id === subjectFilter);
   }, [subjects, subjectFilter]);
 
-  // Helper: Extract subject short name from course name (e.g., "10FS" -> "FS")
+  // Helper: Extract subject short name from course name
   const extractSubjectFromCourseName = (courseName: string): string | null => {
-    // Course names like 10FS, 10SW, 10NW, etc. - extract the letters after the grade
     const match = courseName.match(/^\d{2}([A-Z]+)$/i);
     return match ? match[1].toUpperCase() : null;
   };
 
   // Get subjects relevant for a specific class
   const getSubjectsForClass = useCallback((classData: Class): Subject[] => {
-    // For courses (type='kurs'), only show the subject that matches the course name
     if (classData.type === 'kurs') {
       const courseSubject = extractSubjectFromCourseName(classData.name);
       if (courseSubject) {
         const subject = subjects.find(s => s.shortName.toUpperCase() === courseSubject);
         if (subject) {
-          // Apply subject filter if set
           if (subjectFilter === 'alle' || subject.id === subjectFilter) {
             return [subject];
           }
@@ -331,23 +358,27 @@ export default function LehrerFaecherZuordnung() {
       return [];
     }
     
-    // For regular classes (type='klasse'), show all subjects (or filtered)
     return filteredSubjects;
   }, [subjects, filteredSubjects, subjectFilter]);
 
-  // O(1) lookup functions
-  const getAssignment = useCallback((classId: string, subjectId: string) => {
-    const key = `${classId}-${subjectId}-${selectedSemester}`;
+  // O(1) lookup functions (with semester parameter)
+  const getAssignment = useCallback((classId: string, subjectId: string, semester: "1" | "2") => {
+    const key = `${classId}-${subjectId}-${semester}`;
     return computedData.assignmentIndex.get(key);
-  }, [computedData.assignmentIndex, selectedSemester]);
+  }, [computedData.assignmentIndex]);
 
   const getQualifiedTeachers = useCallback((subjectShortName: string) => {
     return computedData.teachersBySubjectShort.get(subjectShortName.toLowerCase()) || [];
   }, [computedData.teachersBySubjectShort]);
 
-  const getRemainingHours = useCallback((teacherId: string) => {
-    return computedData.remainingHoursByTeacher.get(teacherId) || 0;
-  }, [computedData.remainingHoursByTeacher]);
+  const getRemainingHours = useCallback((teacherId: string, semester: "1" | "2") => {
+    const key = `${teacherId}-${semester}`;
+    const assignedHours = computedData.hoursByTeacherAndSemester.get(key) || 0;
+    const teacher = teachers.find(t => t.id === teacherId);
+    if (!teacher) return 0;
+    const maxHours = parseFloat(teacher.maxHours);
+    return Math.max(0, maxHours - assignedHours);
+  }, [computedData.hoursByTeacherAndSemester, teachers]);
 
   // Get required hours from existing assignments or use default
   const getRequiredHours = (subjectId: string) => {
@@ -355,7 +386,7 @@ export default function LehrerFaecherZuordnung() {
     if (existingAssignments.length > 0) {
       return parseFloat(existingAssignments[0].hoursPerWeek);
     }
-    return 2; // Default
+    return 2;
   };
 
   // Mutations
@@ -364,7 +395,7 @@ export default function LehrerFaecherZuordnung() {
       return apiRequest('POST', '/api/assignments', assignment);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/assignments', selectedSemester] });
+      queryClient.invalidateQueries({ queryKey: ['/api/assignments'] });
       toast({ title: "Zuordnung erstellt", description: "Die Zuordnung wurde erfolgreich gespeichert." });
     },
     onError: (error: any) => {
@@ -381,8 +412,8 @@ export default function LehrerFaecherZuordnung() {
       return apiRequest('PATCH', `/api/assignments/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/assignments', selectedSemester] });
-      queryClient.invalidateQueries({ queryKey: ['/api/assignments-full', selectedSemester] });
+      queryClient.invalidateQueries({ queryKey: ['/api/assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/assignments-full'] });
       toast({ title: "Zuordnung aktualisiert", description: "Die Zuordnung wurde erfolgreich geändert." });
     },
     onError: (error: any) => {
@@ -399,7 +430,7 @@ export default function LehrerFaecherZuordnung() {
       return apiRequest('DELETE', `/api/assignments/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/assignments', selectedSemester] });
+      queryClient.invalidateQueries({ queryKey: ['/api/assignments'] });
       toast({ title: "Zuordnung gelöscht", description: "Die Zuordnung wurde entfernt." });
     },
     onError: (error: any) => {
@@ -424,7 +455,6 @@ export default function LehrerFaecherZuordnung() {
 
     setIsSyncing(true);
     try {
-      // Filtere nur "Nur in Stundenplänen" Einträge für Synchronisation
       const toSync = comparisonResult.differences.filter(diff => 
         diff.issue === 'Nur in Stundenplänen' && diff.schedulesData
       );
@@ -432,11 +462,9 @@ export default function LehrerFaecherZuordnung() {
       let syncedCount = 0;
       let errorCount = 0;
 
-      // Synchronisiere jeden fehlenden Eintrag
       for (const diff of toSync) {
         if (diff.schedulesData) {
           try {
-            // Erstelle den Assignment in der Matrix
             await createAssignmentMutation.mutateAsync({
               teacherId: diff.schedulesData.teacherId,
               classId: diff.schedulesData.classId,
@@ -452,7 +480,6 @@ export default function LehrerFaecherZuordnung() {
         }
       }
 
-      // Erfolgs-/Fehlermeldung
       if (syncedCount > 0) {
         toast({
           title: "Synchronisation erfolgreich",
@@ -460,8 +487,7 @@ export default function LehrerFaecherZuordnung() {
           variant: "default"
         });
         
-        // Aktualisiere die Daten und führe neuen Abgleich durch
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Kurz warten
+        await new Promise(resolve => setTimeout(resolve, 1000));
         performDataComparison();
       } else if (errorCount > 0) {
         toast({
@@ -483,16 +509,14 @@ export default function LehrerFaecherZuordnung() {
     }
   }, [comparisonResult, createAssignmentMutation, toast, performDataComparison]);
 
-  // Memoized update assignment function to prevent unnecessary re-renders
-  const updateAssignment = useCallback((classId: string, subjectId: string, teacherId: string | null) => {
+  // Updated updateAssignment function with semester parameter
+  const updateAssignment = useCallback((classId: string, subjectId: string, semester: "1" | "2", teacherId: string | null) => {
     const hours = getRequiredHours(subjectId);
-    const existingAssignment = getAssignment(classId, subjectId);
+    const existingAssignment = getAssignment(classId, subjectId, semester);
 
-    // Finde das Fach und die Klasse für Differenzierungsfach-Logik (using refs for always current values)
     const subject = subjectsRef.current.find(s => s.id === subjectId);
     const currentClass = classesRef.current.find(c => c.id === classId);
     
-    // Differenzierungsfächer für Jahrgänge 7-10 (normalisiert auf Großbuchstaben)
     const differenzierungsFaecher = ['FS', 'SW', 'NW', 'IF', 'TC', 'MUS'];
     const isDifferenzierungsfach = subject && differenzierungsFaecher.includes(subject.shortName.toUpperCase().trim());
     const isGrade7to10 = currentClass && currentClass.grade >= 7 && currentClass.grade <= 10;
@@ -502,14 +526,13 @@ export default function LehrerFaecherZuordnung() {
         deleteAssignmentMutation.mutate(existingAssignment.id);
       }
       
-      // Bei Differenzierungsfächern auch für alle anderen Klassen der Jahrgangsstufe löschen
       if (isDifferenzierungsfach && isGrade7to10 && currentClass) {
         const sameGradeClasses = classesRef.current.filter(c => 
           c.grade === currentClass.grade && c.id !== currentClass.id && c.type === 'klasse'
         );
         
         sameGradeClasses.forEach(cls => {
-          const otherAssignment = getAssignment(cls.id, subjectId);
+          const otherAssignment = getAssignment(cls.id, subjectId, semester);
           if (otherAssignment) {
             deleteAssignmentMutation.mutate(otherAssignment.id);
           }
@@ -522,14 +545,13 @@ export default function LehrerFaecherZuordnung() {
         hoursPerWeek: hours
       });
       
-      // Bei Differenzierungsfächern auch für alle anderen Klassen der Jahrgangsstufe aktualisieren
       if (isDifferenzierungsfach && isGrade7to10 && currentClass) {
         const sameGradeClasses = classesRef.current.filter(c => 
           c.grade === currentClass.grade && c.id !== currentClass.id && c.type === 'klasse'
         );
         
         sameGradeClasses.forEach(cls => {
-          const otherAssignment = getAssignment(cls.id, subjectId);
+          const otherAssignment = getAssignment(cls.id, subjectId, semester);
           if (otherAssignment) {
             updateAssignmentMutation.mutate({
               id: otherAssignment.id,
@@ -542,7 +564,7 @@ export default function LehrerFaecherZuordnung() {
               classId: cls.id,
               subjectId,
               hoursPerWeek: hours,
-              semester: selectedSemester
+              semester
             });
           }
         });
@@ -553,339 +575,99 @@ export default function LehrerFaecherZuordnung() {
         classId,
         subjectId,
         hoursPerWeek: hours,
-        semester: selectedSemester
+        semester
       });
       
-      // Bei Differenzierungsfächern auch für alle anderen Klassen der Jahrgangsstufe erstellen
       if (isDifferenzierungsfach && isGrade7to10 && currentClass) {
         const sameGradeClasses = classesRef.current.filter(c => 
           c.grade === currentClass.grade && c.id !== currentClass.id && c.type === 'klasse'
         );
         
         sameGradeClasses.forEach(cls => {
-          const otherAssignment = getAssignment(cls.id, subjectId);
+          const otherAssignment = getAssignment(cls.id, subjectId, semester);
           if (!otherAssignment) {
             createAssignmentMutation.mutate({
               teacherId,
               classId: cls.id,
               subjectId,
               hoursPerWeek: hours,
-              semester: selectedSemester
+              semester
             });
           }
         });
       }
     }
-  }, [selectedSemester, getRequiredHours, getAssignment, createAssignmentMutation, updateAssignmentMutation, deleteAssignmentMutation]);
+  }, [getRequiredHours, getAssignment, createAssignmentMutation, updateAssignmentMutation, deleteAssignmentMutation]);
 
   return (
     <div className="flex h-screen bg-muted/50 dark:bg-muted/20">
       <Sidebar />
       
       <main className="flex-1 overflow-auto">
-        {/* Header */}
         <header className="bg-card border-b border-border px-6 py-4">
           <div className="flex items-center gap-2">
             <Grid3X3 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
             <div>
               <h2 className="text-2xl font-semibold text-foreground">Lehrer-Fächer-Zuordnung</h2>
+              <p className="text-sm text-muted-foreground mt-1">Beide Halbjahre gleichzeitig bearbeiten</p>
               {isLoading && (
                 <div className="flex items-center gap-2 mt-2">
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-                  <span className="text-sm text-orange-600 font-medium">Daten werden geladen... (kann bis zu 10 Sekunden dauern)</span>
+                  <span className="text-sm text-orange-600 font-medium">Daten werden geladen...</span>
                 </div>
               )}
             </div>
           </div>
         </header>
 
-        <div className="p-6">
-          {/* Semester Tabs */}
-          <Tabs value={selectedSemester} onValueChange={(value) => setSelectedSemester(value as "1" | "2")} className="mb-6">
-            <TabsList className="grid w-fit grid-cols-2">
-              <TabsTrigger value="1" data-testid="tab-semester-1">1. Halbjahr</TabsTrigger>
-              <TabsTrigger value="2" data-testid="tab-semester-2">2. Halbjahr</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value={selectedSemester} className="space-y-6">
-              {/* Statistik-Kacheln */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card data-testid="card-assignments">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-muted-foreground text-xs font-medium">Zuordnungen</p>
-                        <p className="text-2xl font-bold text-foreground" data-testid="text-assignments-count">
-                          {isLoading ? '...' : assignments.filter(a => {
-                            // Filter by current filters and search
-                            const matchesGrade = gradeFilter === 'alle' || classes.find(c => c.id === a.classId)?.grade.toString() === gradeFilter;
-                            const matchesSubject = subjectFilter === 'alle' || a.subjectId === subjectFilter;
-                            const matchesSearch = searchQuery === '' || (() => {
-                              const teacher = teachers.find(t => t.id === a.teacherId);
-                              if (!teacher) return false;
-                              const query = searchQuery.toLowerCase();
-                              return teacher.firstName.toLowerCase().includes(query) ||
-                                     teacher.lastName.toLowerCase().includes(query) ||
-                                     teacher.shortName.toLowerCase().includes(query);
-                            })();
-                            return matchesGrade && matchesSubject && matchesSearch;
-                          }).length}
-                        </p>
-                      </div>
-                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-950 rounded-lg flex items-center justify-center">
-                        <Grid3X3 className="text-blue-600 dark:text-blue-400 h-5 w-5" />
-                      </div>
-                    </div>
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      {selectedSemester}. Halbjahr
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card data-testid="card-classes">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-muted-foreground text-xs font-medium">Klassen</p>
-                        <p className="text-2xl font-bold text-foreground" data-testid="text-classes-count">
-                          {isLoading ? '...' : filteredClasses.filter(classData => {
-                            if (searchQuery === '') return true;
-                            const classSubjects = getSubjectsForClass(classData);
-                            const classAssignments = classSubjects.map(subject => 
-                              getAssignment(classData.id, subject.id)
-                            ).filter(Boolean);
-                            return classAssignments.some(assignment => {
-                              const teacher = teachers.find(t => t.id === assignment?.teacherId);
-                              if (!teacher) return false;
-                              const query = searchQuery.toLowerCase();
-                              return (
-                                teacher.firstName.toLowerCase().includes(query) ||
-                                teacher.lastName.toLowerCase().includes(query) ||
-                                teacher.shortName.toLowerCase().includes(query)
-                              );
-                            });
-                          }).length}
-                        </p>
-                      </div>
-                      <div className="w-10 h-10 bg-green-100 dark:bg-green-950 rounded-lg flex items-center justify-center">
-                        <Users className="text-green-600 dark:text-green-400 h-5 w-5" />
-                      </div>
-                    </div>
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      {gradeFilter === 'alle' ? 'Alle Jahrgänge' : `Jahrgang ${gradeFilter}`}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card data-testid="card-subjects">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-muted-foreground text-xs font-medium">Fächer</p>
-                        <p className="text-2xl font-bold text-foreground" data-testid="text-subjects-count">
-                          {filteredSubjects.length}
-                        </p>
-                      </div>
-                      <div className="w-10 h-10 bg-orange-100 dark:bg-orange-950 rounded-lg flex items-center justify-center">
-                        <BookOpen className="text-orange-600 dark:text-orange-400 h-5 w-5" />
-                      </div>
-                    </div>
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      {subjectFilter === 'alle' ? 'Alle Fächer' : 'Gefiltert'}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card data-testid="card-search">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <p className="text-muted-foreground text-xs font-medium">Suche / Filter</p>
-                      </div>
-                      <div className="w-10 h-10 bg-purple-100 dark:bg-purple-950 rounded-lg flex items-center justify-center">
-                        <Search className="text-purple-600 dark:text-purple-400 h-5 w-5" />
-                      </div>
-                    </div>
-                    <Input
-                      type="text"
-                      placeholder="Lehrer suchen..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="h-8 text-xs"
-                      data-testid="input-search-teacher"
-                    />
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Filter Controls */}
-              <div className="flex gap-6 items-center">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="filter-grade">Jahrgangsstufe</Label>
-                  <Select value={gradeFilter} onValueChange={setGradeFilter}>
-                    <SelectTrigger className="w-40" id="filter-grade" data-testid="select-grade">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="alle">Alle Klassen</SelectItem>
-                      <SelectItem value="5">Jahrgang 5</SelectItem>
-                      <SelectItem value="6">Jahrgang 6</SelectItem>
-                      <SelectItem value="7">Jahrgang 7</SelectItem>
-                      <SelectItem value="8">Jahrgang 8</SelectItem>
-                      <SelectItem value="9">Jahrgang 9</SelectItem>
-                      <SelectItem value="10">Jahrgang 10</SelectItem>
-                    </SelectContent>
-                  </Select>
+        <div className="p-6 space-y-6">
+          {/* Statistik-Kacheln */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card data-testid="card-assignments">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-muted-foreground text-xs font-medium">Zuordnungen</p>
+                    <p className="text-2xl font-bold text-foreground" data-testid="text-assignments-count">
+                      {isLoading ? '...' : assignments.filter(a => {
+                        const matchesGrade = gradeFilter === 'alle' || classes.find(c => c.id === a.classId)?.grade.toString() === gradeFilter;
+                        const matchesSubject = subjectFilter === 'alle' || a.subjectId === subjectFilter;
+                        const matchesSearch = searchQuery === '' || (() => {
+                          const teacher = teachers.find(t => t.id === a.teacherId);
+                          if (!teacher) return false;
+                          const query = searchQuery.toLowerCase();
+                          return teacher.firstName.toLowerCase().includes(query) ||
+                                 teacher.lastName.toLowerCase().includes(query) ||
+                                 teacher.shortName.toLowerCase().includes(query);
+                        })();
+                        return matchesGrade && matchesSubject && matchesSearch;
+                      }).length}
+                    </p>
+                  </div>
+                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-950 rounded-lg flex items-center justify-center">
+                    <Grid3X3 className="text-blue-600 dark:text-blue-400 h-5 w-5" />
+                  </div>
                 </div>
-                
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="filter-subject">Fach</Label>
-                  <Select value={subjectFilter} onValueChange={setSubjectFilter}>
-                    <SelectTrigger className="w-48" id="filter-subject" data-testid="select-subject">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="alle">Alle Fächer</SelectItem>
-                      {subjects.map(subject => (
-                        <SelectItem key={subject.id} value={subject.id}>
-                          {subject.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  Beide Halbjahre
                 </div>
+              </CardContent>
+            </Card>
 
-                {/* Datenabgleich-Button */}
-                <div className="flex flex-col gap-2 ml-auto">
-                  <Label>&nbsp;</Label>
-                  <Button 
-                    onClick={performDataComparison}
-                    disabled={isComparingData}
-                    variant="outline"
-                    size="sm"
-                    data-testid="button-data-comparison"
-                  >
-                    {isComparingData ? (
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                    )}
-                    Datenabgleich
-                  </Button>
-                </div>
-              </div>
-
-              {/* Abgleichsergebnis anzeigen */}
-              {comparisonResult && (
-                <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    <div className="flex items-center justify-between mb-2">
-                      <strong>Datenabgleich-Ergebnis ({selectedSemester}. Halbjahr)</strong>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => setComparisonResult(null)}
-                        className="h-6 px-2 text-xs"
-                      >
-                        ✕
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-5 gap-3 text-sm mb-3">
-                      <div className="text-center" data-testid="summary-consistent">
-                        <div className="font-semibold text-green-600">{comparisonResult.summary.consistent}</div>
-                        <div className="text-xs text-muted-foreground">Konsistent</div>
-                      </div>
-                      <div className="text-center" data-testid="summary-missing">
-                        <div className="font-semibold text-blue-600">{comparisonResult.summary.missing}</div>
-                        <div className="text-xs text-muted-foreground">Nur Matrix</div>
-                      </div>
-                      <div className="text-center" data-testid="summary-extra">
-                        <div className="font-semibold text-orange-600">{comparisonResult.summary.extraInSchedules}</div>
-                        <div className="text-xs text-muted-foreground">Nur Stundenpläne</div>
-                      </div>
-                      <div className="text-center" data-testid="summary-conflicts">
-                        <div className="font-semibold text-red-600">{comparisonResult.summary.conflicts}</div>
-                        <div className="text-xs text-muted-foreground">Konflikte</div>
-                      </div>
-                      <div className="text-center" data-testid="summary-total">
-                        <div className="font-semibold">{comparisonResult.summary.total + comparisonResult.summary.extraInSchedules}</div>
-                        <div className="text-xs text-muted-foreground">Gesamt verglichen</div>
-                      </div>
-                    </div>
-                    {comparisonResult.differences.length > 0 ? (
-                      <div className="max-h-32 overflow-y-auto space-y-1">
-                        {comparisonResult.differences.slice(0, 5).map(diff => (
-                          <div key={diff.id} className="text-xs p-2 bg-white dark:bg-slate-800 rounded border">
-                            <span className="font-medium text-orange-600">{diff.issue}:</span> {diff.description}
-                          </div>
-                        ))}
-                        {comparisonResult.differences.length > 5 && (
-                          <div className="text-xs text-muted-foreground">
-                            ... und {comparisonResult.differences.length - 5} weitere Unterschiede
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex items-center text-green-600 text-sm">
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Alle Daten sind konsistent zwischen Matrix und Stundenplänen
-                      </div>
-                    )}
-                    
-                    {/* Synchronisations-Button */}
-                    {comparisonResult.differences.length > 0 && (
-                      <div className="mt-3 pt-3 border-t">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm text-muted-foreground">
-                            {comparisonResult.differences.filter(d => d.issue === 'Nur in Stundenplänen').length} Einträge können von Stundenplänen übernommen werden
-                          </p>
-                          <Button 
-                            onClick={performDataSynchronization}
-                            disabled={isSyncing}
-                            size="sm"
-                            variant="default"
-                            data-testid="button-sync-data"
-                          >
-                            {isSyncing ? (
-                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <RefreshCw className="h-4 w-4 mr-2" />
-                            )}
-                            Synchronisieren
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {/* Assignment Matrix */}
-              <div className="bg-card border rounded-lg overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="text-left p-3 font-medium text-sm border-r bg-muted/80">KLASSE</th>
-                        {filteredSubjects.map(subject => (
-                          <th key={subject.id} className="text-center p-3 font-medium text-sm border-r min-w-[120px]">
-                            {subject.shortName.toUpperCase()}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredClasses.map(classData => {
-                        // Get subjects relevant for this specific class
+            <Card data-testid="card-classes">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-muted-foreground text-xs font-medium">Klassen</p>
+                    <p className="text-2xl font-bold text-foreground" data-testid="text-classes-count">
+                      {isLoading ? '...' : filteredClasses.filter(classData => {
+                        if (searchQuery === '') return true;
                         const classSubjects = getSubjectsForClass(classData);
-                        
-                        // Prüfe ob Klasse basierend auf Suchquery angezeigt werden soll
-                        const classAssignments = classSubjects.map(subject => 
-                          getAssignment(classData.id, subject.id)
-                        ).filter(Boolean);
-                        
-                        const hasMatchingTeacher = searchQuery === '' || classAssignments.some(assignment => {
+                        const classAssignments = classSubjects.flatMap(subject => [
+                          getAssignment(classData.id, subject.id, "1"),
+                          getAssignment(classData.id, subject.id, "2")
+                        ]).filter(Boolean);
+                        return classAssignments.some(assignment => {
                           const teacher = teachers.find(t => t.id === assignment?.teacherId);
                           if (!teacher) return false;
                           const query = searchQuery.toLowerCase();
@@ -895,52 +677,279 @@ export default function LehrerFaecherZuordnung() {
                             teacher.shortName.toLowerCase().includes(query)
                           );
                         });
-
-                        if (!hasMatchingTeacher) return null;
-
-                        return (
-                          <tr key={classData.id} className="border-b hover:bg-muted/20">
-                            <td className="p-3 font-medium border-r bg-muted/30 text-sm">
-                              {classData.name}
-                            </td>
-                            {filteredSubjects.map(subject => {
-                              // Check if this subject is relevant for this class
-                              const isRelevant = classSubjects.some(cs => cs.id === subject.id);
-                              
-                              if (!isRelevant) {
-                                // Don't show interactive cell for irrelevant subjects
-                                return (
-                                  <td key={`${classData.id}-${subject.id}`} className="p-3 text-center border-r bg-muted/5">
-                                    <span className="text-muted-foreground text-xs">—</span>
-                                  </td>
-                                );
-                              }
-                              
-                              const assignment = getAssignment(classData.id, subject.id);
-                              const qualifiedTeachers = getQualifiedTeachers(subject.shortName);
-                              
-                              return (
-                                <MatrixCell
-                                  key={`${classData.id}-${subject.id}`}
-                                  classId={classData.id}
-                                  subjectId={subject.id}
-                                  subjectShortName={subject.shortName}
-                                  assignment={assignment}
-                                  qualifiedTeachers={qualifiedTeachers}
-                                  remainingHoursByTeacher={computedData.remainingHoursByTeacher}
-                                  onUpdate={updateAssignment}
-                                />
-                              );
-                            })}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                      }).length}
+                    </p>
+                  </div>
+                  <div className="w-10 h-10 bg-green-100 dark:bg-green-950 rounded-lg flex items-center justify-center">
+                    <Users className="text-green-600 dark:text-green-400 h-5 w-5" />
+                  </div>
                 </div>
-              </div>
-            </TabsContent>
-          </Tabs>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  {gradeFilter === 'alle' ? 'Alle Jahrgänge' : `Jahrgang ${gradeFilter}`}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card data-testid="card-subjects">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-muted-foreground text-xs font-medium">Fächer</p>
+                    <p className="text-2xl font-bold text-foreground" data-testid="text-subjects-count">
+                      {filteredSubjects.length}
+                    </p>
+                  </div>
+                  <div className="w-10 h-10 bg-orange-100 dark:bg-orange-950 rounded-lg flex items-center justify-center">
+                    <BookOpen className="text-orange-600 dark:text-orange-400 h-5 w-5" />
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  {subjectFilter === 'alle' ? 'Alle Fächer' : 'Gefiltert'}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card data-testid="card-search">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="text-muted-foreground text-xs font-medium">Suche / Filter</p>
+                  </div>
+                  <div className="w-10 h-10 bg-purple-100 dark:bg-purple-950 rounded-lg flex items-center justify-center">
+                    <Search className="text-purple-600 dark:text-purple-400 h-5 w-5" />
+                  </div>
+                </div>
+                <Input
+                  type="text"
+                  placeholder="Lehrer suchen..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-8 text-xs"
+                  data-testid="input-search-teacher"
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Filter Controls */}
+          <div className="flex gap-6 items-center">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="filter-grade">Jahrgangsstufe</Label>
+              <Select value={gradeFilter} onValueChange={setGradeFilter}>
+                <SelectTrigger className="w-40" id="filter-grade" data-testid="select-grade">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="alle">Alle Klassen</SelectItem>
+                  <SelectItem value="5">Jahrgang 5</SelectItem>
+                  <SelectItem value="6">Jahrgang 6</SelectItem>
+                  <SelectItem value="7">Jahrgang 7</SelectItem>
+                  <SelectItem value="8">Jahrgang 8</SelectItem>
+                  <SelectItem value="9">Jahrgang 9</SelectItem>
+                  <SelectItem value="10">Jahrgang 10</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="filter-subject">Fach</Label>
+              <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+                <SelectTrigger className="w-48" id="filter-subject" data-testid="select-subject">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="alle">Alle Fächer</SelectItem>
+                  {subjects.map(subject => (
+                    <SelectItem key={subject.id} value={subject.id}>
+                      {subject.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-2 ml-auto">
+              <Label>&nbsp;</Label>
+              <Button 
+                onClick={performDataComparison}
+                disabled={isComparingData}
+                variant="outline"
+                size="sm"
+                data-testid="button-data-comparison"
+              >
+                {isComparingData ? (
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Datenabgleich
+              </Button>
+            </div>
+          </div>
+
+          {/* Abgleichsergebnis anzeigen */}
+          {comparisonResult && (
+            <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <div className="flex items-center justify-between mb-2">
+                  <strong>Datenabgleich-Ergebnis (Beide Halbjahre)</strong>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setComparisonResult(null)}
+                    className="h-6 px-2 text-xs"
+                  >
+                    ✕
+                  </Button>
+                </div>
+                <div className="grid grid-cols-5 gap-3 text-sm mb-3">
+                  <div className="text-center" data-testid="summary-consistent">
+                    <div className="font-semibold text-green-600">{comparisonResult.summary.consistent}</div>
+                    <div className="text-xs text-muted-foreground">Konsistent</div>
+                  </div>
+                  <div className="text-center" data-testid="summary-missing">
+                    <div className="font-semibold text-blue-600">{comparisonResult.summary.missing}</div>
+                    <div className="text-xs text-muted-foreground">Nur Matrix</div>
+                  </div>
+                  <div className="text-center" data-testid="summary-extra">
+                    <div className="font-semibold text-orange-600">{comparisonResult.summary.extraInSchedules}</div>
+                    <div className="text-xs text-muted-foreground">Nur Stundenpläne</div>
+                  </div>
+                  <div className="text-center" data-testid="summary-conflicts">
+                    <div className="font-semibold text-red-600">{comparisonResult.summary.conflicts}</div>
+                    <div className="text-xs text-muted-foreground">Konflikte</div>
+                  </div>
+                  <div className="text-center" data-testid="summary-total">
+                    <div className="font-semibold">{comparisonResult.summary.total + comparisonResult.summary.extraInSchedules}</div>
+                    <div className="text-xs text-muted-foreground">Gesamt verglichen</div>
+                  </div>
+                </div>
+                {comparisonResult.differences.length > 0 ? (
+                  <div className="max-h-32 overflow-y-auto space-y-1">
+                    {comparisonResult.differences.slice(0, 5).map(diff => (
+                      <div key={diff.id} className="text-xs p-2 bg-white dark:bg-slate-800 rounded border">
+                        <span className="font-medium text-orange-600">{diff.issue}:</span> {diff.description}
+                      </div>
+                    ))}
+                    {comparisonResult.differences.length > 5 && (
+                      <div className="text-xs text-muted-foreground">
+                        ... und {comparisonResult.differences.length - 5} weitere Unterschiede
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center text-green-600 text-sm">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Alle Daten sind konsistent zwischen Matrix und Stundenplänen
+                  </div>
+                )}
+                
+                {comparisonResult.differences.length > 0 && (
+                  <div className="mt-3 pt-3 border-t">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-muted-foreground">
+                        {comparisonResult.differences.filter(d => d.issue === 'Nur in Stundenplänen').length} Einträge können von Stundenplänen übernommen werden
+                      </p>
+                      <Button 
+                        onClick={performDataSynchronization}
+                        disabled={isSyncing}
+                        size="sm"
+                        variant="default"
+                        data-testid="button-sync-data"
+                      >
+                        {isSyncing ? (
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                        )}
+                        Synchronisieren
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Assignment Matrix */}
+          <div className="bg-card border rounded-lg overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="text-left p-3 font-medium text-sm border-r bg-muted/80">KLASSE</th>
+                    {filteredSubjects.map(subject => (
+                      <th key={subject.id} className="text-center p-3 font-medium text-sm border-r min-w-[180px]">
+                        {subject.shortName.toUpperCase()}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredClasses.map(classData => {
+                    const classSubjects = getSubjectsForClass(classData);
+                    
+                    const classAssignments = classSubjects.flatMap(subject => [
+                      getAssignment(classData.id, subject.id, "1"),
+                      getAssignment(classData.id, subject.id, "2")
+                    ]).filter(Boolean);
+                    
+                    const hasMatchingTeacher = searchQuery === '' || classAssignments.some(assignment => {
+                      const teacher = teachers.find(t => t.id === assignment?.teacherId);
+                      if (!teacher) return false;
+                      const query = searchQuery.toLowerCase();
+                      return (
+                        teacher.firstName.toLowerCase().includes(query) ||
+                        teacher.lastName.toLowerCase().includes(query) ||
+                        teacher.shortName.toLowerCase().includes(query)
+                      );
+                    });
+
+                    if (!hasMatchingTeacher) return null;
+
+                    return (
+                      <tr key={classData.id} className="border-b hover:bg-muted/20">
+                        <td className="p-3 font-medium border-r bg-muted/30 text-sm">
+                          {classData.name}
+                        </td>
+                        {filteredSubjects.map(subject => {
+                          const isRelevant = classSubjects.some(cs => cs.id === subject.id);
+                          
+                          if (!isRelevant) {
+                            return (
+                              <td key={`${classData.id}-${subject.id}`} className="p-3 text-center border-r bg-muted/5">
+                                <span className="text-muted-foreground text-xs">—</span>
+                              </td>
+                            );
+                          }
+                          
+                          const assignmentSem1 = getAssignment(classData.id, subject.id, "1");
+                          const assignmentSem2 = getAssignment(classData.id, subject.id, "2");
+                          const qualifiedTeachers = getQualifiedTeachers(subject.shortName);
+                          
+                          return (
+                            <MatrixCell
+                              key={`${classData.id}-${subject.id}`}
+                              classId={classData.id}
+                              subjectId={subject.id}
+                              subjectShortName={subject.shortName}
+                              assignmentSem1={assignmentSem1}
+                              assignmentSem2={assignmentSem2}
+                              qualifiedTeachers={qualifiedTeachers}
+                              remainingHoursByTeacherSem1={computedData.remainingHoursByTeacherSem1}
+                              remainingHoursByTeacherSem2={computedData.remainingHoursByTeacherSem2}
+                              onUpdate={updateAssignment}
+                            />
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </main>
     </div>
