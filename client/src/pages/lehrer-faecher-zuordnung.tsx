@@ -450,30 +450,10 @@ export default function LehrerFaecherZuordnung() {
     const subject = subjects.find(s => s.id === subjectId);
     const currentClass = classes.find(c => c.id === classId);
     
-    console.log('🔧 updateAssignment called:', { 
-      classId, 
-      subjectId, 
-      teacherId,
-      subjectFound: !!subject, 
-      classFound: !!currentClass,
-      subjectName: subject?.shortName,
-      className: currentClass?.name
-    });
-    
     // Differenzierungsfächer für Jahrgänge 7-10 (normalisiert auf Großbuchstaben)
     const differenzierungsFaecher = ['FS', 'SW', 'NW', 'IF', 'TC', 'MUS'];
     const isDifferenzierungsfach = subject && differenzierungsFaecher.includes(subject.shortName.toUpperCase().trim());
     const isGrade7to10 = currentClass && currentClass.grade >= 7 && currentClass.grade <= 10;
-
-    console.log('🔍 Differenzierungsfach-Check:', {
-      subject: subject?.shortName,
-      normalized: subject?.shortName.toUpperCase().trim(),
-      isDiff: isDifferenzierungsfach,
-      class: currentClass?.name,
-      grade: currentClass?.grade,
-      isGrade7to10,
-      willReplicate: isDifferenzierungsfach && isGrade7to10
-    });
 
     if (teacherId === null || teacherId === 'unassigned') {
       if (existingAssignment) {
@@ -483,7 +463,7 @@ export default function LehrerFaecherZuordnung() {
       // Bei Differenzierungsfächern auch für alle anderen Klassen der Jahrgangsstufe löschen
       if (isDifferenzierungsfach && isGrade7to10 && currentClass) {
         const sameGradeClasses = classes.filter(c => 
-          c.grade === currentClass.grade && c.id !== currentClass.id
+          c.grade === currentClass.grade && c.id !== currentClass.id && c.type === 'klasse'
         );
         
         sameGradeClasses.forEach(cls => {
@@ -503,7 +483,7 @@ export default function LehrerFaecherZuordnung() {
       // Bei Differenzierungsfächern auch für alle anderen Klassen der Jahrgangsstufe aktualisieren
       if (isDifferenzierungsfach && isGrade7to10 && currentClass) {
         const sameGradeClasses = classes.filter(c => 
-          c.grade === currentClass.grade && c.id !== currentClass.id
+          c.grade === currentClass.grade && c.id !== currentClass.id && c.type === 'klasse'
         );
         
         sameGradeClasses.forEach(cls => {
@@ -537,20 +517,11 @@ export default function LehrerFaecherZuordnung() {
       // Bei Differenzierungsfächern auch für alle anderen Klassen der Jahrgangsstufe erstellen
       if (isDifferenzierungsfach && isGrade7to10 && currentClass) {
         const sameGradeClasses = classes.filter(c => 
-          c.grade === currentClass.grade && c.id !== currentClass.id
+          c.grade === currentClass.grade && c.id !== currentClass.id && c.type === 'klasse'
         );
-        
-        console.log('📋 Repliziere zu anderen Klassen:', {
-          currentClass: currentClass.name,
-          subject: subject?.shortName,
-          sameGradeClassesCount: sameGradeClasses.length,
-          sameGradeClasses: sameGradeClasses.map(c => c.name),
-          semester: selectedSemester
-        });
         
         sameGradeClasses.forEach(cls => {
           const otherAssignment = getAssignment(cls.id, subjectId);
-          console.log(`  → ${cls.name}: ${otherAssignment ? 'existiert bereits' : 'wird erstellt'}`);
           if (!otherAssignment) {
             createAssignmentMutation.mutate({
               teacherId,
