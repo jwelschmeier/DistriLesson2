@@ -104,10 +104,22 @@ export default function KlassenMatrix() {
   const SUBJECT_ORDER = ['D', 'M', 'E', 'FS', 'NW', 'SW', 'IF', 'TC', 'PK', 'GE', 'EK', 'BI', 'PH', 'CH', 'HW', 'KU', 'MU', 'TX', 'ER', 'KR', 'PP', 'SO', 'BO', 'SP'];
   const RELIGION_SUBJECTS = new Set(['ER', 'KR', 'PP']);
   
-  // Sort subjects according to predefined order
+  // Get religion courses for the current grade
+  const religionCourses = useMemo(() => {
+    if (!selectedClass) return [];
+    return allClasses
+      .filter(c => 
+        c.grade === selectedClass.grade && 
+        c.type === 'kurs' && 
+        (c.name.includes('ER') || c.name.includes('KR') || c.name.includes('PP'))
+      )
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [allClasses, selectedClass]);
+  
+  // Sort subjects according to predefined order (exclude ER, KR, PP as they are shown as courses)
   const sortedSubjects = useMemo(() => {
     return subjects
-      .filter(subject => SUBJECT_ORDER.includes(subject.shortName))
+      .filter(subject => SUBJECT_ORDER.includes(subject.shortName) && !RELIGION_SUBJECTS.has(subject.shortName))
       .sort((a, b) => {
         const indexA = SUBJECT_ORDER.indexOf(a.shortName);
         const indexB = SUBJECT_ORDER.indexOf(b.shortName);
@@ -418,8 +430,8 @@ export default function KlassenMatrix() {
               )}
             </div>
             
-            <div className="border rounded-lg">
-              <div className="overflow-x-auto">
+            <div className="border rounded-lg overflow-x-auto">
+              <div>
                 <table className="min-w-max border-collapse">
                   <thead>
                     <tr className="bg-muted/50">
@@ -434,6 +446,18 @@ export default function KlassenMatrix() {
                           }`}
                         >
                           {subject.shortName.toUpperCase()}
+                        </th>
+                      ))}
+                      {religionCourses.map((course, index) => (
+                        <th 
+                          key={course.id} 
+                          className={`border-b border-r p-3 text-center text-sm font-medium min-w-[140px] ${
+                            index % 2 === 0 
+                              ? 'bg-green-100 dark:bg-green-900/50' 
+                              : 'bg-teal-100 dark:bg-teal-900/50'
+                          }`}
+                        >
+                          {course.name}
                         </th>
                       ))}
                     </tr>
@@ -497,6 +521,89 @@ export default function KlassenMatrix() {
                                   handleTeacherChange(classItem.id, "2", subject.id, teacherId === 'unassigned' ? null : teacherId)
                                 }
                                 data-testid={`select-teacher-${classItem.id}-${subject.id}-semester-2`}
+                              >
+                                <SelectTrigger className="w-full h-8 text-xs">
+                                  <SelectValue placeholder="--" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="unassigned">--</SelectItem>
+                                  {qualifiedForSubject.map(teacher => {
+                                    const workload = getTeacherWorkload(teacher.id, "2");
+                                    return (
+                                      <SelectItem key={teacher.id} value={teacher.id}>
+                                        {teacher.shortName} ({workload.assigned}/{workload.total}h)
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </td>
+                        );
+                      })}
+                      
+                      {/* Religion Courses */}
+                      {religionCourses.map((course, index) => {
+                        // For religion courses, we need to find the subject based on course name
+                        const courseSubjectName = course.name.includes('ER') ? 'ER' : 
+                                                  course.name.includes('KR') ? 'KR' : 
+                                                  course.name.includes('PP') ? 'PP' : '';
+                        const courseSubject = subjects.find(s => s.shortName === courseSubjectName);
+                        
+                        if (!courseSubject) return null;
+                        
+                        // Get teachers qualified for this religion subject
+                        const qualifiedForSubject = teachers.filter(teacher => 
+                          teacher.subjects.includes(courseSubjectName)
+                        );
+                        
+                        // Get current teacher assignments (using course.id as the "class" for assignment)
+                        const currentTeacher1 = getCurrentTeacher(course.id, courseSubject.id, "1");
+                        const currentTeacher2 = getCurrentTeacher(course.id, courseSubject.id, "2");
+                        
+                        return (
+                          <td 
+                            key={course.id} 
+                            className={`border-b border-r p-2 text-center ${
+                              index % 2 === 0 
+                                ? 'bg-green-50 dark:bg-green-900/30' 
+                                : 'bg-teal-50 dark:bg-teal-900/30'
+                            }`}
+                          >
+                            <div className="space-y-2">
+                              {/* 1. Halbjahr */}
+                              <div className="text-xs text-muted-foreground font-medium">1. HJ</div>
+                              <Select
+                                value={currentTeacher1 || 'unassigned'}
+                                onValueChange={(teacherId) => 
+                                  handleTeacherChange(course.id, "1", courseSubject.id, teacherId === 'unassigned' ? null : teacherId)
+                                }
+                                data-testid={`select-teacher-${course.id}-${courseSubject.id}-semester-1`}
+                              >
+                                <SelectTrigger className="w-full h-8 text-xs">
+                                  <SelectValue placeholder="--" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="unassigned">--</SelectItem>
+                                  {qualifiedForSubject.map(teacher => {
+                                    const workload = getTeacherWorkload(teacher.id, "1");
+                                    return (
+                                      <SelectItem key={teacher.id} value={teacher.id}>
+                                        {teacher.shortName} ({workload.assigned}/{workload.total}h)
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectContent>
+                              </Select>
+                              
+                              {/* 2. Halbjahr */}
+                              <div className="text-xs text-muted-foreground font-medium">2. HJ</div>
+                              <Select
+                                value={currentTeacher2 || 'unassigned'}
+                                onValueChange={(teacherId) => 
+                                  handleTeacherChange(course.id, "2", courseSubject.id, teacherId === 'unassigned' ? null : teacherId)
+                                }
+                                data-testid={`select-teacher-${course.id}-${courseSubject.id}-semester-2`}
                               >
                                 <SelectTrigger className="w-full h-8 text-xs">
                                   <SelectValue placeholder="--" />
