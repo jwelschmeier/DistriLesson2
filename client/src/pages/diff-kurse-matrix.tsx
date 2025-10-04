@@ -96,7 +96,7 @@ export default function DiffKurseMatrix() {
 
   // Helper: Get current teacher (with changes)
   const getCurrentTeacher = (classId: string, subjectId: string, semester: "1" | "2"): string | null => {
-    const key = `${classId}-${subjectId}`;
+    const key = `${classId}::${subjectId}`;
     const changes = semester === "1" ? changes1 : changes2;
     const assignments = semester === "1" ? assignments1 : assignments2;
     
@@ -127,7 +127,7 @@ export default function DiffKurseMatrix() {
 
     // Apply changes
     Object.entries(changes).forEach(([key, newTeacherId]) => {
-      const [classId, subjectId] = key.split('-');
+      const [classId, subjectId] = key.split('::');
       const oldAssignment = assignments.find(a => a.classId === classId && a.subjectId === subjectId);
       
       if (oldAssignment?.teacherId === teacherId && newTeacherId !== teacherId) {
@@ -147,7 +147,7 @@ export default function DiffKurseMatrix() {
 
   // Handle teacher change
   const handleTeacherChange = (classId: string, semester: "1" | "2", subjectId: string, teacherId: string | null) => {
-    const key = `${classId}-${subjectId}`;
+    const key = `${classId}::${subjectId}`;
     if (semester === "1") {
       setChanges1(prev => ({ ...prev, [key]: teacherId }));
     } else {
@@ -166,7 +166,7 @@ export default function DiffKurseMatrix() {
       ];
 
       for (const { key, teacherId, semester } of allChanges) {
-        const [classId, subjectId] = key.split('-');
+        const [classId, subjectId] = key.split('::');
         const assignments = semester === "1" ? assignments1 : assignments2;
         const existing = assignments.find(a => a.classId === classId && a.subjectId === subjectId);
 
