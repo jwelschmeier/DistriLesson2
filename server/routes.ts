@@ -636,6 +636,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const assignmentData = insertAssignmentSchema.parse(req.body);
       const assignment = await storage.createAssignment(assignmentData);
+      
+      // Auto-replicate differentiation subjects across parallel classes
+      const subject = await storage.getSubject(assignmentData.subjectId);
+      const classData = await storage.getClass(assignmentData.classId);
+      
+      if (subject && classData) {
+        const { getParallelGroupForSubject } = await import("@shared/parallel-subjects");
+        const parallelGroup = getParallelGroupForSubject(subject.shortName);
+        
+        // Check if this is a differentiation subject and class is in grades 7-10
+        if (parallelGroup?.id === "Differenzierung" && classData.grade >= 7 && classData.grade <= 10) {
+          // Find all parallel classes in the same grade (regular classes with pattern like 07A, 07B, etc.)
+          const allClasses = await storage.getClasses();
+          const parallelClasses = allClasses.filter(c => 
+            c.grade === classData.grade && 
+            c.id !== classData.id && 
+            c.type === 'klasse' &&
+            /^\d{2}[A-Z]$/.test(c.name)
+          );
+          
+          // Get all assignments to check for existing ones
+          const allAssignments = await storage.getAssignments();
+          
+          // Create assignments for parallel classes if they don't exist
+          for (const parallelClass of parallelClasses) {
+            // Check if assignment already exists for this class + subject + semester
+            const exists = allAssignments.some(a => 
+              a.classId === parallelClass.id && 
+              a.subjectId === assignmentData.subjectId && 
+              a.semester === assignmentData.semester
+            );
+            
+            if (!exists) {
+              await storage.createAssignment({
+                classId: parallelClass.id,
+                subjectId: assignmentData.subjectId,
+                teacherId: assignmentData.teacherId,
+                hoursPerWeek: assignmentData.hoursPerWeek,
+                semester: assignmentData.semester,
+                schoolYearId: assignmentData.schoolYearId
+              });
+            }
+          }
+        }
+      }
+      
       res.status(201).json(assignment);
     } catch (error) {
       if (error instanceof z.ZodError) {
