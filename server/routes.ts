@@ -708,13 +708,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const subjects = await storage.getSubjects();
       const classes = await storage.getClasses();
       
+      // PERFORMANCE OPTIMIZATION: Create O(1) lookup maps by ID
+      const teacherMap = new Map(teachers.map(t => [t.id, t]));
+      const subjectMap = new Map(subjects.map(s => [s.id, s]));
+      const classMap = new Map(classes.map(c => [c.id, c]));
+      
       // Group assignments by teacher-subject-class combination
       const assignmentMap = new Map<string, { semester1?: any, semester2?: any }>();
       
       for (const assignment of assignments) {
-        const teacher = teachers.find(t => t.id === assignment.teacherId);
-        const subject = subjects.find(s => s.id === assignment.subjectId);
-        const classObj = classes.find(c => c.id === assignment.classId);
+        const teacher = teacherMap.get(assignment.teacherId);
+        const subject = subjectMap.get(assignment.subjectId);
+        const classObj = classMap.get(assignment.classId);
         
         if (!teacher || !subject || !classObj) continue;
         
