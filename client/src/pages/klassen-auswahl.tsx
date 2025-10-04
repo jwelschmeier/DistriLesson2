@@ -73,7 +73,9 @@ export default function KlassenAuswahl() {
     return acc;
   }, {} as Record<number, Class[]>);
 
-  const grades = Object.keys(filteredClassesByGrade).map(Number).sort();
+  const grades = Object.keys(filteredClassesByGrade)
+    .map(Number)
+    .sort((a, b) => a - b);
 
   return (
     <div className="flex h-screen bg-muted/50 dark:bg-muted/20">
