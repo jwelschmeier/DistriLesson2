@@ -402,12 +402,12 @@ export default function Klassenverwaltung() {
   });
 
   const handleClassSubmit = async (data: ClassFormData) => {
-    // Convert empty strings to null for decimal fields
+    // Convert empty strings, null, and undefined to null for decimal fields
     const sanitizedData = {
       ...data,
-      targetHoursTotal: data.targetHoursTotal === "" ? null : data.targetHoursTotal,
-      targetHoursSemester1: data.targetHoursSemester1 === "" ? null : data.targetHoursSemester1,
-      targetHoursSemester2: data.targetHoursSemester2 === "" ? null : data.targetHoursSemester2,
+      targetHoursTotal: (data.targetHoursTotal === "" || data.targetHoursTotal === null || data.targetHoursTotal === undefined) ? null : data.targetHoursTotal,
+      targetHoursSemester1: (data.targetHoursSemester1 === "" || data.targetHoursSemester1 === null || data.targetHoursSemester1 === undefined) ? null : data.targetHoursSemester1,
+      targetHoursSemester2: (data.targetHoursSemester2 === "" || data.targetHoursSemester2 === null || data.targetHoursSemester2 === undefined) ? null : data.targetHoursSemester2,
     };
     
     if (editingClass) {
