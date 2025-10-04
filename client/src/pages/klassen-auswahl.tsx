@@ -20,11 +20,11 @@ export default function KlassenAuswahl() {
   // Differenzierungsfächer (FS, SW, NW, IF, TC, MUS)
   const DIFF_SUBJECTS = ['FS', 'SW', 'NW', 'IF', 'TC', 'MUS'];
   
-  // Helper: Check if a course is a Diff-Kurs (grade 7-9, one of the diff subjects)
+  // Helper: Check if a course is a Diff-Kurs (grade 7-10, one of the diff subjects)
   const isDiffKurs = (classItem: Class): boolean => {
     if (classItem.type !== 'kurs') return false;
     const grade = classItem.grade;
-    if (grade < 7 || grade > 9) return false;
+    if (grade < 7 || grade > 10) return false;
     
     // Extract subject from course name (e.g., "07FS" -> "FS")
     const match = classItem.name.match(/^\d{2}([A-Z]+)$/i);
