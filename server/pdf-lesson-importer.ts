@@ -64,11 +64,12 @@ export class PdfLessonImporter {
     const teacherMap = this.createTeacherMap(existingTeachers);
     const subjectMap = this.createSubjectMap(existingSubjects);
 
-    // PERFORMANCE OPTIMIZATION: Create Set for O(1) duplicate assignment detection
-    const existingAssignmentKeys = new Set(
-      existingAssignments.map(a => 
-        `${a.classId}-${a.teacherId}-${a.subjectId}-${a.semester}`
-      )
+    // PERFORMANCE OPTIMIZATION: Create Map for O(1) duplicate assignment detection with full data
+    const existingAssignmentMap = new Map(
+      existingAssignments.map(a => {
+        const key = `${a.classId}-${a.teacherId}-${a.subjectId}-${a.semester}`;
+        return [key, a];
+      })
     );
 
     const matches: ImportMatch[] = [];
@@ -155,18 +156,19 @@ export class PdfLessonImporter {
           }
         }
 
-        // OPTIMIZED: O(1) Set lookup with composite key instead of O(n) .find()
+        // OPTIMIZED: O(1) Map lookup with composite key instead of O(n) .find()
         if (match.classId && match.teacherId && match.subjectId) {
           const semesterStr = lesson.semester.toString() as "1" | "2";
           const assignmentKey = `${match.classId}-${match.teacherId}-${match.subjectId}-${semesterStr}`;
           
-          if (existingAssignmentKeys.has(assignmentKey)) {
+          const existingAssignment = existingAssignmentMap.get(assignmentKey);
+          if (existingAssignment) {
             conflicts.push({
               type: 'duplicate_assignment',
               message: `Zuweisung bereits vorhanden: ${lesson.subject} bei ${lesson.teacherShortName} für Klasse ${lesson.className} (Semester ${lesson.semester})`,
               data: { 
                 lesson,
-                existingAssignment: null, // Not needed for duplicate detection
+                existingAssignment, // Preserve full assignment data for downstream consumers
                 action: 'update_or_skip'
               }
             });
