@@ -1587,25 +1587,26 @@ export class DatabaseStorage implements IStorage {
           tx.select().from(subjects)
         ]);
 
+        // OPTIMIZED: Pre-group students by classId to avoid repeated filtering
+        const studentsByClass = new Map<string, typeof currentStudents>();
+        for (const student of currentStudents) {
+          if (!studentsByClass.has(student.classId!)) {
+            studentsByClass.set(student.classId!, []);
+          }
+          studentsByClass.get(student.classId!)!.push(student);
+        }
+
         // 5. Create new classes for continuing students and migrate students
         const newClassMap = new Map<string, string>(); // oldClassId -> newClassId
+        const graduatingStudentIds: string[] = [];
+        const continuingStudentUpdates: Array<{ studentIds: string[], newClassId: string, newGrade: number }> = [];
 
         for (const currentClass of currentClasses) {
           if (currentClass.grade === 10) {
-            // Archive graduating class - migrate students out of the class
-            const graduatingStudents = currentStudents.filter(s => s.classId === currentClass.id);
-            
-            for (const student of graduatingStudents) {
-              await tx
-                .update(students)
-                .set({ 
-                  classId: null, // Remove from class (graduated)
-                  schoolYearId: newSchoolYear.id // But keep in new school year for record keeping
-                })
-                .where(eq(students.id, student.id));
-              migratedStudents++;
-            }
-            
+            // Archive graduating class - collect student IDs for batch update
+            const graduatingStudents = studentsByClass.get(currentClass.id) || [];
+            graduatingStudentIds.push(...graduatingStudents.map(s => s.id));
+            migratedStudents += graduatingStudents.length;
             graduatedClasses++;
           } else {
             // Create new class for next grade
@@ -1625,20 +1626,38 @@ export class DatabaseStorage implements IStorage {
             newClassMap.set(currentClass.id, newClass.id);
             migratedClasses++;
 
-            // Migrate students to new class
-            const classStudents = currentStudents.filter(s => s.classId === currentClass.id);
-            for (const student of classStudents) {
-              await tx
-                .update(students)
-                .set({ 
-                  classId: newClass.id,
-                  grade: newGrade,
-                  schoolYearId: newSchoolYear.id
-                })
-                .where(eq(students.id, student.id));
-              migratedStudents++;
+            // Collect students for batch update
+            const classStudents = studentsByClass.get(currentClass.id) || [];
+            if (classStudents.length > 0) {
+              continuingStudentUpdates.push({
+                studentIds: classStudents.map(s => s.id),
+                newClassId: newClass.id,
+                newGrade
+              });
+              migratedStudents += classStudents.length;
             }
           }
+        }
+
+        // OPTIMIZED: Batch update graduating students
+        if (graduatingStudentIds.length > 0) {
+          await tx.execute(sql`
+            UPDATE ${students}
+            SET class_id = NULL,
+                school_year_id = ${newSchoolYear.id}
+            WHERE id = ANY(${graduatingStudentIds}::text[])
+          `);
+        }
+
+        // OPTIMIZED: Batch update continuing students by new class
+        for (const update of continuingStudentUpdates) {
+          await tx.execute(sql`
+            UPDATE ${students}
+            SET class_id = ${update.newClassId},
+                grade = ${update.newGrade},
+                school_year_id = ${newSchoolYear.id}
+            WHERE id = ANY(${update.studentIds}::text[])
+          `);
         }
 
         // 6. Create new 5th grade classes
@@ -1657,9 +1676,16 @@ export class DatabaseStorage implements IStorage {
         if (params.migrationRules.autoMigrateContinuousSubjects) {
           const subjectMigrationRules = this.getNRWSubjectMigrationRules();
           
+          // OPTIMIZED: Create lookup Maps to avoid repeated .find() calls
+          const subjectMap = new Map(allSubjects.map(s => [s.id, s]));
+          const classMap = new Map(currentClasses.map(c => [c.id, c]));
+          
+          // OPTIMIZED: Collect assignments for batch insert
+          const assignmentsToMigrate: Array<typeof assignments.$inferInsert> = [];
+          
           for (const assignment of currentAssignments) {
-            const subject = allSubjects.find(s => s.id === assignment.subjectId);
-            const currentClass = currentClasses.find(c => c.id === assignment.classId);
+            const subject = subjectMap.get(assignment.subjectId);
+            const currentClass = classMap.get(assignment.classId);
             
             if (!subject || !currentClass || currentClass.grade === 10) continue;
             
@@ -1673,7 +1699,7 @@ export class DatabaseStorage implements IStorage {
               const targetHours = subject.hoursPerWeek[targetGrade.toString()] || migrationRule.defaultHours[targetGrade] || 0;
 
               if (targetHours > 0) {
-                await tx.insert(assignments).values({
+                assignmentsToMigrate.push({
                   teacherId: assignment.teacherId,
                   classId: newClassId,
                   subjectId: assignment.subjectId,
@@ -1681,9 +1707,14 @@ export class DatabaseStorage implements IStorage {
                   semester: assignment.semester as "1" | "2",
                   schoolYearId: newSchoolYear.id
                 });
-                migratedAssignments++;
               }
             }
+          }
+          
+          // OPTIMIZED: Batch insert all assignments
+          if (assignmentsToMigrate.length > 0) {
+            await tx.insert(assignments).values(assignmentsToMigrate);
+            migratedAssignments = assignmentsToMigrate.length;
           }
         }
 
