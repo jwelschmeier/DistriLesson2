@@ -455,6 +455,19 @@ export default function LehrerFaecherZuordnung() {
     const isDifferenzierungsfach = subject && differenzierungsFaecher.includes(subject.shortName.toUpperCase().trim());
     const isGrade7to10 = currentClass && currentClass.grade >= 7 && currentClass.grade <= 10;
 
+    // DEBUG: Log für Differenzierungsfach-Erkennung
+    if (subject && currentClass) {
+      console.log('🔍 Differenzierungsfach-Check:', {
+        subject: subject.shortName,
+        normalized: subject.shortName.toUpperCase().trim(),
+        isDiff: isDifferenzierungsfach,
+        class: currentClass.name,
+        grade: currentClass.grade,
+        isGrade7to10,
+        willReplicate: isDifferenzierungsfach && isGrade7to10
+      });
+    }
+
     if (teacherId === null || teacherId === 'unassigned') {
       if (existingAssignment) {
         deleteAssignmentMutation.mutate(existingAssignment.id);
@@ -520,8 +533,17 @@ export default function LehrerFaecherZuordnung() {
           c.grade === currentClass.grade && c.id !== currentClass.id
         );
         
+        console.log('📋 Repliziere zu anderen Klassen:', {
+          currentClass: currentClass.name,
+          subject: subject?.shortName,
+          sameGradeClassesCount: sameGradeClasses.length,
+          sameGradeClasses: sameGradeClasses.map(c => c.name),
+          semester: selectedSemester
+        });
+        
         sameGradeClasses.forEach(cls => {
           const otherAssignment = getAssignment(cls.id, subjectId);
+          console.log(`  → ${cls.name}: ${otherAssignment ? 'existiert bereits' : 'wird erstellt'}`);
           if (!otherAssignment) {
             createAssignmentMutation.mutate({
               teacherId,
