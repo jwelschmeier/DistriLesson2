@@ -873,8 +873,8 @@ export default function LehrerFaecherZuordnung() {
           )}
 
           {/* Assignment Matrix */}
-          <div className="bg-card border rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
+          <div className="bg-card border rounded-lg overflow-x-auto">
+            <div>
               <table className="w-full">
                 <thead>
                   <tr className="border-b bg-muted/50">
