@@ -316,8 +316,8 @@ export default function DiffKurseMatrix() {
                     <Badge variant="secondary">{kurseByGrade[grade].length} Kurse</Badge>
                   </div>
 
-                  <div className="border rounded-lg">
-                    <div className="overflow-x-auto">
+                  <div className="border rounded-lg overflow-x-auto">
+                    <div>
                       <table className="min-w-max border-collapse">
                         <thead>
                           <tr className="bg-muted/50">
