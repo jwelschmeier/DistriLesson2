@@ -93,7 +93,9 @@ export default function DiffKurseMatrix() {
     return grouped;
   }, [diffKurse]);
 
-  const grades = Object.keys(kurseByGrade).map(Number).sort();
+  const grades = Object.keys(kurseByGrade)
+    .map(Number)
+    .sort((a, b) => a - b);
 
   // Helper: Get subject from course name
   const getSubjectFromCourseName = (courseName: string): string | null => {
