@@ -201,10 +201,11 @@ export default function DiffKurseMatrix() {
       setChanges2({});
       toast({ title: "Gespeichert", description: "Alle Änderungen wurden erfolgreich gespeichert." });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Save error:", error);
       toast({ 
         title: "Fehler", 
-        description: "Änderungen konnten nicht gespeichert werden.",
+        description: error?.message || "Änderungen konnten nicht gespeichert werden.",
         variant: "destructive"
       });
     }

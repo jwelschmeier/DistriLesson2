@@ -634,7 +634,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/assignments", async (req, res) => {
     try {
+      console.log("POST /api/assignments - Request body:", JSON.stringify(req.body, null, 2));
       const assignmentData = insertAssignmentSchema.parse(req.body);
+      console.log("POST /api/assignments - Parsed data:", JSON.stringify(assignmentData, null, 2));
       const assignment = await storage.createAssignment(assignmentData);
       
       // Auto-replicate differentiation subjects across parallel classes
@@ -684,7 +686,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(201).json(assignment);
     } catch (error) {
+      console.error("Error creating assignment:", error);
       if (error instanceof z.ZodError) {
+        console.error("Validation errors:", error.errors);
         return res.status(400).json({ error: error.errors });
       }
       if (error instanceof Error && error.message.includes("Keine aktuelle Schuljahr gefunden")) {
@@ -693,7 +697,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           details: "Bitte setzen Sie zuerst ein aktuelles Schuljahr über die Schuljahr-Verwaltung."
         });
       }
-      res.status(500).json({ error: "Failed to create assignment" });
+      res.status(500).json({ 
+        error: "Failed to create assignment",
+        details: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
