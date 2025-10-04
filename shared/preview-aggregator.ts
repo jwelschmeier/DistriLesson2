@@ -206,6 +206,7 @@ export function aggregateMigrationPreview(
 
 /**
  * Calculates comprehensive migration statistics across all dimensions
+ * OPTIMIZED: Single-pass counting instead of multiple O(n) filter operations
  */
 export function calculateMigrationStatistics(
   classPromotions: ClassPromotionPlan[],
@@ -213,25 +214,46 @@ export function calculateMigrationStatistics(
   studentPromotions: StudentPromotionPlan[],
   conflicts: Conflict[]
 ): MigrationStatistics {
-  // Class statistics
+  // OPTIMIZED: Single pass for class statistics
   const totalClasses = classPromotions.length;
-  const classesPromoted = classPromotions.filter(p => p.newGrade <= 10).length;
-  const classesGraduated = classPromotions.filter(p => p.oldGrade === 10).length;
+  let classesPromoted = 0;
+  let classesGraduated = 0;
   
-  // Assignment statistics
+  for (const promotion of classPromotions) {
+    if (promotion.newGrade <= 10) classesPromoted++;
+    if (promotion.oldGrade === 10) classesGraduated++;
+  }
+  
+  // OPTIMIZED: Single pass for assignment statistics
   const totalAssignments = assignmentDecisions.length;
-  const assignmentsAuto = assignmentDecisions.filter(d => d.decision === 'auto').length;
-  const assignmentsManual = assignmentDecisions.filter(d => d.decision === 'manual').length;
-  const assignmentsImpossible = assignmentDecisions.filter(d => d.decision === 'impossible').length;
+  let assignmentsAuto = 0;
+  let assignmentsManual = 0;
+  let assignmentsImpossible = 0;
   
-  // Student statistics
+  for (const decision of assignmentDecisions) {
+    if (decision.decision === 'auto') assignmentsAuto++;
+    else if (decision.decision === 'manual') assignmentsManual++;
+    else if (decision.decision === 'impossible') assignmentsImpossible++;
+  }
+  
+  // OPTIMIZED: Single pass for student statistics
   const totalStudents = studentPromotions.length;
-  const studentsPromoted = studentPromotions.filter(s => s.status === 'promote').length;
-  const studentsGraduated = studentPromotions.filter(s => s.status === 'graduate').length;
+  let studentsPromoted = 0;
+  let studentsGraduated = 0;
   
-  // Conflict statistics
-  const conflictsCount = conflicts.filter(c => c.severity === 'error').length;
-  const warningsCount = conflicts.filter(c => c.severity === 'warning').length;
+  for (const promotion of studentPromotions) {
+    if (promotion.status === 'promote') studentsPromoted++;
+    else if (promotion.status === 'graduate') studentsGraduated++;
+  }
+  
+  // OPTIMIZED: Single pass for conflict statistics
+  let conflictsCount = 0;
+  let warningsCount = 0;
+  
+  for (const conflict of conflicts) {
+    if (conflict.severity === 'error') conflictsCount++;
+    else if (conflict.severity === 'warning') warningsCount++;
+  }
   
   const statistics: MigrationStatistics = {
     totalClasses,
