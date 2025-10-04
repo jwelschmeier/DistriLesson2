@@ -402,10 +402,18 @@ export default function Klassenverwaltung() {
   });
 
   const handleClassSubmit = async (data: ClassFormData) => {
+    // Convert empty strings to null for decimal fields
+    const sanitizedData = {
+      ...data,
+      targetHoursTotal: data.targetHoursTotal === "" ? null : data.targetHoursTotal,
+      targetHoursSemester1: data.targetHoursSemester1 === "" ? null : data.targetHoursSemester1,
+      targetHoursSemester2: data.targetHoursSemester2 === "" ? null : data.targetHoursSemester2,
+    };
+    
     if (editingClass) {
-      updateClassMutation.mutate({ id: editingClass.id, data });
+      updateClassMutation.mutate({ id: editingClass.id, data: sanitizedData });
     } else {
-      createClassMutation.mutate(data);
+      createClassMutation.mutate(sanitizedData);
     }
   };
 
