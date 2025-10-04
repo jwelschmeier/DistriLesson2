@@ -390,9 +390,9 @@ export default function KlassenMatrix() {
               )}
             </div>
             
-            <div className="border rounded-lg overflow-hidden">
+            <div className="border rounded-lg">
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
+                <table className="min-w-max border-collapse">
                   <thead>
                     <tr className="bg-muted/50">
                       <th className="border-b border-r p-3 text-left font-medium bg-slate-200 dark:bg-slate-700">KLASSE</th>
