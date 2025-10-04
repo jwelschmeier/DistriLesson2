@@ -894,6 +894,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   async function performPlanstellenCalculation(teachers: any[], classes: any[], subjects: any[], storage: any) {
     const results = [];
     
+    // OPTIMIZED: Pre-aggregate teacher hours by subject and parallel group
+    const subjectHoursMap = new Map<string, number>();
+    const parallelGroupHoursMap = new Map<string, number>();
+    
+    // OPTIMIZED: Create subject lookup map (by name and shortName) to avoid repeated .find()
+    const subjectLookupMap = new Map<string, any>();
+    for (const subject of subjects) {
+      subjectLookupMap.set(subject.name, subject);
+      if (subject.shortName) {
+        subjectLookupMap.set(subject.shortName, subject);
+      }
+    }
+    
+    // Define parallel groups
+    const parallelGroups = {
+      "Differenzierung": ["FS", "SW", "NW", "IF", "TC", "MUS"],
+      "Religion": ["KR", "ER", "PP"]
+    };
+    
+    // Single pass through teachers to aggregate hours
+    for (const teacher of teachers) {
+      const teacherHours = parseFloat(teacher.currentHours || "0");
+      
+      // Aggregate by subject
+      for (const subject of teacher.subjects) {
+        subjectHoursMap.set(subject, (subjectHoursMap.get(subject) || 0) + teacherHours);
+      }
+      
+      // Aggregate by parallel group
+      for (const [groupId, groupSubjects] of Object.entries(parallelGroups)) {
+        const hasGroupSubject = teacher.subjects.some((subj: string) => groupSubjects.includes(subj));
+        if (hasGroupSubject) {
+          parallelGroupHoursMap.set(groupId, (parallelGroupHoursMap.get(groupId) || 0) + teacherHours);
+        }
+      }
+    }
+    
     // Calculate required hours per grade with correct handling of parallel subjects
     const gradeHours: Record<string, { totalHours: number; parallelGroupHours: Record<string, number>; regularHours: Record<string, number> }> = {};
     
@@ -933,15 +970,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     for (const [grade, gradeData] of Object.entries(gradeHours)) {
       // Create entries for parallel groups
       for (const [groupId, hours] of Object.entries(gradeData.parallelGroupHours)) {
-        // Calculate available hours (simplified: sum all teachers with subjects in this group)
-        const availableHours = teachers
-          .filter((teacher: any) => {
-            // Check if teacher has any subject from this parallel group
-            const groupSubjects = groupId === "Differenzierung" ? ["FS", "SW", "NW", "IF", "TC", "MUS"] :
-                                 groupId === "Religion" ? ["KR", "ER", "PP"] : [];
-            return teacher.subjects.some((subj: string) => groupSubjects.includes(subj));
-          })
-          .reduce((sum: number, teacher: any) => sum + parseFloat(teacher.currentHours || "0"), 0);
+        // OPTIMIZED: O(1) lookup instead of O(teachers) filter
+        const availableHours = parallelGroupHoursMap.get(groupId) || 0;
         
         const planstelle = await storage.createPlanstelle({
           subjectId: null, // Parallel groups don't map to single subjects
@@ -961,12 +991,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create entries for regular subjects
       for (const [subjectName, requiredHours] of Object.entries(gradeData.regularHours)) {
-        const subject = subjects.find((s: any) => s.name === subjectName || s.shortName === subjectName);
+        // OPTIMIZED: O(1) lookup instead of O(subjects) find
+        const subject = subjectLookupMap.get(subjectName);
         
-        // Calculate available hours (simplified: sum all teachers with this subject)
-        const availableHours = teachers
-          .filter((teacher: any) => teacher.subjects.includes(subjectName))
-          .reduce((sum: number, teacher: any) => sum + parseFloat(teacher.currentHours || "0"), 0);
+        // OPTIMIZED: O(1) lookup instead of O(teachers) filter
+        const availableHours = subjectHoursMap.get(subjectName) || 0;
         
         const planstelle = await storage.createPlanstelle({
           subjectId: subject?.id || null,
