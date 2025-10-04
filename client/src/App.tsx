@@ -26,6 +26,7 @@ import ChatGPTImportPage from "@/pages/chatgpt-import";
 import LehrerFaecherZuordnung from "@/pages/lehrer-faecher-zuordnung";
 import KlassenAuswahl from "@/pages/klassen-auswahl";
 import KlassenMatrix from "@/pages/klassen-matrix";
+import DiffKurseMatrix from "@/pages/diff-kurse-matrix";
 
 function Router() {
   const { isAuthenticated, isLoading, isAdmin } = useAuth();
@@ -64,6 +65,7 @@ function Router() {
           <Route path="/schuljahreswechsel" component={Schuljahreswechsel} />
           <Route path="/lehrer-faecher-zuordnung" component={LehrerFaecherZuordnung} />
           <Route path="/lehrer-faecher-zuordnung/select" component={KlassenAuswahl} />
+          <Route path="/lehrer-faecher-zuordnung/diff-kurse" component={DiffKurseMatrix} />
           <Route path="/lehrer-faecher-zuordnung/:classId" component={KlassenMatrix} />
           <Route path="/pdf-import" component={PdfImport} />
           <Route path="/chatgpt-import" component={ChatGPTImportPage} />

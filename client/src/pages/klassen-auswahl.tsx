@@ -140,17 +140,14 @@ export default function KlassenAuswahl() {
               >
                 Kurse
               </button>
-              <button
-                onClick={() => setSelectedType("diff-kurse")}
-                className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                  selectedType === "diff-kurse" 
-                    ? "bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300" 
-                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-                }`}
-                data-testid="filter-diff-kurse"
-              >
-                Diff-Kurse
-              </button>
+              <Link href="/lehrer-faecher-zuordnung/diff-kurse">
+                <button
+                  className="px-3 py-1 rounded-full text-sm transition-colors bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-amber-100 dark:hover:bg-amber-900 hover:text-amber-700 dark:hover:text-amber-300"
+                  data-testid="filter-diff-kurse"
+                >
+                  Diff-Kurse
+                </button>
+              </Link>
               <button
                 onClick={() => setSelectedType("ag")}
                 className={`px-3 py-1 rounded-full text-sm transition-colors ${
