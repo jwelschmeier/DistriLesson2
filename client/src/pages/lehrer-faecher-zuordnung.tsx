@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Sidebar } from '@/components/layout/sidebar';
@@ -87,6 +87,10 @@ export default function LehrerFaecherZuordnung() {
   const [gradeFilter, setGradeFilter] = useState<string>("alle");
   const [subjectFilter, setSubjectFilter] = useState<string>("alle");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  
+  // Refs for always current values
+  const subjectsRef = useRef<Subject[]>([]);
+  const classesRef = useRef<Class[]>([]);
 
   // Definierte Reihenfolge der deutschen Schulfächer
   const SUBJECT_ORDER = ['D', 'M', 'E', 'Fs', 'SW', 'PK', 'GE', 'EK', 'BI', 'PH', 'CH', 'TC', 'If', 'HW', 'KU', 'MU', 'Tx', 'ER', 'KR', 'PP', 'SO', 'BO', 'SP'];
@@ -121,6 +125,15 @@ export default function LehrerFaecherZuordnung() {
     staleTime: 30000,
     retry: false
   });
+
+  // Update refs whenever subjects or classes change
+  useEffect(() => {
+    subjectsRef.current = subjects;
+  }, [subjects]);
+
+  useEffect(() => {
+    classesRef.current = classes;
+  }, [classes]);
 
   const { data: assignments = [], isLoading: assignmentsLoading } = useQuery<AssignmentData[]>({ 
     queryKey: ['/api/assignments', selectedSemester],
@@ -446,9 +459,9 @@ export default function LehrerFaecherZuordnung() {
     const hours = getRequiredHours(subjectId);
     const existingAssignment = getAssignment(classId, subjectId);
 
-    // Finde das Fach und die Klasse für Differenzierungsfach-Logik
-    const subject = subjects.find(s => s.id === subjectId);
-    const currentClass = classes.find(c => c.id === classId);
+    // Finde das Fach und die Klasse für Differenzierungsfach-Logik (using refs for always current values)
+    const subject = subjectsRef.current.find(s => s.id === subjectId);
+    const currentClass = classesRef.current.find(c => c.id === classId);
     
     // Differenzierungsfächer für Jahrgänge 7-10 (normalisiert auf Großbuchstaben)
     const differenzierungsFaecher = ['FS', 'SW', 'NW', 'IF', 'TC', 'MUS'];
@@ -462,7 +475,7 @@ export default function LehrerFaecherZuordnung() {
       
       // Bei Differenzierungsfächern auch für alle anderen Klassen der Jahrgangsstufe löschen
       if (isDifferenzierungsfach && isGrade7to10 && currentClass) {
-        const sameGradeClasses = classes.filter(c => 
+        const sameGradeClasses = classesRef.current.filter(c => 
           c.grade === currentClass.grade && c.id !== currentClass.id && c.type === 'klasse'
         );
         
@@ -482,7 +495,7 @@ export default function LehrerFaecherZuordnung() {
       
       // Bei Differenzierungsfächern auch für alle anderen Klassen der Jahrgangsstufe aktualisieren
       if (isDifferenzierungsfach && isGrade7to10 && currentClass) {
-        const sameGradeClasses = classes.filter(c => 
+        const sameGradeClasses = classesRef.current.filter(c => 
           c.grade === currentClass.grade && c.id !== currentClass.id && c.type === 'klasse'
         );
         
@@ -516,7 +529,7 @@ export default function LehrerFaecherZuordnung() {
       
       // Bei Differenzierungsfächern auch für alle anderen Klassen der Jahrgangsstufe erstellen
       if (isDifferenzierungsfach && isGrade7to10 && currentClass) {
-        const sameGradeClasses = classes.filter(c => 
+        const sameGradeClasses = classesRef.current.filter(c => 
           c.grade === currentClass.grade && c.id !== currentClass.id && c.type === 'klasse'
         );
         
@@ -534,7 +547,7 @@ export default function LehrerFaecherZuordnung() {
         });
       }
     }
-  }, [selectedSemester, getRequiredHours, getAssignment, createAssignmentMutation, updateAssignmentMutation, deleteAssignmentMutation, subjects, classes]);
+  }, [selectedSemester, getRequiredHours, getAssignment, createAssignmentMutation, updateAssignmentMutation, deleteAssignmentMutation]);
 
   return (
     <div className="flex h-screen bg-muted/50 dark:bg-muted/20">
