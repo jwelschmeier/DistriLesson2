@@ -364,6 +364,7 @@ export default function Klassenverwaltung() {
           const courseData = {
             name: course.name,
             grade: course.grade,
+            type: 'kurs', // Explicitly set type to 'kurs' for differentiation courses
             studentCount: 15, // Default for differentiation courses
             subjectHours: {},
             targetHoursTotal: null,

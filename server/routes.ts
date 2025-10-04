@@ -634,9 +634,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/assignments", async (req, res) => {
     try {
-      console.log("POST /api/assignments - Request body:", JSON.stringify(req.body, null, 2));
       const assignmentData = insertAssignmentSchema.parse(req.body);
-      console.log("POST /api/assignments - Parsed data:", JSON.stringify(assignmentData, null, 2));
       const assignment = await storage.createAssignment(assignmentData);
       
       // Auto-replicate differentiation subjects across parallel classes
@@ -1222,6 +1220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               classRecord = await storage.createClass({
                 name: className,
                 grade: grade,
+                type: 'klasse',
                 studentCount: 0,
                 subjectHours: {},
               });
@@ -1242,6 +1241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const classData = rows.map((row: string[]) => ({
             name: row[0] || "",
             grade: parseInt(row[1]) || 5,
+            type: 'klasse' as const,
             studentCount: parseInt(row[2]) || 0,
             subjectHours: {},
           }));

@@ -127,7 +127,7 @@ export default function LehrerFaecherZuordnung() {
   const classesRef = useRef<Class[]>([]);
 
   // Definierte Reihenfolge der deutschen Schulfächer
-  const SUBJECT_ORDER = ['D', 'M', 'E', 'Fs', 'SW', 'PK', 'GE', 'EK', 'BI', 'PH', 'CH', 'TC', 'If', 'HW', 'KU', 'MU', 'Tx', 'ER', 'KR', 'PP', 'SO', 'BO', 'SP'];
+  const SUBJECT_ORDER = ['D', 'M', 'E', 'FS', 'SW', 'PK', 'GE', 'EK', 'BI', 'PH', 'CH', 'TC', 'IF', 'HW', 'KU', 'MU', 'TX', 'ER', 'KR', 'PP', 'SO', 'BO', 'SP'];
 
   // Data fetching with proper error handling
   const { data: teachers = [], isLoading: teachersLoading } = useQuery<Teacher[]>({ 
@@ -338,8 +338,14 @@ export default function LehrerFaecherZuordnung() {
 
   // Helper: Extract subject short name from course name
   const extractSubjectFromCourseName = (courseName: string): string | null => {
-    const match = courseName.match(/^\d{2}([A-Z]+)$/i);
-    return match ? match[1].toUpperCase() : null;
+    // Match patterns like "10FS", "10INF_IF", "07NW_BI"
+    const match = courseName.match(/^\d{2}([A-Z_]+)$/i);
+    if (!match) return null;
+    
+    // If there's an underscore, take the part after it (e.g., "INF_IF" -> "IF")
+    const extracted = match[1].toUpperCase();
+    const underscoreIndex = extracted.indexOf('_');
+    return underscoreIndex !== -1 ? extracted.substring(underscoreIndex + 1) : extracted;
   };
 
   // Get subjects relevant for a specific class
