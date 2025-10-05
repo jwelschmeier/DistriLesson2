@@ -288,7 +288,7 @@ export default function Stundenplaene() {
 
   const selectAllTeacherAssignments = (selectAll: boolean) => {
     if (selectAll) {
-      setSelectedTeacherAssignments(new Set(teacherAssignments.map(a => a.id)));
+      setSelectedTeacherAssignments(new Set(displayedTeacherAssignments.map(a => a.id)));
     } else {
       setSelectedTeacherAssignments(new Set());
     }
@@ -430,6 +430,44 @@ export default function Stundenplaene() {
     
     return filtered;
   }, [extendedAssignments, selectedTeacherId, selectedSemester]);
+
+  // Deduplicated teacher assignments for display (groups Differenzierung courses)
+  const displayedTeacherAssignments = useMemo(() => {
+    const groupMap = new Map<string, ExtendedAssignment>();
+    
+    teacherAssignments.forEach(assignment => {
+      const parallelGroup = assignment.subject?.parallelGroup;
+      const grade = assignment.class?.grade ?? 'na';
+      
+      // For Differenzierung subjects, group by subject+teacher+semester+grade
+      // This shows only one row instead of showing both the kurs and all klasse assignments
+      let groupKey: string;
+      if (assignment.teamTeachingId) {
+        groupKey = `team-${assignment.teamTeachingId}-${assignment.classId}-${assignment.subjectId}-${assignment.semester}`;
+      } else if (parallelGroup === 'Differenzierung') {
+        groupKey = `diff-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}-${grade}`;
+      } else {
+        // For regular assignments, use a unique key so each shows separately
+        groupKey = `individual-${assignment.id}`;
+      }
+      
+      const existing = groupMap.get(groupKey);
+      const hours = parseFloat(assignment.hoursPerWeek);
+      
+      // Keep the assignment with maximum hours (or first if equal)
+      // For Differenzierung, prefer kurs type over klasse type
+      if (!existing) {
+        groupMap.set(groupKey, assignment);
+      } else {
+        const existingHours = parseFloat(existing.hoursPerWeek);
+        if (hours > existingHours || (hours === existingHours && assignment.class?.type === 'kurs')) {
+          groupMap.set(groupKey, assignment);
+        }
+      }
+    });
+    
+    return Array.from(groupMap.values());
+  }, [teacherAssignments]);
 
   // Filter assignments for selected class
   const classAssignments = useMemo(() => {
@@ -1115,7 +1153,7 @@ export default function Stundenplaene() {
                           <div>
                             <p className="text-xs text-muted-foreground font-medium">Zuweisungen</p>
                             <p className="text-2xl font-bold" data-testid="text-teacher-total-assignments">
-                              {teacherAssignments.length}
+                              {displayedTeacherAssignments.length}
                             </p>
                           </div>
                         </div>
@@ -1298,7 +1336,7 @@ export default function Stundenplaene() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      {teacherAssignments.length === 0 ? (
+                      {displayedTeacherAssignments.length === 0 ? (
                         <div className="text-center py-8 text-muted-foreground" data-testid="empty-teacher-assignments">
                           <Calendar className="h-8 w-8 mx-auto mb-2" />
                           <p>Keine Zuweisungen für diese Lehrkraft vorhanden.</p>
@@ -1309,7 +1347,7 @@ export default function Stundenplaene() {
                             <TableRow>
                               <TableHead className="w-12">
                                 <Checkbox
-                                  checked={teacherAssignments.length > 0 && selectedTeacherAssignments.size === teacherAssignments.length}
+                                  checked={displayedTeacherAssignments.length > 0 && selectedTeacherAssignments.size === displayedTeacherAssignments.length}
                                   onCheckedChange={(checked) => selectAllTeacherAssignments(checked as boolean)}
                                   data-testid="checkbox-select-all-teacher"
                                 />
@@ -1322,7 +1360,7 @@ export default function Stundenplaene() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {teacherAssignments.map((assignment) => {
+                            {displayedTeacherAssignments.map((assignment) => {
                               // Calculate conflict status for this assignment
                               const getAssignmentConflictStatus = () => {
                                 const teacher = teachers?.find(t => t.id === assignment.teacherId);
