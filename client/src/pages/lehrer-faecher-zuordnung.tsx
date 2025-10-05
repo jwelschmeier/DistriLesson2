@@ -12,6 +12,7 @@ import { Grid3X3, RefreshCw, AlertTriangle, CheckCircle, Users, BookOpen, Search
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import type { Teacher, Class, Subject, Assignment } from '@shared/schema';
+import { calculateCorrectHours } from '@shared/parallel-subjects';
 
 type DataComparison = {
   differences: {
@@ -1117,48 +1118,85 @@ export default function LehrerFaecherZuordnung() {
 
                     if (!hasMatchingTeacher) return null;
 
+                    // Calculate total hours for this class (per semester, without double-counting parallel subjects)
+                    const subjectHoursSem1: Record<string, number> = {};
+                    const subjectHoursSem2: Record<string, number> = {};
+                    
+                    classSubjects.forEach(subject => {
+                      const assignmentSem1 = getAssignment(classData.id, subject.id, "1");
+                      const assignmentSem2 = getAssignment(classData.id, subject.id, "2");
+                      
+                      if (assignmentSem1?.hoursPerWeek) {
+                        subjectHoursSem1[subject.shortName] = parseFloat(assignmentSem1.hoursPerWeek);
+                      }
+                      if (assignmentSem2?.hoursPerWeek) {
+                        subjectHoursSem2[subject.shortName] = parseFloat(assignmentSem2.hoursPerWeek);
+                      }
+                    });
+                    
+                    const totalSem1 = calculateCorrectHours(subjectHoursSem1, classData.grade, "1").totalHours;
+                    const totalSem2 = calculateCorrectHours(subjectHoursSem2, classData.grade, "2").totalHours;
+
                     return (
-                      <tr key={classData.id} className="border-b hover:bg-muted/20">
-                        <td className="p-2 font-medium border-r bg-muted/30 text-xs sticky left-0 z-10">
-                          {classData.name}
-                        </td>
-                        {filteredSubjects.map(subject => {
-                          const isRelevant = classSubjects.some(cs => cs.id === subject.id);
-                          
-                          if (!isRelevant) {
+                      <React.Fragment key={classData.id}>
+                        <tr className="border-b hover:bg-muted/20">
+                          <td className="p-2 font-medium border-r bg-muted/30 text-xs sticky left-0 z-10">
+                            {classData.name}
+                          </td>
+                          {filteredSubjects.map(subject => {
+                            const isRelevant = classSubjects.some(cs => cs.id === subject.id);
+                            
+                            if (!isRelevant) {
+                              return (
+                                <td key={`${classData.id}-${subject.id}`} className="p-2 text-center border-r bg-muted/5">
+                                  <span className="text-muted-foreground text-[10px]">—</span>
+                                </td>
+                              );
+                            }
+                            
+                            const assignmentSem1 = getAssignment(classData.id, subject.id, "1");
+                            const assignmentSem2 = getAssignment(classData.id, subject.id, "2");
+                            const qualifiedTeachers = getQualifiedTeachers(subject.shortName);
+                            
+                            const teamTextSem1 = isTeamTeaching(assignmentSem1) ? getTeamTeachersDisplay(assignmentSem1) : undefined;
+                            const teamTextSem2 = isTeamTeaching(assignmentSem2) ? getTeamTeachersDisplay(assignmentSem2) : undefined;
+                            
                             return (
-                              <td key={`${classData.id}-${subject.id}`} className="p-2 text-center border-r bg-muted/5">
-                                <span className="text-muted-foreground text-[10px]">—</span>
-                              </td>
+                              <MatrixCell
+                                key={`${classData.id}-${subject.id}`}
+                                classId={classData.id}
+                                subjectId={subject.id}
+                                subjectShortName={subject.shortName}
+                                assignmentSem1={assignmentSem1}
+                                assignmentSem2={assignmentSem2}
+                                qualifiedTeachers={qualifiedTeachers}
+                                remainingHoursByTeacherSem1={computedData.remainingHoursByTeacherSem1}
+                                remainingHoursByTeacherSem2={computedData.remainingHoursByTeacherSem2}
+                                onUpdate={updateAssignment}
+                                onHoursUpdate={updateHoursOnly}
+                                teamTextSem1={teamTextSem1}
+                                teamTextSem2={teamTextSem2}
+                              />
                             );
-                          }
-                          
-                          const assignmentSem1 = getAssignment(classData.id, subject.id, "1");
-                          const assignmentSem2 = getAssignment(classData.id, subject.id, "2");
-                          const qualifiedTeachers = getQualifiedTeachers(subject.shortName);
-                          
-                          const teamTextSem1 = isTeamTeaching(assignmentSem1) ? getTeamTeachersDisplay(assignmentSem1) : undefined;
-                          const teamTextSem2 = isTeamTeaching(assignmentSem2) ? getTeamTeachersDisplay(assignmentSem2) : undefined;
-                          
-                          return (
-                            <MatrixCell
-                              key={`${classData.id}-${subject.id}`}
-                              classId={classData.id}
-                              subjectId={subject.id}
-                              subjectShortName={subject.shortName}
-                              assignmentSem1={assignmentSem1}
-                              assignmentSem2={assignmentSem2}
-                              qualifiedTeachers={qualifiedTeachers}
-                              remainingHoursByTeacherSem1={computedData.remainingHoursByTeacherSem1}
-                              remainingHoursByTeacherSem2={computedData.remainingHoursByTeacherSem2}
-                              onUpdate={updateAssignment}
-                              onHoursUpdate={updateHoursOnly}
-                              teamTextSem1={teamTextSem1}
-                              teamTextSem2={teamTextSem2}
-                            />
-                          );
-                        })}
-                      </tr>
+                          })}
+                        </tr>
+                        {/* Summary row showing total hours per semester */}
+                        <tr className="border-b bg-blue-50 dark:bg-blue-950/30">
+                          <td className="p-2 font-semibold border-r bg-blue-100 dark:bg-blue-900/50 text-xs sticky left-0 z-10">
+                            Summe
+                          </td>
+                          <td colSpan={filteredSubjects.length} className="p-2 text-xs border-r">
+                            <div className="flex gap-6 items-center">
+                              <span className="font-medium">
+                                1. HJ: <span className="font-bold text-blue-700 dark:text-blue-400">{totalSem1.toFixed(1)}h</span>
+                              </span>
+                              <span className="font-medium">
+                                2. HJ: <span className="font-bold text-blue-700 dark:text-blue-400">{totalSem2.toFixed(1)}h</span>
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
