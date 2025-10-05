@@ -122,7 +122,10 @@ export default function Klassenverwaltung() {
         
         // Generate grouping key based on assignment type
         let groupKey: string;
-        if (parallelGroup) {
+        if (a.teamTeachingId) {
+          // For team teaching, group by teamTeachingId to count hours only once per team
+          groupKey = `team-${a.teamTeachingId}-${a.subjectId}-${a.semester}`;
+        } else if (parallelGroup) {
           groupKey = `parallel-${parallelGroup}-${a.semester}`;
         } else {
           groupKey = `individual-${a.subjectId}-${a.teacherId}-${a.semester}`;
@@ -130,7 +133,7 @@ export default function Klassenverwaltung() {
         
         const existing = processedAssignments.get(groupKey);
         
-        // Keep the assignment with maximum hours (handles duplicates and parallel subjects)
+        // Keep the assignment with maximum hours (handles duplicates, team teaching, and parallel subjects)
         if (!existing || hours > existing.hours) {
           processedAssignments.set(groupKey, {
             hours: hours,
