@@ -37,17 +37,22 @@ export class PdfLessonParser {
       // Extract text from PDF
       const text = await this.extractTextFromPDF(pdfBuffer, pdfjs);
       
-      // Debug: Log extracted text to understand PDF structure
-      console.log('DEBUG: Extracted PDF text (first 1000 chars):');
-      console.log(text.substring(0, 1000));
-      console.log('DEBUG: Total text length:', text.length);
+      // Debug logging (only if DEBUG_PDF is enabled)
+      const debugPdf = process.env.DEBUG_PDF === 'true';
+      if (debugPdf) {
+        console.log('DEBUG: Extracted PDF text (first 1000 chars):');
+        console.log(text.substring(0, 1000));
+        console.log('DEBUG: Total text length:', text.length);
+      }
       
       // Split into class sections
       const classSections = this.extractClassSections(text);
-      console.log('DEBUG: Found class sections:', classSections.length);
-      classSections.forEach((section, index) => {
-        console.log(`DEBUG: Section ${index}:`, section.substring(0, 200));
-      });
+      if (debugPdf) {
+        console.log('DEBUG: Found class sections:', classSections.length);
+        classSections.forEach((section, index) => {
+          console.log(`DEBUG: Section ${index}:`, section.substring(0, 200));
+        });
+      }
       
       for (const section of classSections) {
         try {

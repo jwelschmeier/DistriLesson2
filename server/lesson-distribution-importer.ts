@@ -76,7 +76,9 @@ export class LessonDistributionImporter {
         });
       }
 
-      console.log(`Gefundene Datensätze: ${records.length}`);
+      if (process.env.DEBUG_IMPORT === 'true') {
+        console.log(`Gefundene Datensätze: ${records.length}`);
+      }
 
       // Extract unique entities
       const uniqueTeachers = new Set(records.map(r => r.teacherShort));
@@ -102,10 +104,11 @@ export class LessonDistributionImporter {
       const existingSubjectShorts = new Set(existingSubjects.map(s => s.shortName));
       const existingClassNames = new Set(existingClasses.map(c => c.name));
 
-      // Create missing teachers
+      // BULK INSERT: Collect missing teachers and create in parallel
+      const teachersToCreate: InsertTeacher[] = [];
       for (const teacherShort of Array.from(uniqueTeachers)) {
         if (!existingTeacherShorts.has(teacherShort)) {
-          const teacher: InsertTeacher = {
+          teachersToCreate.push({
             firstName: teacherShort,
             lastName: '(Importiert)',
             shortName: teacherShort,
@@ -115,11 +118,16 @@ export class LessonDistributionImporter {
             currentHours: '0',
             qualifications: [],
             isActive: true
-          };
-          
-          await this.storage.createTeacher(teacher);
-          result.imported.teachers++;
+          });
         }
+      }
+      
+      // Create all teachers in parallel
+      if (teachersToCreate.length > 0) {
+        await Promise.all(
+          teachersToCreate.map(teacher => this.storage.createTeacher(teacher))
+        );
+        result.imported.teachers = teachersToCreate.length;
       }
 
       // Create missing subjects with NRW mapping
@@ -148,25 +156,33 @@ export class LessonDistributionImporter {
         'WP': 'Wahlpflichtbereich'
       };
 
+      // BULK INSERT: Collect missing subjects and create in parallel
+      const subjectsToCreate: InsertSubject[] = [];
       for (const subjectShort of Array.from(uniqueSubjects)) {
         if (!existingSubjectShorts.has(subjectShort)) {
-          const subject: InsertSubject = {
+          subjectsToCreate.push({
             name: nrwSubjectMapping[subjectShort] || subjectShort,
             shortName: subjectShort,
             category: this.getSubjectCategory(subjectShort),
             hoursPerWeek: {},
             parallelGroup: this.getParallelGroup(subjectShort)
-          };
-          
-          await this.storage.createSubject(subject);
-          result.imported.subjects++;
+          });
         }
       }
+      
+      // Create all subjects in parallel
+      if (subjectsToCreate.length > 0) {
+        await Promise.all(
+          subjectsToCreate.map(subject => this.storage.createSubject(subject))
+        );
+        result.imported.subjects = subjectsToCreate.length;
+      }
 
-      // Create missing classes
+      // BULK INSERT: Collect missing classes and create in parallel
+      const classesToCreate: InsertClass[] = [];
       for (const [className, classInfo] of Array.from(uniqueClasses.entries())) {
         if (!existingClassNames.has(className)) {
-          const classData: InsertClass = {
+          classesToCreate.push({
             name: className,
             type: "klasse",
             grade: classInfo.grade,
@@ -175,11 +191,16 @@ export class LessonDistributionImporter {
             subjectHours: {},
             targetHoursSemester1: null,
             targetHoursSemester2: null
-          };
-          
-          await this.storage.createClass(classData);
-          result.imported.classes++;
+          });
         }
+      }
+      
+      // Create all classes in parallel
+      if (classesToCreate.length > 0) {
+        await Promise.all(
+          classesToCreate.map(classData => this.storage.createClass(classData))
+        );
+        result.imported.classes = classesToCreate.length;
       }
 
       // PERFORMANCE OPTIMIZATION: Load all data once and create lookup maps
@@ -200,7 +221,9 @@ export class LessonDistributionImporter {
         existingAssignments.map(a => `${a.teacherId}-${a.subjectId}-${a.classId}`)
       );
 
-      // OPTIMIZED: Create teacher-subject-class assignments using maps
+      // BULK INSERT: Collect assignments to create
+      const assignmentsToCreate: InsertAssignment[] = [];
+      
       for (const record of records) {
         const teacher = teacherMap.get(record.teacherShort);
         const subject = subjectMap.get(record.subjectShort);
@@ -214,25 +237,32 @@ export class LessonDistributionImporter {
         // O(1) lookup to check if assignment already exists
         const assignmentKey = `${teacher.id}-${subject.id}-${classObj.id}`;
         if (!assignmentSet.has(assignmentKey)) {
-          const assignment: InsertAssignment = {
+          assignmentsToCreate.push({
             teacherId: teacher.id,
             subjectId: subject.id,
             classId: classObj.id,
             schoolYearId: schoolYearId,
             hoursPerWeek: record.hoursPerWeek.toString(),
             semester: "1" // Default to first semester
-          };
-          
-          await this.storage.createAssignment(assignment);
+          });
           assignmentSet.add(assignmentKey); // Add to set to prevent duplicates from Excel data
-          result.imported.assignments++;
         } else {
           result.warnings.push(`Duplikat übersprungen: ${record.teacherShort} -> ${record.subjectShort} in ${record.className}`);
         }
       }
+      
+      // Create all assignments in parallel
+      if (assignmentsToCreate.length > 0) {
+        await Promise.all(
+          assignmentsToCreate.map(assignment => this.storage.createAssignment(assignment))
+        );
+        result.imported.assignments = assignmentsToCreate.length;
+      }
 
       result.success = true;
-      console.log('Import erfolgreich abgeschlossen:', result.imported);
+      if (process.env.DEBUG_IMPORT === 'true') {
+        console.log('Import erfolgreich abgeschlossen:', result.imported);
+      }
       
     } catch (error) {
       result.errors.push(`Import-Fehler: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
@@ -291,7 +321,11 @@ export class LessonDistributionImporter {
     };
 
     try {
-      console.log('=== VALIDIERTER EXCEL-IMPORT GESTARTET ===');
+      const debugImport = process.env.DEBUG_IMPORT === 'true';
+      
+      if (debugImport) {
+        console.log('=== VALIDIERTER EXCEL-IMPORT GESTARTET ===');
+      }
       
       // Load current teacher data with their correct subjects
       const existingTeachers = await this.storage.getTeachers();
@@ -305,7 +339,9 @@ export class LessonDistributionImporter {
         }
       });
 
-      console.log('Geladene Lehrerdaten:', Object.keys(teacherSubjectsMap).length);
+      if (debugImport) {
+        console.log('Geladene Lehrerdaten:', Object.keys(teacherSubjectsMap).length);
+      }
 
       // Read Excel file
       const workbook = XLSX.readFile(filePath);
@@ -332,11 +368,15 @@ export class LessonDistributionImporter {
         return result;
       }
 
-      console.log(`Verwende Arbeitsblatt: ${foundSheet}`);
+      if (debugImport) {
+        console.log(`Verwende Arbeitsblatt: ${foundSheet}`);
+      }
       const worksheet = workbook.Sheets[foundSheet];
       const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
       
-      console.log(`Gesamte Zeilen in Excel: ${data.length}`);
+      if (debugImport) {
+        console.log(`Gesamte Zeilen in Excel: ${data.length}`);
+      }
 
       // Parse lesson distribution records with validation
       const records: LessonDistributionRecord[] = [];
@@ -428,8 +468,10 @@ export class LessonDistributionImporter {
         });
       }
 
-      console.log(`Gültige Datensätze nach Validierung: ${records.length}`);
-      console.log(`Validierungsfehler: ${validationErrors.length}`);
+      if (debugImport) {
+        console.log(`Gültige Datensätze nach Validierung: ${records.length}`);
+        console.log(`Validierungsfehler: ${validationErrors.length}`);
+      }
       
       // Add validation errors as warnings
       result.warnings.push(...validationErrors);
@@ -488,25 +530,33 @@ export class LessonDistributionImporter {
         'WP': 'Wahlpflichtbereich'
       };
 
+      // BULK INSERT: Collect missing subjects and create in parallel
+      const subjectsToCreate: InsertSubject[] = [];
       for (const subjectShort of Array.from(uniqueSubjects)) {
         if (!existingSubjectShorts.has(subjectShort)) {
-          const subject: InsertSubject = {
+          subjectsToCreate.push({
             name: nrwSubjectMapping[subjectShort] || subjectShort,
             shortName: subjectShort,
             category: this.getSubjectCategory(subjectShort),
             hoursPerWeek: {},
             parallelGroup: this.getParallelGroup(subjectShort)
-          };
-          
-          await this.storage.createSubject(subject);
-          result.imported.subjects++;
+          });
         }
       }
+      
+      // Create all subjects in parallel
+      if (subjectsToCreate.length > 0) {
+        await Promise.all(
+          subjectsToCreate.map(subject => this.storage.createSubject(subject))
+        );
+        result.imported.subjects = subjectsToCreate.length;
+      }
 
-      // Create missing classes
+      // BULK INSERT: Collect missing classes and create in parallel
+      const classesToCreate: InsertClass[] = [];
       for (const [className, classInfo] of Array.from(uniqueClasses.entries())) {
         if (!existingClassNames.has(className)) {
-          const classData: InsertClass = {
+          classesToCreate.push({
             name: className,
             type: "klasse",
             grade: classInfo.grade,
@@ -515,17 +565,24 @@ export class LessonDistributionImporter {
             subjectHours: {},
             targetHoursSemester1: null,
             targetHoursSemester2: null
-          };
-          
-          await this.storage.createClass(classData);
-          result.imported.classes++;
+          });
         }
       }
+      
+      // Create all classes in parallel
+      if (classesToCreate.length > 0) {
+        await Promise.all(
+          classesToCreate.map(classData => this.storage.createClass(classData))
+        );
+        result.imported.classes = classesToCreate.length;
+      }
 
-      // Clear existing assignments for this school year before importing new ones
+      // BULK DELETE: Clear existing assignments for this school year before importing new ones
       const existingAssignments = await this.storage.getAssignmentsBySchoolYear(schoolYearId);
-      for (const assignment of existingAssignments) {
-        await this.storage.deleteAssignment(assignment.id);
+      if (existingAssignments.length > 0) {
+        await Promise.all(
+          existingAssignments.map(assignment => this.storage.deleteAssignment(assignment.id))
+        );
       }
 
       // PERFORMANCE OPTIMIZATION: Load all data once and create lookup maps
@@ -543,7 +600,9 @@ export class LessonDistributionImporter {
       // Create set to prevent duplicate assignments from Excel data
       const createdAssignments = new Set<string>();
 
-      // OPTIMIZED: Create teacher-subject-class assignments using maps (only for validated records)
+      // BULK INSERT: Collect assignments to create (only for validated records)
+      const assignmentsToCreate: InsertAssignment[] = [];
+      
       for (const record of records) {
         const teacher = teacherMap.get(record.teacherShort);
         const subject = subjectMap.get(record.subjectShort);
@@ -561,24 +620,31 @@ export class LessonDistributionImporter {
           continue;
         }
 
-        const assignment: InsertAssignment = {
+        assignmentsToCreate.push({
           teacherId: teacher.id,
           subjectId: subject.id,
           classId: classObj.id,
           schoolYearId: schoolYearId,
           hoursPerWeek: record.hoursPerWeek.toString(),
           semester: "1" // Default to first semester
-        };
-        
-        await this.storage.createAssignment(assignment);
+        });
         createdAssignments.add(assignmentKey);
-        result.imported.assignments++;
+      }
+      
+      // Create all assignments in parallel
+      if (assignmentsToCreate.length > 0) {
+        await Promise.all(
+          assignmentsToCreate.map(assignment => this.storage.createAssignment(assignment))
+        );
+        result.imported.assignments = assignmentsToCreate.length;
       }
 
       result.success = true;
-      console.log('=== VALIDIERTER IMPORT ERFOLGREICH ABGESCHLOSSEN ===');
-      console.log('Import-Ergebnis:', result.imported);
-      console.log(`Validierungsfehler: ${validationErrors.length}`);
+      if (debugImport) {
+        console.log('=== VALIDIERTER IMPORT ERFOLGREICH ABGESCHLOSSEN ===');
+        console.log('Import-Ergebnis:', result.imported);
+        console.log(`Validierungsfehler: ${validationErrors.length}`);
+      }
       
     } catch (error) {
       result.errors.push(`Import-Fehler: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
