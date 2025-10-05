@@ -1882,7 +1882,7 @@ export default function Stundenplaene() {
                   {/* Compact Class Summary Card */}
                   <Card data-testid="card-class-summary">
                     <CardContent className="p-4">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
                         {/* Class Info */}
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -1892,6 +1892,20 @@ export default function Stundenplaene() {
                             <p className="text-xs text-foreground/70">Klasse</p>
                             <p className="font-bold text-foreground">{selectedClass.name}</p>
                             <p className="text-xs text-foreground/60">Stufe {selectedClass.grade} • {selectedClass.studentCount} SuS</p>
+                          </div>
+                        </div>
+
+                        {/* Calculated Semester Hours */}
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Clock className="text-purple-600 h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-foreground/70">Zugewiesen</p>
+                            <p className="font-bold text-foreground">1. HJ & 2. HJ</p>
+                            <p className="text-xs text-foreground/60">
+                              <span data-testid="text-class-s1-hours">{classSummary.s1Hours}h</span> • <span data-testid="text-class-s2-hours">{classSummary.s2Hours}h</span>
+                            </p>
                           </div>
                         </div>
 
@@ -1906,13 +1920,13 @@ export default function Stundenplaene() {
                           </div>
                         </div>
 
-                        {/* Semester Info */}
+                        {/* Target Semester Hours */}
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
                             <Calendar className="text-orange-600 h-5 w-5" />
                           </div>
                           <div>
-                            <p className="text-xs text-foreground/70">Halbjahre</p>
+                            <p className="text-xs text-foreground/70">Soll-Stunden</p>
                             <p className="font-bold text-foreground">1. HJ & 2. HJ</p>
                             <p className="text-xs text-foreground/60">
                               {selectedClass.targetHoursSemester1}h • {selectedClass.targetHoursSemester2}h
