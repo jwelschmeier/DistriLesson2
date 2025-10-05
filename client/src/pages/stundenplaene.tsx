@@ -42,6 +42,7 @@ export default function Stundenplaene() {
   const [isClassEditMode, setIsClassEditMode] = useState(false);
   const [selectedSemester, setSelectedSemester] = useState<'all' | '1' | '2'>('all');
   const [selectedClassType, setSelectedClassType] = useState<string>("all");
+  const [teacherSearchTerm, setTeacherSearchTerm] = useState('');
   
   
   // State for editable table
@@ -386,6 +387,11 @@ export default function Stundenplaene() {
     setSelectedTeacherAssignments(new Set());
   }, [selectedTeacherId]);
 
+  // Reset search term when changing selected teacher
+  useEffect(() => {
+    setTeacherSearchTerm('');
+  }, [selectedTeacherId]);
+
   // Reset class selections when changing selected class
   useEffect(() => {
     setSelectedClassAssignments(new Set());
@@ -473,7 +479,7 @@ export default function Stundenplaene() {
       }
     });
     
-    const assignments = Array.from(groupMap.values());
+    let assignments = Array.from(groupMap.values());
     
     // Sort by grade, class name, and semester
     assignments.sort((a, b) => {
@@ -488,8 +494,24 @@ export default function Stundenplaene() {
       return a.semester.localeCompare(b.semester);
     });
     
+    // Apply search filter
+    if (teacherSearchTerm) {
+      const searchLower = teacherSearchTerm.toLowerCase();
+      assignments = assignments.filter(a => {
+        const className = a.class?.name?.toLowerCase() || '';
+        const classGrade = a.class?.grade?.toString() || '';
+        const subjectShort = a.subject?.shortName?.toLowerCase() || '';
+        const subjectName = a.subject?.name?.toLowerCase() || '';
+        
+        return className.includes(searchLower) ||
+               classGrade.includes(searchLower) ||
+               subjectShort.includes(searchLower) ||
+               subjectName.includes(searchLower);
+      });
+    }
+    
     return assignments;
-  }, [teacherAssignments]);
+  }, [teacherAssignments, teacherSearchTerm]);
 
   // Group teacher assignments by grade and semester for better overview
   const groupedTeacherAssignments = useMemo(() => {
@@ -1430,18 +1452,26 @@ export default function Stundenplaene() {
                     <CardContent>
                       <div className="space-y-3">
                         {/* Add New Assignment Button */}
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center gap-4">
                           <p className="text-sm text-muted-foreground">
                             {teacherAssignments.length} Zuweisung{teacherAssignments.length !== 1 ? 'en' : ''}
                             {!isTeacherEditMode && <span className="ml-2 text-blue-600 dark:text-blue-400">• Ansichtsmodus</span>}
                             {isTeacherEditMode && <span className="ml-2 text-orange-600 dark:text-orange-400">• Bearbeitungsmodus</span>}
                           </p>
-                          {isTeacherEditMode && (
-                            <Button
-                              onClick={() => setNewTeacherAssignment({
-                                classId: '',
-                                subjectId: '',
-                                hoursPerWeek: 1,
+                          <div className="flex items-center gap-2">
+                            <Input
+                              placeholder="Klasse oder Fach suchen..."
+                              value={teacherSearchTerm}
+                              onChange={(e) => setTeacherSearchTerm(e.target.value)}
+                              className="w-64"
+                              data-testid="input-teacher-search"
+                            />
+                            {isTeacherEditMode && (
+                              <Button
+                                onClick={() => setNewTeacherAssignment({
+                                  classId: '',
+                                  subjectId: '',
+                                  hoursPerWeek: 1,
                                 semester: '1',
                               })}
                               disabled={!!newTeacherAssignment}
@@ -1452,6 +1482,7 @@ export default function Stundenplaene() {
                               Neue Zuordnung
                             </Button>
                           )}
+                          </div>
                         </div>
 
                         {displayedTeacherAssignments.length === 0 && !newTeacherAssignment ? (
