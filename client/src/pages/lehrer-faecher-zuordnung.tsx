@@ -347,10 +347,13 @@ export default function LehrerFaecherZuordnung() {
 
   // Pre-computed indexes for O(1) lookups (for BOTH semesters)
   const computedData = useMemo(() => {
-    const assignmentIndex = new Map<string, AssignmentData>();
+    // Store arrays of assignments for team-teaching support
+    const assignmentIndex = new Map<string, AssignmentData[]>();
     assignments.forEach(assignment => {
       const key = `${assignment.classId}-${assignment.subjectId}-${assignment.semester}`;
-      assignmentIndex.set(key, assignment);
+      const existing = assignmentIndex.get(key) || [];
+      existing.push(assignment);
+      assignmentIndex.set(key, existing);
     });
 
     const teachersBySubjectShort = new Map<string, Teacher[]>();
@@ -441,7 +444,9 @@ export default function LehrerFaecherZuordnung() {
   // O(1) lookup functions (with semester parameter)
   const getAssignment = useCallback((classId: string, subjectId: string, semester: "1" | "2") => {
     const key = `${classId}-${subjectId}-${semester}`;
-    return computedData.assignmentIndex.get(key);
+    const assignments = computedData.assignmentIndex.get(key);
+    // Return first assignment for display (team teaching will be shown via badge)
+    return assignments && assignments.length > 0 ? assignments[0] : undefined;
   }, [computedData.assignmentIndex]);
 
   const getQualifiedTeachers = useCallback((subjectShortName: string) => {
