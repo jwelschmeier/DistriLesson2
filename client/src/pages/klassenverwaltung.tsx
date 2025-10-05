@@ -136,14 +136,11 @@ export default function Klassenverwaltung() {
           }
         } else {
           // Individual assignment: sum hours
-          if (existing) {
-            existing.hours += hours;
-          } else {
-            processedAssignments.set(groupKey, {
-              hours: hours,
-              semester: a.semester
-            });
-          }
+          const newHours = existing ? existing.hours + hours : hours;
+          processedAssignments.set(groupKey, {
+            hours: newHours,
+            semester: a.semester
+          });
         }
       });
       

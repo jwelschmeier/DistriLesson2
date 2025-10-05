@@ -586,16 +586,13 @@ export default function Stundenplaene() {
         }
       } else {
         // Individual assignment: sum hours
-        if (existing) {
-          existing.hours += hours;
-        } else {
-          uniqueAssignments.set(groupKey, {
-            subject: assignment.subjectId,
-            teacher: assignment.teacherId,
-            hours: hours,
-            semester: assignment.semester
-          });
-        }
+        const newHours = existing ? existing.hours + hours : hours;
+        uniqueAssignments.set(groupKey, {
+          subject: assignment.subjectId,
+          teacher: assignment.teacherId,
+          hours: newHours,
+          semester: assignment.semester
+        });
       }
     });
     
