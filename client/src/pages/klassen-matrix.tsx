@@ -477,7 +477,7 @@ export default function KlassenMatrix() {
               <table className="min-w-max border-collapse w-full">
                   <thead>
                     <tr className="bg-muted/50">
-                      <th className="border-b border-r p-3 text-left font-medium bg-slate-200 dark:bg-slate-700">KLASSE</th>
+                      <th className="border-b border-r p-3 text-left font-medium bg-slate-200 dark:bg-slate-700 sticky left-0 z-10">KLASSE</th>
                       {sortedSubjects.map((subject, index) => (
                         <th 
                           key={subject.id} 
@@ -507,7 +507,7 @@ export default function KlassenMatrix() {
                   <tbody>
                     {(viewMode === "single" ? [selectedClass] : jahrgangClasses).map((classItem) => (
                       <tr key={classItem.id} className="hover:bg-muted/25">
-                        <td className="border-b border-r p-4 font-semibold text-lg bg-slate-100 dark:bg-slate-800">
+                        <td className="border-b border-r p-4 font-semibold text-lg bg-slate-100 dark:bg-slate-800 sticky left-0 z-10">
                           {classItem.name}
                         </td>
                         {sortedSubjects.map((subject, index) => {
