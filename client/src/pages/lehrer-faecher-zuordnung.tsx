@@ -1022,7 +1022,7 @@ export default function LehrerFaecherZuordnung() {
           {/* Assignment Matrix */}
           <div className="bg-card border rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="min-w-max w-full">
                 <thead>
                   <tr className="border-b bg-muted/50">
                     <th className="text-left p-3 font-medium text-sm border-r bg-muted/80 sticky left-0 z-10">KLASSE</th>
