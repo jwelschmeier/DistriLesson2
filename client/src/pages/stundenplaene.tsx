@@ -1342,7 +1342,8 @@ export default function Stundenplaene() {
                           <p>Keine Zuweisungen für diese Lehrkraft vorhanden.</p>
                         </div>
                       ) : (
-                        <Table data-testid="table-teacher-assignments">
+                        <div className="overflow-x-auto">
+                          <Table data-testid="table-teacher-assignments">
                           <TableHeader>
                             <TableRow>
                               <TableHead className="w-12">
@@ -1483,6 +1484,7 @@ export default function Stundenplaene() {
                             })}
                           </TableBody>
                         </Table>
+                        </div>
                       )}
                     </CardContent>
                   </Card>

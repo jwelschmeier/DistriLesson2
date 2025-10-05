@@ -431,8 +431,7 @@ export default function KlassenMatrix() {
             </div>
             
             <div className="border rounded-lg overflow-x-auto">
-              <div>
-                <table className="min-w-max border-collapse">
+              <table className="min-w-max border-collapse w-full">
                   <thead>
                     <tr className="bg-muted/50">
                       <th className="border-b border-r p-3 text-left font-medium bg-slate-200 dark:bg-slate-700">KLASSE</th>
@@ -628,7 +627,6 @@ export default function KlassenMatrix() {
                     ))}
                   </tbody>
                 </table>
-              </div>
             </div>
           </div>
         </div>
