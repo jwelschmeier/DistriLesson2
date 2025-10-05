@@ -457,14 +457,16 @@ export default function LehrerFaecherZuordnung() {
     return Math.max(0, maxHours - assignedHours);
   }, [computedData.hoursByTeacherAndSemester, teachers]);
 
-  // Team-Teaching helpers
+  // Team-Teaching helpers - semester-aware
   const getTeamTeachingGroups = useMemo(() => {
     const groups = new Map<string, Assignment[]>();
     assignments.forEach(assignment => {
       if (assignment.teamTeachingId) {
-        const existing = groups.get(assignment.teamTeachingId) || [];
+        // Group by teamTeachingId, semester, classId, and subjectId to ensure correct scoping
+        const key = `${assignment.teamTeachingId}-${assignment.semester}-${assignment.classId}-${assignment.subjectId}`;
+        const existing = groups.get(key) || [];
         existing.push(assignment);
-        groups.set(assignment.teamTeachingId, existing);
+        groups.set(key, existing);
       }
     });
     return groups;
@@ -472,13 +474,16 @@ export default function LehrerFaecherZuordnung() {
 
   const isTeamTeaching = useCallback((assignment: Assignment | undefined): boolean => {
     if (!assignment?.teamTeachingId) return false;
-    const group = getTeamTeachingGroups.get(assignment.teamTeachingId);
+    const key = `${assignment.teamTeachingId}-${assignment.semester}-${assignment.classId}-${assignment.subjectId}`;
+    const group = getTeamTeachingGroups.get(key);
+    // Only true if multiple distinct teachers share the same teamTeachingId in the same semester/class/subject
     return group ? group.length > 1 : false;
   }, [getTeamTeachingGroups]);
 
   const getTeamTeachersDisplay = useCallback((assignment: Assignment | undefined): string => {
     if (!assignment?.teamTeachingId) return '';
-    const group = getTeamTeachingGroups.get(assignment.teamTeachingId);
+    const key = `${assignment.teamTeachingId}-${assignment.semester}-${assignment.classId}-${assignment.subjectId}`;
+    const group = getTeamTeachingGroups.get(key);
     if (!group || group.length <= 1) return '';
     
     const teacherNames = group
