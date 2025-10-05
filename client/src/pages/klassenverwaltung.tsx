@@ -494,7 +494,7 @@ export default function Klassenverwaltung() {
   };
 
 
-  const filteredClasses = classes?.filter((classData) => {
+  const filteredClasses = (classes?.filter((classData) => {
     const matchesSearch = classData.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesGrade = filterGrade === "all" || classData.grade.toString() === filterGrade;
     
@@ -502,7 +502,14 @@ export default function Klassenverwaltung() {
     const matchesType = filterType === "all" || classData.type === filterType;
     
     return matchesSearch && matchesGrade && matchesType;
-  }) || [];
+  }) || []).sort((a, b) => {
+    // Erst nach Jahrgangsstufe sortieren
+    if (a.grade !== b.grade) {
+      return a.grade - b.grade;
+    }
+    // Dann alphabetisch nach Klassennamen
+    return a.name.localeCompare(b.name);
+  });
 
   const totalClasses = classes?.length || 0;
 
