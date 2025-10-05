@@ -62,7 +62,7 @@ const MatrixCell = React.memo(({
   return (
     <td className="p-2 border-r">
       <div className="flex flex-col gap-1">
-        {/* 1. Halbjahr Dropdown + Hours Input */}
+        {/* 1. Halbjahr Dropdown + Hours Dropdown */}
         <div className="flex items-center gap-1">
           <span className="text-xs text-muted-foreground font-medium w-8">1.HJ</span>
           <Select
@@ -80,33 +80,36 @@ const MatrixCell = React.memo(({
                 const remainingHours = remainingHoursByTeacherSem1.get(teacher.id) || 0;
                 return (
                   <SelectItem key={teacher.id} value={teacher.id}>
-                    {teacher.shortName} ({remainingHours}h frei)
+                    {teacher.shortName} ({remainingHours.toFixed(0)}h frei)
                   </SelectItem>
                 );
               })}
             </SelectContent>
           </Select>
-          <Input
-            type="number"
-            min="0"
-            max="10"
-            step="0.5"
-            value={assignmentSem1?.hoursPerWeek || ''}
-            onChange={(e) => {
-              const value = e.target.value;
+          <Select
+            value={assignmentSem1?.hoursPerWeek ? Math.round(parseFloat(assignmentSem1.hoursPerWeek)).toString() : ''}
+            onValueChange={(value) => {
               if (value && assignmentSem1) {
-                onHoursUpdate(classId, subjectId, "1", parseFloat(value));
+                onHoursUpdate(classId, subjectId, "1", parseInt(value));
               }
             }}
-            className="w-14 h-7 text-xs text-center"
-            placeholder="0"
             disabled={!assignmentSem1}
-            data-testid={`input-hours-s1-${classId}-${subjectId}`}
-          />
-          <span className="text-xs text-muted-foreground">h</span>
+          >
+            <SelectTrigger className="w-16 h-7 text-xs" data-testid={`select-hours-s1-${classId}-${subjectId}`}>
+              <SelectValue placeholder="--" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">1h</SelectItem>
+              <SelectItem value="2">2h</SelectItem>
+              <SelectItem value="3">3h</SelectItem>
+              <SelectItem value="4">4h</SelectItem>
+              <SelectItem value="5">5h</SelectItem>
+              <SelectItem value="6">6h</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         
-        {/* 2. Halbjahr Dropdown + Hours Input */}
+        {/* 2. Halbjahr Dropdown + Hours Dropdown */}
         <div className="flex items-center gap-1">
           <span className="text-xs text-muted-foreground font-medium w-8">2.HJ</span>
           <Select
@@ -124,30 +127,33 @@ const MatrixCell = React.memo(({
                 const remainingHours = remainingHoursByTeacherSem2.get(teacher.id) || 0;
                 return (
                   <SelectItem key={teacher.id} value={teacher.id}>
-                    {teacher.shortName} ({remainingHours}h frei)
+                    {teacher.shortName} ({remainingHours.toFixed(0)}h frei)
                   </SelectItem>
                 );
               })}
             </SelectContent>
           </Select>
-          <Input
-            type="number"
-            min="0"
-            max="10"
-            step="0.5"
-            value={assignmentSem2?.hoursPerWeek || ''}
-            onChange={(e) => {
-              const value = e.target.value;
+          <Select
+            value={assignmentSem2?.hoursPerWeek ? Math.round(parseFloat(assignmentSem2.hoursPerWeek)).toString() : ''}
+            onValueChange={(value) => {
               if (value && assignmentSem2) {
-                onHoursUpdate(classId, subjectId, "2", parseFloat(value));
+                onHoursUpdate(classId, subjectId, "2", parseInt(value));
               }
             }}
-            className="w-14 h-7 text-xs text-center"
-            placeholder="0"
             disabled={!assignmentSem2}
-            data-testid={`input-hours-s2-${classId}-${subjectId}`}
-          />
-          <span className="text-xs text-muted-foreground">h</span>
+          >
+            <SelectTrigger className="w-16 h-7 text-xs" data-testid={`select-hours-s2-${classId}-${subjectId}`}>
+              <SelectValue placeholder="--" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">1h</SelectItem>
+              <SelectItem value="2">2h</SelectItem>
+              <SelectItem value="3">3h</SelectItem>
+              <SelectItem value="4">4h</SelectItem>
+              <SelectItem value="5">5h</SelectItem>
+              <SelectItem value="6">6h</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
     </td>
