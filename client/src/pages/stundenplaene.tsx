@@ -1895,14 +1895,14 @@ export default function Stundenplaene() {
                           </div>
                         </div>
 
-                        {/* Total Hours */}
+                        {/* Semester Hours */}
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
                             <Clock className="text-purple-600 h-5 w-5" />
                           </div>
                           <div>
-                            <p className="text-xs text-foreground/70">Gesamtstunden</p>
-                            <p className="font-bold text-foreground" data-testid="text-class-total-hours">{classSummary.totalHours}h</p>
+                            <p className="text-xs text-foreground/70">Halbjahre</p>
+                            <p className="font-bold text-foreground">1. HJ & 2. HJ</p>
                             <p className="text-xs text-foreground/60">
                               <span data-testid="text-class-s1-hours">{classSummary.s1Hours}h</span> • <span data-testid="text-class-s2-hours">{classSummary.s2Hours}h</span>
                             </p>
