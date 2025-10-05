@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { Teacher, Class, Subject, Assignment } from "@shared/schema";
@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Users, BookOpen, Save, RotateCcw } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { calculateCorrectHours } from "@shared/parallel-subjects";
 
 
 export default function KlassenMatrix() {
@@ -537,8 +538,25 @@ export default function KlassenMatrix() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(viewMode === "single" ? [selectedClass] : jahrgangClasses).map((classItem) => (
-                      <tr key={classItem.id} className="hover:bg-muted/25">
+                    {(viewMode === "single" ? [selectedClass] : jahrgangClasses).map((classItem) => {
+                      // Calculate total hours for this class (per semester, without double-counting parallel subjects)
+                      const subjectHoursSem1: Record<string, number> = {};
+                      const subjectHoursSem2: Record<string, number> = {};
+                      
+                      // Collect hours from all subjects
+                      sortedSubjects.forEach(subject => {
+                        const hours1 = getCurrentHours(classItem.id, subject.id, "1");
+                        const hours2 = getCurrentHours(classItem.id, subject.id, "2");
+                        if (hours1 > 0) subjectHoursSem1[subject.shortName] = hours1;
+                        if (hours2 > 0) subjectHoursSem2[subject.shortName] = hours2;
+                      });
+                      
+                      const totalSem1 = calculateCorrectHours(subjectHoursSem1, classItem.grade, "1").totalHours;
+                      const totalSem2 = calculateCorrectHours(subjectHoursSem2, classItem.grade, "2").totalHours;
+                      
+                      return (
+                        <React.Fragment key={classItem.id}>
+                          <tr className="hover:bg-muted/25">
                         <td className="border-b border-r p-4 font-semibold text-lg bg-slate-100 dark:bg-slate-800 sticky left-0 z-10">
                           {classItem.name}
                         </td>
@@ -753,7 +771,25 @@ export default function KlassenMatrix() {
                         );
                       })}
                       </tr>
-                    ))}
+                      {/* Summary row showing total hours per semester */}
+                      <tr className="border-t-2 border-blue-500 bg-blue-50 dark:bg-blue-950/30">
+                        <td className="border-b border-r p-3 font-bold text-sm bg-blue-100 dark:bg-blue-900/50 sticky left-0 z-10">
+                          Summe
+                        </td>
+                        <td colSpan={sortedSubjects.length + religionCourses.length} className="border-b border-r p-3 text-sm">
+                          <div className="flex gap-6 items-center">
+                            <span className="font-medium">
+                              1. HJ: <span className="font-bold text-blue-700 dark:text-blue-400">{totalSem1.toFixed(1)}h</span>
+                            </span>
+                            <span className="font-medium">
+                              2. HJ: <span className="font-bold text-blue-700 dark:text-blue-400">{totalSem2.toFixed(1)}h</span>
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    </React.Fragment>
+                  );
+                })}
                   </tbody>
                 </table>
             </div>
