@@ -35,7 +35,7 @@ type AssignmentData = Assignment & {
   subject?: Subject;
 };
 
-// Memoized matrix cell component for performance - NOW WITH TWO DROPDOWNS
+// Memoized matrix cell component for performance - NOW WITH TWO DROPDOWNS AND HOURS INPUT
 const MatrixCell = React.memo(({ 
   classId, 
   subjectId, 
@@ -45,7 +45,8 @@ const MatrixCell = React.memo(({
   qualifiedTeachers,
   remainingHoursByTeacherSem1,
   remainingHoursByTeacherSem2,
-  onUpdate 
+  onUpdate,
+  onHoursUpdate 
 }: {
   classId: string;
   subjectId: string;
@@ -56,11 +57,12 @@ const MatrixCell = React.memo(({
   remainingHoursByTeacherSem1: Map<string, number>;
   remainingHoursByTeacherSem2: Map<string, number>;
   onUpdate: (classId: string, subjectId: string, semester: "1" | "2", teacherId: string | null) => void;
+  onHoursUpdate: (classId: string, subjectId: string, semester: "1" | "2", hours: number) => void;
 }) => {
   return (
     <td className="p-2 border-r">
       <div className="flex flex-col gap-1">
-        {/* 1. Halbjahr Dropdown */}
+        {/* 1. Halbjahr Dropdown + Hours Input */}
         <div className="flex items-center gap-1">
           <span className="text-xs text-muted-foreground font-medium w-8">1.HJ</span>
           <Select
@@ -69,7 +71,7 @@ const MatrixCell = React.memo(({
               onUpdate(classId, subjectId, "1", teacherId === 'unassigned' ? null : teacherId)
             }
           >
-            <SelectTrigger className="w-full h-7 text-xs">
+            <SelectTrigger className="w-24 h-7 text-xs">
               <SelectValue placeholder="--" />
             </SelectTrigger>
             <SelectContent>
@@ -84,9 +86,27 @@ const MatrixCell = React.memo(({
               })}
             </SelectContent>
           </Select>
+          <Input
+            type="number"
+            min="0"
+            max="10"
+            step="0.5"
+            value={assignmentSem1?.hoursPerWeek || ''}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value && assignmentSem1) {
+                onHoursUpdate(classId, subjectId, "1", parseFloat(value));
+              }
+            }}
+            className="w-14 h-7 text-xs text-center"
+            placeholder="0"
+            disabled={!assignmentSem1}
+            data-testid={`input-hours-s1-${classId}-${subjectId}`}
+          />
+          <span className="text-xs text-muted-foreground">h</span>
         </div>
         
-        {/* 2. Halbjahr Dropdown */}
+        {/* 2. Halbjahr Dropdown + Hours Input */}
         <div className="flex items-center gap-1">
           <span className="text-xs text-muted-foreground font-medium w-8">2.HJ</span>
           <Select
@@ -95,7 +115,7 @@ const MatrixCell = React.memo(({
               onUpdate(classId, subjectId, "2", teacherId === 'unassigned' ? null : teacherId)
             }
           >
-            <SelectTrigger className="w-full h-7 text-xs">
+            <SelectTrigger className="w-24 h-7 text-xs">
               <SelectValue placeholder="--" />
             </SelectTrigger>
             <SelectContent>
@@ -110,6 +130,24 @@ const MatrixCell = React.memo(({
               })}
             </SelectContent>
           </Select>
+          <Input
+            type="number"
+            min="0"
+            max="10"
+            step="0.5"
+            value={assignmentSem2?.hoursPerWeek || ''}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value && assignmentSem2) {
+                onHoursUpdate(classId, subjectId, "2", parseFloat(value));
+              }
+            }}
+            className="w-14 h-7 text-xs text-center"
+            placeholder="0"
+            disabled={!assignmentSem2}
+            data-testid={`input-hours-s2-${classId}-${subjectId}`}
+          />
+          <span className="text-xs text-muted-foreground">h</span>
         </div>
       </div>
     </td>
@@ -605,6 +643,18 @@ export default function LehrerFaecherZuordnung() {
     }
   }, [getRequiredHours, getAssignment, createAssignmentMutation, updateAssignmentMutation, deleteAssignmentMutation]);
 
+  // Update only hours for an existing assignment
+  const updateHoursOnly = useCallback((classId: string, subjectId: string, semester: "1" | "2", hours: number) => {
+    const existingAssignment = getAssignment(classId, subjectId, semester);
+    
+    if (existingAssignment && hours > 0 && hours <= 10) {
+      updateAssignmentMutation.mutate({
+        id: existingAssignment.id,
+        hoursPerWeek: hours
+      });
+    }
+  }, [getAssignment, updateAssignmentMutation]);
+
   return (
     <div className="flex h-screen bg-muted/50 dark:bg-muted/20">
       <Sidebar />
@@ -946,6 +996,7 @@ export default function LehrerFaecherZuordnung() {
                               remainingHoursByTeacherSem1={computedData.remainingHoursByTeacherSem1}
                               remainingHoursByTeacherSem2={computedData.remainingHoursByTeacherSem2}
                               onUpdate={updateAssignment}
+                              onHoursUpdate={updateHoursOnly}
                             />
                           );
                         })}
