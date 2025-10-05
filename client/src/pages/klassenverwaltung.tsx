@@ -16,7 +16,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, School, Search, Filter, Calendar } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
-import { insertClassSchema, type Class, type Teacher } from "@shared/schema";
+import { insertClassSchema, type Class, type Teacher, type Subject } from "@shared/schema";
+import { getParallelGroupForSubject } from "@shared/parallel-subjects";
 
 type Assignment = {
   id: string;
@@ -72,6 +73,10 @@ export default function Klassenverwaltung() {
     queryKey: ["/api/teachers"],
   });
 
+  const { data: subjects, isLoading: subjectsLoading } = useQuery<Subject[]>({
+    queryKey: ["/api/subjects"],
+  });
+
   const { data: assignments, isLoading: assignmentsLoading } = useQuery<Assignment[]>({
     queryKey: ["/api/assignments"],
     queryFn: () => fetch("/api/assignments?minimal=true").then(res => res.json())
@@ -89,31 +94,69 @@ export default function Klassenverwaltung() {
     return new Map(teachers.map(t => [t.id, t]));
   }, [teachers]);
 
+  // PERFORMANCE OPTIMIZATION: Memoized subject lookup map for O(1) access
+  const subjectMap = useMemo(() => {
+    if (!subjects) return new Map<string, Subject>();
+    return new Map(subjects.map(s => [s.id, s]));
+  }, [subjects]);
+
   // PERFORMANCE OPTIMIZATION: Memoized class hours map for O(1) access per semester
-  // Pre-aggregates all assignment hours by classId and semester
+  // Pre-aggregates all assignment hours by classId and semester with parallel group handling
   const classHoursMap = useMemo(() => {
     const hoursMap = new Map<string, { all: number; '1': number; '2': number }>();
     
-    if (!assignments) return hoursMap;
+    if (!assignments || !classes || !subjectMap) return hoursMap;
     
-    assignments.forEach(a => {
-      const hours = parseNumber(a.hoursPerWeek) || 0;
-      if (!Number.isFinite(hours)) return;
+    // Process each class individually to handle grouping correctly
+    classes.forEach(cls => {
+      const classAssignments = assignments.filter(a => a.classId === cls.id);
+      const processedAssignments = new Map<string, { hours: number; semester: string }>();
       
-      const existing = hoursMap.get(a.classId) || { all: 0, '1': 0, '2': 0 };
-      existing.all += hours;
+      classAssignments.forEach(a => {
+        const hours = parseNumber(a.hoursPerWeek) || 0;
+        if (!Number.isFinite(hours) || hours <= 0) return;
+        
+        const subject = subjectMap.get(a.subjectId);
+        const subjectShortName = subject?.shortName;
+        const parallelGroup = subjectShortName ? getParallelGroupForSubject(subjectShortName) : null;
+        
+        // Generate grouping key based on assignment type
+        let groupKey: string;
+        if (parallelGroup) {
+          groupKey = `parallel-${parallelGroup}-${a.semester}`;
+        } else {
+          groupKey = `individual-${a.subjectId}-${a.teacherId}-${a.semester}`;
+        }
+        
+        const existing = processedAssignments.get(groupKey);
+        
+        // Keep the assignment with maximum hours (handles duplicates and parallel subjects)
+        if (!existing || hours > existing.hours) {
+          processedAssignments.set(groupKey, {
+            hours: hours,
+            semester: a.semester
+          });
+        }
+      });
       
-      if (a.semester === '1') {
-        existing['1'] += hours;
-      } else if (a.semester === '2') {
-        existing['2'] += hours;
-      }
+      // Calculate totals from processed assignments
+      const s1Hours = Array.from(processedAssignments.values())
+        .filter(a => a.semester === '1')
+        .reduce((sum, a) => sum + a.hours, 0);
+        
+      const s2Hours = Array.from(processedAssignments.values())
+        .filter(a => a.semester === '2')
+        .reduce((sum, a) => sum + a.hours, 0);
       
-      hoursMap.set(a.classId, existing);
+      hoursMap.set(cls.id, {
+        all: s1Hours + s2Hours,
+        '1': s1Hours,
+        '2': s2Hours
+      });
     });
     
     return hoursMap;
-  }, [assignments]);
+  }, [assignments, classes, subjectMap]);
 
   // Check if this is a regular class (like 05A, 09B) vs differentiation course (like 09DF, 10KR1)
   const isRegularClass = (className: string): boolean => {
