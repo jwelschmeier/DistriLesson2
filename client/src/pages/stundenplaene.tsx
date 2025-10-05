@@ -1491,7 +1491,7 @@ export default function Stundenplaene() {
                             <p>Keine Zuweisungen für diese Lehrkraft vorhanden.</p>
                           </div>
                         ) : (
-                          <div className="overflow-x-auto max-h-[60vh]">
+                          <div className="overflow-x-auto max-h-[75vh]">
                             <Table data-testid="table-teacher-assignments">
                             <TableHeader>
                               <TableRow className="sticky top-0 z-10 bg-card border-b">
