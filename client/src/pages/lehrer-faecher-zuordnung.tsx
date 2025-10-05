@@ -156,6 +156,8 @@ const MatrixCell = React.memo(({
 
 export default function LehrerFaecherZuordnung() {
   const { toast } = useToast();
+  const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<'jahrgang' | 'einzelklasse' | null>(null);
   const [gradeFilter, setGradeFilter] = useState<string>("alle");
   const [subjectFilter, setSubjectFilter] = useState<string>("alle");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -167,19 +169,21 @@ export default function LehrerFaecherZuordnung() {
   // Definierte Reihenfolge der deutschen Schulfächer
   const SUBJECT_ORDER = ['D', 'M', 'E', 'FS', 'SW', 'PK', 'GE', 'EK', 'BI', 'PH', 'CH', 'TC', 'IF', 'HW', 'KU', 'MU', 'TX', 'ER', 'KR', 'PP', 'SO', 'BO', 'SP'];
 
-  // Data fetching with proper error handling
-  const { data: teachers = [], isLoading: teachersLoading } = useQuery<Teacher[]>({ 
-    queryKey: ['/api/teachers'],
-    select: (data: Teacher[]) => data?.filter(t => t.isActive) || [],
-    staleTime: 30000,
-    retry: false
-  });
-
+  // Only load basic data first
   const { data: classes = [], isLoading: classesLoading } = useQuery<Class[]>({ 
     queryKey: ['/api/classes'],
     select: (data: Class[]) => data?.sort((a, b) => a.grade - b.grade || a.name.localeCompare(b.name)) || [],
     staleTime: 30000,
     retry: false
+  });
+
+  // Load other data only when grade is selected
+  const { data: teachers = [], isLoading: teachersLoading } = useQuery<Teacher[]>({ 
+    queryKey: ['/api/teachers'],
+    select: (data: Teacher[]) => data?.filter(t => t.isActive) || [],
+    staleTime: 30000,
+    retry: false,
+    enabled: selectedGrade !== null
   });
 
   const { data: subjects = [], isLoading: subjectsLoading } = useQuery<Subject[]>({ 
@@ -195,7 +199,8 @@ export default function LehrerFaecherZuordnung() {
         });
     },
     staleTime: 30000,
-    retry: false
+    retry: false,
+    enabled: selectedGrade !== null
   });
 
   // Update refs whenever subjects or classes change
@@ -207,12 +212,13 @@ export default function LehrerFaecherZuordnung() {
     classesRef.current = classes;
   }, [classes]);
 
-  // Load assignments for BOTH semesters
+  // Load assignments for BOTH semesters only when grade is selected
   const { data: assignments = [], isLoading: assignmentsLoading } = useQuery<AssignmentData[]>({ 
     queryKey: ['/api/assignments'],
     queryFn: () => fetch(`/api/assignments?minimal=true`).then(res => res.json()),
     staleTime: 30000,
-    retry: false
+    retry: false,
+    enabled: selectedGrade !== null
   });
 
   // Show loading state while data is loading
@@ -655,24 +661,103 @@ export default function LehrerFaecherZuordnung() {
     }
   }, [getAssignment, updateAssignmentMutation]);
 
+  // Group classes by grade
+  const classesByGrade = useMemo(() => {
+    const grouped = new Map<number, Class[]>();
+    classes.forEach(cls => {
+      if (!grouped.has(cls.grade)) {
+        grouped.set(cls.grade, []);
+      }
+      grouped.get(cls.grade)!.push(cls);
+    });
+    return grouped;
+  }, [classes]);
+
+  // Selection screen
+  if (selectedGrade === null) {
+    return (
+      <div className="flex h-screen bg-muted/50 dark:bg-muted/20">
+        <Sidebar />
+        
+        <main className="flex-1 overflow-auto">
+          <header className="bg-card border-b border-border px-6 py-4">
+            <div className="flex items-center gap-2">
+              <Grid3X3 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <div>
+                <h2 className="text-2xl font-semibold text-foreground">Lehrer-Fächer-Zuordnung</h2>
+                <p className="text-sm text-muted-foreground mt-1">Jahrgang auswählen</p>
+              </div>
+            </div>
+          </header>
+
+          <div className="p-6">
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Bitte wählen Sie einen Jahrgang aus:</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {[5, 6, 7, 8, 9, 10].map(grade => {
+                    const gradeClasses = classesByGrade.get(grade) || [];
+                    const classCount = gradeClasses.filter(c => c.type === 'klasse').length;
+                    const courseCount = gradeClasses.filter(c => c.type === 'kurs').length;
+                    
+                    return (
+                      <Button
+                        key={grade}
+                        onClick={() => {
+                          setSelectedGrade(grade);
+                          setGradeFilter(grade.toString());
+                        }}
+                        variant="outline"
+                        className="h-auto py-6 flex flex-col items-center gap-2 hover:bg-primary/10 hover:border-primary"
+                        data-testid={`button-select-grade-${grade}`}
+                      >
+                        <span className="text-3xl font-bold">{grade}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {classCount} Klasse{classCount !== 1 ? 'n' : ''} • {courseCount} Kurs{courseCount !== 1 ? 'e' : ''}
+                        </span>
+                      </Button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-muted/50 dark:bg-muted/20">
       <Sidebar />
       
       <main className="flex-1 overflow-auto">
         <header className="bg-card border-b border-border px-6 py-4">
-          <div className="flex items-center gap-2">
-            <Grid3X3 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-            <div>
-              <h2 className="text-2xl font-semibold text-foreground">Lehrer-Fächer-Zuordnung</h2>
-              <p className="text-sm text-muted-foreground mt-1">Beide Halbjahre gleichzeitig bearbeiten</p>
-              {isLoading && (
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-                  <span className="text-sm text-orange-600 font-medium">Daten werden geladen...</span>
-                </div>
-              )}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Grid3X3 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <div>
+                <h2 className="text-2xl font-semibold text-foreground">Lehrer-Fächer-Zuordnung - Jahrgang {selectedGrade}</h2>
+                <p className="text-sm text-muted-foreground mt-1">Beide Halbjahre gleichzeitig bearbeiten</p>
+                {isLoading && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                    <span className="text-sm text-orange-600 font-medium">Daten werden geladen...</span>
+                  </div>
+                )}
+              </div>
             </div>
+            <Button
+              onClick={() => {
+                setSelectedGrade(null);
+                setGradeFilter("alle");
+              }}
+              variant="outline"
+              size="sm"
+              data-testid="button-back-to-selection"
+            >
+              ← Zurück zur Auswahl
+            </Button>
           </div>
         </header>
 
