@@ -1014,14 +1014,14 @@ export default function LehrerFaecherZuordnung() {
           )}
 
           {/* Assignment Matrix */}
-          <div className="bg-card border rounded-lg">
+          <div className="bg-card border rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="min-w-max">
+              <table className="w-full">
                 <thead>
                   <tr className="border-b bg-muted/50">
-                    <th className="text-left p-3 font-medium text-sm border-r bg-muted/80">KLASSE</th>
+                    <th className="text-left p-3 font-medium text-sm border-r bg-muted/80 sticky left-0 z-10">KLASSE</th>
                     {filteredSubjects.map(subject => (
-                      <th key={subject.id} className="text-center p-3 font-medium text-sm border-r min-w-[180px]">
+                      <th key={subject.id} className="text-center p-3 font-medium text-sm border-r min-w-[280px]">
                         {subject.shortName.toUpperCase()}
                       </th>
                     ))}
@@ -1051,7 +1051,7 @@ export default function LehrerFaecherZuordnung() {
 
                     return (
                       <tr key={classData.id} className="border-b hover:bg-muted/20">
-                        <td className="p-3 font-medium border-r bg-muted/30 text-sm">
+                        <td className="p-3 font-medium border-r bg-muted/30 text-sm sticky left-0 z-10">
                           {classData.name}
                         </td>
                         {filteredSubjects.map(subject => {
