@@ -130,6 +130,38 @@ export default function KlassenMatrix() {
       });
   }, [subjects]);
 
+  // Team-Teaching helpers - semester-aware
+  const getTeamTeachingGroups = useMemo(() => {
+    const allAssignments = [...assignments1, ...assignments2];
+    const groups = new Map<string, Assignment[]>();
+    allAssignments.forEach(assignment => {
+      if (assignment.teamTeachingId) {
+        // Group by teamTeachingId, semester, classId, and subjectId to ensure correct scoping
+        const key = `${assignment.teamTeachingId}-${assignment.semester}-${assignment.classId}-${assignment.subjectId}`;
+        const existing = groups.get(key) || [];
+        existing.push(assignment);
+        groups.set(key, existing);
+      }
+    });
+    return groups;
+  }, [assignments1, assignments2]);
+
+  const getTeamTeachersDisplay = useCallback((classItemId: string, subjectId: string, semester: "1" | "2"): string => {
+    const assignments = semester === "1" ? assignments1 : assignments2;
+    const assignment = assignments.find(a => a.subjectId === subjectId && a.classId === classItemId);
+    
+    if (!assignment?.teamTeachingId) return '';
+    const key = `${assignment.teamTeachingId}-${assignment.semester}-${assignment.classId}-${assignment.subjectId}`;
+    const group = getTeamTeachingGroups.get(key);
+    if (!group || group.length <= 1) return '';
+    
+    const teacherNames = group
+      .map(a => teachers.find(t => t.id === a.teacherId)?.shortName)
+      .filter(Boolean);
+    
+    return teacherNames.join(' & ');
+  }, [getTeamTeachingGroups, teachers, assignments1, assignments2]);
+
   // Get current teacher for a subject, semester, and class (considering local changes)
   const getCurrentTeacher = (classItemId: string, subjectId: string, semester: "1" | "2") => {
     const key = `${classItemId}::${subjectId}::${semester}`;
@@ -520,6 +552,10 @@ export default function KlassenMatrix() {
                         const currentTeacher1 = getCurrentTeacher(classItem.id, subject.id, "1");
                         const currentTeacher2 = getCurrentTeacher(classItem.id, subject.id, "2");
                         
+                        // Get team teaching display
+                        const teamText1 = getTeamTeachersDisplay(classItem.id, subject.id, "1");
+                        const teamText2 = getTeamTeachersDisplay(classItem.id, subject.id, "2");
+                        
                         return (
                           <td 
                             key={subject.id} 
@@ -531,50 +567,59 @@ export default function KlassenMatrix() {
                           >
                             <div className="space-y-2">
                               {/* 1. Halbjahr */}
-                              <div className="text-xs text-muted-foreground font-medium">1. HJ</div>
-                              <div className="flex items-center gap-1">
-                                <Select
-                                  value={currentTeacher1 || 'unassigned'}
-                                  onValueChange={(teacherId) => 
-                                    handleTeacherChange(classItem.id, "1", subject.id, teacherId === 'unassigned' ? null : teacherId)
-                                  }
-                                  data-testid={`select-teacher-${classItem.id}-${subject.id}-semester-1`}
-                                >
-                                  <SelectTrigger className="w-20 h-7 text-xs">
-                                    <SelectValue placeholder="--" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="unassigned">--</SelectItem>
-                                    {qualifiedForSubject.map(teacher => {
-                                      const workload = getTeacherWorkload(teacher.id, "1");
-                                      return (
-                                        <SelectItem key={teacher.id} value={teacher.id}>
-                                          {teacher.shortName} ({workload.assigned}/{workload.total}h)
-                                        </SelectItem>
-                                      );
-                                    })}
-                                  </SelectContent>
-                                </Select>
-                                <Select
-                                  value={getCurrentHours(classItem.id, subject.id, "1").toString()}
-                                  onValueChange={(hours) => handleHoursChange(classItem.id, "1", subject.id, parseInt(hours))}
-                                  disabled={!currentTeacher1}
-                                  data-testid={`select-hours-${classItem.id}-${subject.id}-semester-1`}
-                                >
-                                  <SelectTrigger className="w-14 h-7 text-xs">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {[1, 2, 3, 4, 5, 6].map(h => (
-                                      <SelectItem key={h} value={h.toString()}>{h}h</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                              <div className="space-y-1">
+                                <div className="text-xs text-muted-foreground font-medium">1. HJ</div>
+                                <div className="flex items-center gap-1 justify-center">
+                                  <Select
+                                    value={currentTeacher1 || 'unassigned'}
+                                    onValueChange={(teacherId) => 
+                                      handleTeacherChange(classItem.id, "1", subject.id, teacherId === 'unassigned' ? null : teacherId)
+                                    }
+                                    data-testid={`select-teacher-${classItem.id}-${subject.id}-semester-1`}
+                                  >
+                                    <SelectTrigger className="w-20 h-7 text-xs">
+                                      <SelectValue placeholder="--" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="unassigned">--</SelectItem>
+                                      {qualifiedForSubject.map(teacher => {
+                                        const workload = getTeacherWorkload(teacher.id, "1");
+                                        return (
+                                          <SelectItem key={teacher.id} value={teacher.id}>
+                                            {teacher.shortName} ({workload.assigned}/{workload.total}h)
+                                          </SelectItem>
+                                        );
+                                      })}
+                                    </SelectContent>
+                                  </Select>
+                                  <Select
+                                    value={getCurrentHours(classItem.id, subject.id, "1").toString()}
+                                    onValueChange={(hours) => handleHoursChange(classItem.id, "1", subject.id, parseInt(hours))}
+                                    disabled={!currentTeacher1}
+                                    data-testid={`select-hours-${classItem.id}-${subject.id}-semester-1`}
+                                  >
+                                    <SelectTrigger className="w-14 h-7 text-xs">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {[1, 2, 3, 4, 5, 6].map(h => (
+                                        <SelectItem key={h} value={h.toString()}>{h}h</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                {teamText1 && (
+                                  <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
+                                    <Users className="h-2.5 w-2.5 mr-0.5" />
+                                    {teamText1}
+                                  </Badge>
+                                )}
                               </div>
                               
                               {/* 2. Halbjahr */}
-                              <div className="text-xs text-muted-foreground font-medium">2. HJ</div>
-                              <div className="flex items-center gap-1">
+                              <div className="space-y-1">
+                                <div className="text-xs text-muted-foreground font-medium">2. HJ</div>
+                                <div className="flex items-center gap-1 justify-center">
                                 <Select
                                   value={currentTeacher2 || 'unassigned'}
                                   onValueChange={(teacherId) => 
@@ -613,6 +658,13 @@ export default function KlassenMatrix() {
                                   </SelectContent>
                                 </Select>
                               </div>
+                              {teamText2 && (
+                                <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
+                                  <Users className="h-2.5 w-2.5 mr-0.5" />
+                                  {teamText2}
+                                </Badge>
+                              )}
+                            </div>
                             </div>
                           </td>
                         );
