@@ -11,22 +11,36 @@ app.use((req, res, next) => {
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
+  // Only capture response body if debug logging is enabled
+  const debugLogResponses = process.env.DEBUG_LOG_RESPONSES === 'true';
+  
+  if (debugLogResponses) {
+    const originalResJson = res.json;
+    res.json = function (bodyJson, ...args) {
+      capturedJsonResponse = bodyJson;
+      return originalResJson.apply(res, [bodyJson, ...args]);
+    };
+  }
 
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
+      
+      // Only log response body if debug mode is enabled
+      if (debugLogResponses && capturedJsonResponse) {
+        try {
+          // Serialize and truncate to max 1KB to avoid performance issues
+          const serialized = JSON.stringify(capturedJsonResponse);
+          const maxLength = 1024;
+          if (serialized.length > maxLength) {
+            logLine += ` :: ${serialized.slice(0, maxLength)}…`;
+          } else {
+            logLine += ` :: ${serialized}`;
+          }
+        } catch (e) {
+          logLine += ` :: [serialization error]`;
+        }
       }
 
       log(logLine);
