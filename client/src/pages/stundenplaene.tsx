@@ -593,8 +593,8 @@ export default function Stundenplaene() {
       .filter(a => a.semester === "2")
       .reduce((sum, a) => sum + a.hours, 0);
     
-    // Total hours represents the weekly teaching load
-    const totalHours = Math.max(s1Hours, s2Hours);
+    // Total hours represents the sum of both semesters
+    const totalHours = s1Hours + s2Hours;
     
     // Calculate teacher count from all assignments with hours > 0
     const allTeachersWithHours = new Set(
