@@ -1,13 +1,17 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { HelpBot } from "./HelpBot";
 import { MessageCircle } from "lucide-react";
+
+// Lazy load the HelpBot component
+const HelpBot = lazy(() => import("./HelpBot").then(module => ({ default: module.HelpBot })));
 
 export function HelpBotButton() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   const handleOpen = () => {
+    setIsMounted(true); // Trigger lazy loading
     setIsOpen(true);
     setIsMinimized(false);
   };
@@ -34,12 +38,20 @@ export function HelpBotButton() {
         </Button>
       )}
       
-      <HelpBot
-        isOpen={isOpen}
-        onClose={handleClose}
-        onMinimize={handleMinimize}
-        isMinimized={isMinimized}
-      />
+      {isMounted && (
+        <Suspense fallback={
+          <div className="fixed bottom-4 right-4 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        }>
+          <HelpBot
+            isOpen={isOpen}
+            onClose={handleClose}
+            onMinimize={handleMinimize}
+            isMinimized={isMinimized}
+          />
+        </Suspense>
+      )}
     </>
   );
 }
