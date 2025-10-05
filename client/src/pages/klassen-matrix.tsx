@@ -774,17 +774,19 @@ export default function KlassenMatrix() {
                       {/* Summary row showing total hours per semester */}
                       <tr className="border-t-2 border-blue-500 bg-blue-50 dark:bg-blue-950/30">
                         <td className="border-b border-r p-3 font-bold text-sm bg-blue-100 dark:bg-blue-900/50 sticky left-0 z-10">
-                          Summe
-                        </td>
-                        <td colSpan={sortedSubjects.length + religionCourses.length} className="border-b border-r p-3 text-sm">
-                          <div className="flex gap-6 items-center">
-                            <span className="font-medium">
-                              1. HJ: <span className="font-bold text-blue-700 dark:text-blue-400">{totalSem1.toFixed(1)}h</span>
-                            </span>
-                            <span className="font-medium">
-                              2. HJ: <span className="font-bold text-blue-700 dark:text-blue-400">{totalSem2.toFixed(1)}h</span>
-                            </span>
+                          <div className="flex flex-col gap-1">
+                            <div className="font-bold">Summe</div>
+                            <div className="flex gap-4 text-xs">
+                              <span className="font-medium">
+                                1. HJ: <span className="font-bold text-blue-700 dark:text-blue-400">{totalSem1.toFixed(1)}h</span>
+                              </span>
+                              <span className="font-medium">
+                                2. HJ: <span className="font-bold text-blue-700 dark:text-blue-400">{totalSem2.toFixed(1)}h</span>
+                              </span>
+                            </div>
                           </div>
+                        </td>
+                        <td colSpan={sortedSubjects.length + religionCourses.length} className="border-b border-r p-3 text-sm bg-blue-50 dark:bg-blue-950/30">
                         </td>
                       </tr>
                     </React.Fragment>
