@@ -22,6 +22,7 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { type Teacher, type Class, type Subject, type Assignment } from "@shared/schema";
+import { getParallelGroupForSubject } from "@shared/parallel-subjects";
 
 interface ExtendedAssignment extends Assignment {
   teacher?: Teacher;
@@ -497,16 +498,26 @@ export default function Stundenplaene() {
       // Skip 0-hour assignments as they're often placeholders
       if (hours <= 0) return;
       
+      // Check if subject belongs to a parallel group (e.g., religion subjects)
+      const subjectShortName = assignment.subject?.shortName;
+      const parallelGroup = subjectShortName ? getParallelGroupForSubject(subjectShortName) : null;
+      
       // For team teaching, use teamTeachingId as the grouping key to count hours only once per team
+      // For parallel subjects (e.g., religion), group by parallel group and semester
       // For regular assignments, use the individual assignment details
-      const groupKey = assignment.teamTeachingId 
-        ? `team-${assignment.teamTeachingId}-${assignment.subjectId}-${assignment.semester}`
-        : `individual-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
+      let groupKey: string;
+      if (assignment.teamTeachingId) {
+        groupKey = `team-${assignment.teamTeachingId}-${assignment.subjectId}-${assignment.semester}`;
+      } else if (parallelGroup) {
+        groupKey = `parallel-${parallelGroup}-${assignment.semester}`;
+      } else {
+        groupKey = `individual-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
+      }
       
       const existing = uniqueAssignments.get(groupKey);
       
       // Keep the assignment with maximum hours (handles duplicates)
-      // For team teaching, this ensures we only count the hours once per team
+      // For team teaching and parallel subjects, this ensures we only count the hours once per group
       if (!existing || hours > existing.hours) {
         uniqueAssignments.set(groupKey, {
           subject: assignment.subjectId,
@@ -529,8 +540,13 @@ export default function Stundenplaene() {
     // Total hours represents the weekly teaching load
     const totalHours = Math.max(s1Hours, s2Hours);
     
-    const uniqueTeachers = new Set(Array.from(uniqueAssignments.values()).map(a => a.teacher));
-    const teacherCount = uniqueTeachers.size;
+    // Calculate teacher count from all assignments with hours > 0
+    const allTeachersWithHours = new Set(
+      classAssignments
+        .filter(a => parseFloat(a.hoursPerWeek) > 0)
+        .map(a => a.teacherId)
+    );
+    const teacherCount = allTeachersWithHours.size;
     
     return { totalHours, s1Hours, s2Hours, teacherCount };
   }, [classAssignments]);
