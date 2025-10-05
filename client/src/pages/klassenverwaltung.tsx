@@ -124,12 +124,26 @@ export default function Klassenverwaltung() {
         
         const existing = processedAssignments.get(groupKey);
         
-        // Keep the assignment with maximum hours (handles duplicates, team teaching, and parallel subjects)
-        if (!existing || hours > existing.hours) {
-          processedAssignments.set(groupKey, {
-            hours: hours,
-            semester: a.semester
-          });
+        // For team teaching and parallel subjects, keep max hours (one per group)
+        // For individual assignments, sum the hours (same teacher can teach multiple times)
+        if (a.teamTeachingId || parallelGroup) {
+          // Team teaching or parallel: keep max hours only
+          if (!existing || hours > existing.hours) {
+            processedAssignments.set(groupKey, {
+              hours: hours,
+              semester: a.semester
+            });
+          }
+        } else {
+          // Individual assignment: sum hours
+          if (existing) {
+            existing.hours += hours;
+          } else {
+            processedAssignments.set(groupKey, {
+              hours: hours,
+              semester: a.semester
+            });
+          }
         }
       });
       

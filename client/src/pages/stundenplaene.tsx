@@ -572,15 +572,30 @@ export default function Stundenplaene() {
       
       const existing = uniqueAssignments.get(groupKey);
       
-      // Keep the assignment with maximum hours (handles duplicates)
-      // For team teaching and parallel subjects, this ensures we only count the hours once per group
-      if (!existing || hours > existing.hours) {
-        uniqueAssignments.set(groupKey, {
-          subject: assignment.subjectId,
-          teacher: assignment.teacherId,
-          hours: hours,
-          semester: assignment.semester
-        });
+      // For team teaching and parallel subjects, keep max hours (one per group)
+      // For individual assignments, sum the hours (same teacher can teach multiple times)
+      if (assignment.teamTeachingId || parallelGroup) {
+        // Team teaching or parallel: keep max hours only
+        if (!existing || hours > existing.hours) {
+          uniqueAssignments.set(groupKey, {
+            subject: assignment.subjectId,
+            teacher: assignment.teacherId,
+            hours: hours,
+            semester: assignment.semester
+          });
+        }
+      } else {
+        // Individual assignment: sum hours
+        if (existing) {
+          existing.hours += hours;
+        } else {
+          uniqueAssignments.set(groupKey, {
+            subject: assignment.subjectId,
+            teacher: assignment.teacherId,
+            hours: hours,
+            semester: assignment.semester
+          });
+        }
       }
     });
     
