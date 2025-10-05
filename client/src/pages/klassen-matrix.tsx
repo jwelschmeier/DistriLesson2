@@ -283,8 +283,13 @@ export default function KlassenMatrix() {
       }
     },
     onSuccess: () => {
-      // Invalidate all assignment queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['/api/assignments'] });
+      // Invalidate ALL assignment queries to refresh data everywhere (Stundenpläne, etc.)
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.includes('/api/assignments');
+        }
+      });
       setChanges1({});
       setChanges2({});
       setChangesHours1({});

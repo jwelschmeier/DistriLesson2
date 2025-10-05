@@ -514,7 +514,12 @@ export default function LehrerFaecherZuordnung() {
       return apiRequest('POST', '/api/assignments', assignment);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/assignments'] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.includes('/api/assignments');
+        }
+      });
       toast({ title: "Zuordnung erstellt", description: "Die Zuordnung wurde erfolgreich gespeichert." });
     },
     onError: (error: any) => {
@@ -531,8 +536,12 @@ export default function LehrerFaecherZuordnung() {
       return apiRequest('PATCH', `/api/assignments/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/assignments'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/assignments-full'] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.includes('/api/assignments');
+        }
+      });
       toast({ title: "Zuordnung aktualisiert", description: "Die Zuordnung wurde erfolgreich geändert." });
     },
     onError: (error: any) => {
@@ -549,7 +558,12 @@ export default function LehrerFaecherZuordnung() {
       return apiRequest('DELETE', `/api/assignments/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/assignments'] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.includes('/api/assignments');
+        }
+      });
       toast({ title: "Zuordnung gelöscht", description: "Die Zuordnung wurde entfernt." });
     },
     onError: (error: any) => {
