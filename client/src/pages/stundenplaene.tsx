@@ -38,14 +38,21 @@ export default function Stundenplaene() {
   const [activeTab, setActiveTab] = useState<string>("teacher");
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>("");
   const [selectedClassId, setSelectedClassId] = useState<string>("");
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [isTeacherEditMode, setIsTeacherEditMode] = useState(false);
+  const [isClassEditMode, setIsClassEditMode] = useState(false);
   const [selectedSemester, setSelectedSemester] = useState<'all' | '1' | '2'>('all');
   const [selectedClassType, setSelectedClassType] = useState<string>("all");
   
   
   // State for editable table
   const [editedAssignments, setEditedAssignments] = useState<Record<string, Partial<Assignment>>>({});
-  const [newAssignment, setNewAssignment] = useState<{
+  const [newTeacherAssignment, setNewTeacherAssignment] = useState<{
+    classId: string;
+    subjectId: string;
+    hoursPerWeek: number;
+    semester: "1" | "2";
+  } | null>(null);
+  const [newClassAssignment, setNewClassAssignment] = useState<{
     teacherId: string;
     subjectId: string;
     hoursPerWeek: number;
@@ -164,7 +171,7 @@ export default function Stundenplaene() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
-      setNewAssignment(null);
+      setNewClassAssignment(null);
       toast({
         title: "Erfolg",
         description: "Neue Zuweisung wurde erstellt.",
@@ -1019,14 +1026,29 @@ export default function Stundenplaene() {
     }
   };
 
-  const saveNewAssignment = async () => {
-    if (!newAssignment || !selectedClassId) return;
+  const saveNewClassAssignment = async () => {
+    if (!newClassAssignment || !selectedClassId) return;
 
     try {
       await createAssignmentMutation.mutateAsync({
-        ...newAssignment,
+        ...newClassAssignment,
         classId: selectedClassId,
       });
+      setNewClassAssignment(null);
+    } catch (error) {
+      // Error handled by mutation onError
+    }
+  };
+
+  const saveNewTeacherAssignment = async () => {
+    if (!newTeacherAssignment || !selectedTeacherId) return;
+
+    try {
+      await createAssignmentMutation.mutateAsync({
+        ...newTeacherAssignment,
+        teacherId: selectedTeacherId,
+      });
+      setNewTeacherAssignment(null);
     } catch (error) {
       // Error handled by mutation onError
     }
@@ -1321,7 +1343,27 @@ export default function Stundenplaene() {
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center justify-between">
-                        <span>Stundenplan für {selectedTeacher.firstName} {selectedTeacher.lastName}</span>
+                        <div className="flex items-center gap-2">
+                          <span>Stundenplan für {selectedTeacher.firstName} {selectedTeacher.lastName}</span>
+                          <Button
+                            variant={isTeacherEditMode ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setIsTeacherEditMode(!isTeacherEditMode)}
+                            data-testid="button-toggle-teacher-edit-mode"
+                          >
+                            {isTeacherEditMode ? (
+                              <>
+                                <Eye className="h-4 w-4 mr-2" />
+                                Ansicht
+                              </>
+                            ) : (
+                              <>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Bearbeiten
+                              </>
+                            )}
+                          </Button>
+                        </div>
                         {selectedTeacherAssignments.size > 0 && (
                           <Button
                             variant="destructive"
@@ -1336,31 +1378,157 @@ export default function Stundenplaene() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      {displayedTeacherAssignments.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground" data-testid="empty-teacher-assignments">
-                          <Calendar className="h-8 w-8 mx-auto mb-2" />
-                          <p>Keine Zuweisungen für diese Lehrkraft vorhanden.</p>
+                      <div className="space-y-3">
+                        {/* Add New Assignment Button */}
+                        <div className="flex justify-between items-center">
+                          <p className="text-sm text-muted-foreground">
+                            {teacherAssignments.length} Zuweisung{teacherAssignments.length !== 1 ? 'en' : ''}
+                            {!isTeacherEditMode && <span className="ml-2 text-blue-600 dark:text-blue-400">• Ansichtsmodus</span>}
+                            {isTeacherEditMode && <span className="ml-2 text-orange-600 dark:text-orange-400">• Bearbeitungsmodus</span>}
+                          </p>
+                          {isTeacherEditMode && (
+                            <Button
+                              onClick={() => setNewTeacherAssignment({
+                                classId: '',
+                                subjectId: '',
+                                hoursPerWeek: 1,
+                                semester: '1',
+                              })}
+                              disabled={!!newTeacherAssignment}
+                              size="sm"
+                              data-testid="button-add-teacher-assignment"
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Neue Zuordnung
+                            </Button>
+                          )}
                         </div>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <Table data-testid="table-teacher-assignments">
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-12">
-                                <Checkbox
-                                  checked={displayedTeacherAssignments.length > 0 && selectedTeacherAssignments.size === displayedTeacherAssignments.length}
-                                  onCheckedChange={(checked) => selectAllTeacherAssignments(checked as boolean)}
-                                  data-testid="checkbox-select-all-teacher"
-                                />
-                              </TableHead>
-                              <TableHead>Klasse</TableHead>
-                              <TableHead>Fach</TableHead>
-                              <TableHead>Stunden</TableHead>
-                              <TableHead>Semester</TableHead>
-                              <TableHead className="text-center">Aktionen</TableHead>
-                            </TableRow>
-                          </TableHeader>
+
+                        {displayedTeacherAssignments.length === 0 && !newTeacherAssignment ? (
+                          <div className="text-center py-8 text-muted-foreground" data-testid="empty-teacher-assignments">
+                            <Calendar className="h-8 w-8 mx-auto mb-2" />
+                            <p>Keine Zuweisungen für diese Lehrkraft vorhanden.</p>
+                          </div>
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <Table data-testid="table-teacher-assignments">
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="w-12">
+                                  <Checkbox
+                                    checked={displayedTeacherAssignments.length > 0 && selectedTeacherAssignments.size === displayedTeacherAssignments.length}
+                                    onCheckedChange={(checked) => selectAllTeacherAssignments(checked as boolean)}
+                                    data-testid="checkbox-select-all-teacher"
+                                  />
+                                </TableHead>
+                                <TableHead>Klasse</TableHead>
+                                <TableHead>Fach</TableHead>
+                                <TableHead>Stunden</TableHead>
+                                <TableHead>Semester</TableHead>
+                                <TableHead className="w-32">Aktionen</TableHead>
+                              </TableRow>
+                            </TableHeader>
                           <TableBody>
+                            {/* New Assignment Row */}
+                            {newTeacherAssignment && isTeacherEditMode && (
+                              <TableRow data-testid="row-new-teacher-assignment">
+                                <TableCell>
+                                  {/* Empty cell for checkbox column */}
+                                </TableCell>
+                                <TableCell>
+                                  <Select
+                                    value={newTeacherAssignment.classId}
+                                    onValueChange={(value) =>
+                                      setNewTeacherAssignment(prev => prev ? { ...prev, classId: value } : null)
+                                    }
+                                    data-testid="select-new-class"
+                                  >
+                                    <SelectTrigger className="w-full">
+                                      <SelectValue placeholder="Klasse wählen..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {classes?.map((cls) => (
+                                        <SelectItem key={cls.id} value={cls.id}>
+                                          {cls.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </TableCell>
+                                <TableCell>
+                                  <Select
+                                    value={newTeacherAssignment.subjectId}
+                                    onValueChange={(value) =>
+                                      setNewTeacherAssignment(prev => prev ? { ...prev, subjectId: value } : null)
+                                    }
+                                    data-testid="select-new-subject"
+                                  >
+                                    <SelectTrigger className="w-full">
+                                      <SelectValue placeholder="Fach wählen..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {subjects?.map((subject) => (
+                                        <SelectItem key={subject.id} value={subject.id}>
+                                          {subject.shortName} - {subject.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </TableCell>
+                                <TableCell>
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    max="40"
+                                    value={newTeacherAssignment.hoursPerWeek}
+                                    onChange={(e) =>
+                                      setNewTeacherAssignment(prev => prev ? { ...prev, hoursPerWeek: parseInt(e.target.value) || 1 } : null)
+                                    }
+                                    data-testid="input-new-hours"
+                                    className="w-20"
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Select
+                                    value={newTeacherAssignment.semester}
+                                    onValueChange={(value: "1" | "2") =>
+                                      setNewTeacherAssignment(prev => prev ? { ...prev, semester: value } : null)
+                                    }
+                                    data-testid="select-new-semester"
+                                  >
+                                    <SelectTrigger className="w-24">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="1">1. HJ</SelectItem>
+                                      <SelectItem value="2">2. HJ</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex space-x-2">
+                                    <Button
+                                      onClick={saveNewTeacherAssignment}
+                                      disabled={!newTeacherAssignment.classId || !newTeacherAssignment.subjectId || createAssignmentMutation.isPending}
+                                      size="sm"
+                                      data-testid="button-save-new-teacher"
+                                    >
+                                      <Save className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      onClick={() => setNewTeacherAssignment(null)}
+                                      variant="outline"
+                                      size="sm"
+                                      data-testid="button-cancel-new-teacher"
+                                    >
+                                      ✕
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )}
+
+                            {/* Existing Assignment Rows */}
                             {displayedTeacherAssignments.map((assignment) => {
                               // Calculate conflict status for this assignment
                               const getAssignmentConflictStatus = () => {
@@ -1399,85 +1567,190 @@ export default function Stundenplaene() {
                               return (
                               <TableRow key={assignment.id} data-testid={`row-teacher-assignment-${assignment.id}`}>
                                 <TableCell>
-                                  <Checkbox
-                                    checked={selectedTeacherAssignments.has(assignment.id)}
-                                    onCheckedChange={() => toggleTeacherAssignmentSelection(assignment.id)}
-                                    data-testid={`checkbox-teacher-assignment-${assignment.id}`}
-                                  />
-                                </TableCell>
-                                <TableCell className="font-medium">
-                                  {assignment.class?.name || 'Unbekannt'}
-                                </TableCell>
-                                <TableCell>
-                                  <Badge variant="light">
-                                    {assignment.subject?.shortName || assignment.subject?.name || 'Unbekannt'}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>{assignment.hoursPerWeek}</TableCell>
-                                <TableCell>
-                                  <Badge variant="light">
-                                    {assignment.semester === "1" ? "1. HJ" : "2. HJ"}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>
-                                  {conflictStatus && (
-                                    <div className="flex items-center">
-                                      {conflictStatus.type === "error" && (
-                                        <AlertTriangle className="w-4 h-4 text-red-500 mr-1" />
-                                      )}
-                                      {conflictStatus.type === "warning" && (
-                                        <AlertTriangle className="w-4 h-4 text-orange-500 mr-1" />
-                                      )}
-                                      {conflictStatus.type === "success" && (
-                                        <div className="w-4 h-4 rounded-full bg-green-500 mr-1"></div>
-                                      )}
-                                      <Badge 
-                                        variant={
-                                          conflictStatus.type === "error" ? "destructive" :
-                                          conflictStatus.type === "warning" ? "light" : "light"
-                                        }
-                                      >
-                                        {conflictStatus.message}
-                                      </Badge>
-                                    </div>
+                                  {isTeacherEditMode ? (
+                                    <Checkbox
+                                      checked={selectedTeacherAssignments.has(assignment.id)}
+                                      onCheckedChange={() => toggleTeacherAssignmentSelection(assignment.id)}
+                                      data-testid={`checkbox-teacher-assignment-${assignment.id}`}
+                                    />
+                                  ) : (
+                                    <div className="w-4"></div>
                                   )}
                                 </TableCell>
-                                <TableCell className="text-center">
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <Button
-                                        variant="destructive"
-                                        size="sm"
-                                        className="h-8 w-8 p-0"
-                                        data-testid={`button-delete-assignment-${assignment.id}`}
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>Zuweisung löschen?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          Möchten Sie die Zuweisung <strong>{assignment.subject?.shortName}</strong> 
-                                          in Klasse <strong>{assignment.class?.name}</strong> 
-                                          ({assignment.hoursPerWeek}h, {assignment.semester === "1" ? "1. HJ" : "2. HJ"}) 
-                                          wirklich löschen?
-                                          <br /><br />
-                                          Diese Stunden werden wieder für andere Kollegen verfügbar.
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                                        <AlertDialogAction
-                                          onClick={() => deleteAssignment(assignment.id)}
-                                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                          data-testid={`confirm-delete-assignment-${assignment.id}`}
+                                <TableCell className="font-medium">
+                                  {isTeacherEditMode ? (
+                                    <Select
+                                      value={getEffectiveValue(assignment, 'classId') as string}
+                                      onValueChange={(value) => updateEditedAssignment(assignment.id, 'classId', value)}
+                                      data-testid={`select-class-${assignment.id}`}
+                                    >
+                                      <SelectTrigger className="w-full">
+                                        <SelectValue>
+                                          {assignment.class?.name || 'Unbekannt'}
+                                        </SelectValue>
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {classes?.map((cls) => (
+                                          <SelectItem key={cls.id} value={cls.id}>
+                                            {cls.name}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  ) : (
+                                    assignment.class?.name || 'Unbekannt'
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {isTeacherEditMode ? (
+                                    <Select
+                                      value={getEffectiveValue(assignment, 'subjectId') as string}
+                                      onValueChange={(value) => updateEditedAssignment(assignment.id, 'subjectId', value)}
+                                      data-testid={`select-subject-${assignment.id}`}
+                                    >
+                                      <SelectTrigger className="w-full">
+                                        <SelectValue>
+                                          <Badge variant="light">
+                                            {assignment.subject?.shortName || assignment.subject?.name || 'Unbekannt'}
+                                          </Badge>
+                                        </SelectValue>
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {subjects?.map((subject) => (
+                                          <SelectItem key={subject.id} value={subject.id}>
+                                            {subject.shortName} - {subject.name}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  ) : (
+                                    <Badge variant="light">
+                                      {assignment.subject?.shortName || assignment.subject?.name || 'Unbekannt'}
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {isTeacherEditMode ? (
+                                    <Input
+                                      type="number"
+                                      min="1"
+                                      max="40"
+                                      value={parseFloat(getEffectiveValue(assignment, 'hoursPerWeek') as string)}
+                                      onChange={(e) => updateEditedAssignment(assignment.id, 'hoursPerWeek', parseInt(e.target.value) || 1)}
+                                      data-testid={`input-hours-${assignment.id}`}
+                                      className="w-20"
+                                    />
+                                  ) : (
+                                    <span className="font-medium">{assignment.hoursPerWeek}h</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {isTeacherEditMode ? (
+                                    <Select
+                                      value={getEffectiveValue(assignment, 'semester') as string}
+                                      onValueChange={(value: "1" | "2") => updateEditedAssignment(assignment.id, 'semester', value)}
+                                      data-testid={`select-semester-${assignment.id}`}
+                                    >
+                                      <SelectTrigger className="w-24">
+                                        <SelectValue>
+                                          <Badge variant="light">
+                                            {assignment.semester === "1" ? "1. HJ" : "2. HJ"}
+                                          </Badge>
+                                        </SelectValue>
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="1">1. HJ</SelectItem>
+                                        <SelectItem value="2">2. HJ</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  ) : (
+                                    <Badge variant="light">
+                                      {assignment.semester === "1" ? "1. HJ" : "2. HJ"}
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {isTeacherEditMode ? (
+                                    <div className="flex space-x-2">
+                                      {hasChanges(assignment.id) && (
+                                        <>
+                                          <Button
+                                            onClick={() => saveAssignment(assignment)}
+                                            disabled={updateAssignmentMutation.isPending}
+                                            size="sm"
+                                            data-testid={`button-save-${assignment.id}`}
+                                          >
+                                            <Save className="h-3 w-3" />
+                                          </Button>
+                                          <Button
+                                            onClick={() => cancelEdit(assignment.id)}
+                                            variant="outline"
+                                            size="sm"
+                                            data-testid={`button-cancel-${assignment.id}`}
+                                          >
+                                            ✕
+                                          </Button>
+                                        </>
+                                      )}
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            className="h-8 w-8 p-0"
+                                            data-testid={`button-delete-assignment-${assignment.id}`}
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>Zuweisung löschen?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                              Möchten Sie die Zuweisung <strong>{assignment.subject?.shortName}</strong> 
+                                              in Klasse <strong>{assignment.class?.name}</strong> 
+                                              ({assignment.hoursPerWeek}h, {assignment.semester === "1" ? "1. HJ" : "2. HJ"}) 
+                                              wirklich löschen?
+                                              <br /><br />
+                                              Diese Stunden werden wieder für andere Kollegen verfügbar.
+                                            </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                                            <AlertDialogAction
+                                              onClick={() => deleteAssignment(assignment.id)}
+                                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                              data-testid={`confirm-delete-assignment-${assignment.id}`}
+                                            >
+                                              Löschen
+                                            </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    </div>
+                                  ) : (
+                                    conflictStatus && (
+                                      <div className="flex items-center">
+                                        {conflictStatus.type === "error" && (
+                                          <AlertTriangle className="w-4 h-4 text-red-500 mr-1" />
+                                        )}
+                                        {conflictStatus.type === "warning" && (
+                                          <AlertTriangle className="w-4 h-4 text-orange-500 mr-1" />
+                                        )}
+                                        {conflictStatus.type === "success" && (
+                                          <div className="w-4 h-4 rounded-full bg-green-500 mr-1"></div>
+                                        )}
+                                        <Badge 
+                                          variant={
+                                            conflictStatus.type === "error" ? "destructive" :
+                                            conflictStatus.type === "warning" ? "light" : "light"
+                                          }
                                         >
-                                          Löschen
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
+                                          {conflictStatus.message}
+                                        </Badge>
+                                      </div>
+                                    )
+                                  )}
                                 </TableCell>
                               </TableRow>
                             );
@@ -1486,6 +1759,7 @@ export default function Stundenplaene() {
                         </Table>
                         </div>
                       )}
+                      </div>
                     </CardContent>
                   </Card>
                 </>
@@ -1946,15 +2220,15 @@ export default function Stundenplaene() {
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center justify-between">
-                        <span>Stundenplan für Klasse {selectedClass.name}</span>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center gap-2">
+                          <span>Stundenplan für Klasse {selectedClass.name}</span>
                           <Button
-                            variant={isEditMode ? "default" : "outline"}
+                            variant={isClassEditMode ? "default" : "outline"}
                             size="sm"
-                            onClick={() => setIsEditMode(!isEditMode)}
-                            data-testid="button-toggle-edit-mode"
+                            onClick={() => setIsClassEditMode(!isClassEditMode)}
+                            data-testid="button-toggle-class-edit-mode"
                           >
-                            {isEditMode ? (
+                            {isClassEditMode ? (
                               <>
                                 <Eye className="h-4 w-4 mr-2" />
                                 Ansicht
@@ -1966,18 +2240,18 @@ export default function Stundenplaene() {
                               </>
                             )}
                           </Button>
-                          {selectedClassAssignments.size > 0 && (
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => openBulkDeleteDialog('class')}
-                              data-testid="button-bulk-delete-class"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              {selectedClassAssignments.size} ausgewählte löschen
-                            </Button>
-                          )}
                         </div>
+                        {selectedClassAssignments.size > 0 && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => openBulkDeleteDialog('class')}
+                            data-testid="button-bulk-delete-class"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            {selectedClassAssignments.size} ausgewählte löschen
+                          </Button>
+                        )}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -1986,18 +2260,18 @@ export default function Stundenplaene() {
                         <div className="flex justify-between items-center">
                           <p className="text-sm text-muted-foreground">
                             {classAssignments.length} Zuweisung{classAssignments.length !== 1 ? 'en' : ''}
-                            {!isEditMode && <span className="ml-2 text-blue-600 dark:text-blue-400">• Ansichtsmodus</span>}
-                            {isEditMode && <span className="ml-2 text-orange-600 dark:text-orange-400">• Bearbeitungsmodus</span>}
+                            {!isClassEditMode && <span className="ml-2 text-blue-600 dark:text-blue-400">• Ansichtsmodus</span>}
+                            {isClassEditMode && <span className="ml-2 text-orange-600 dark:text-orange-400">• Bearbeitungsmodus</span>}
                           </p>
-                          {isEditMode && (
+                          {isClassEditMode && (
                             <Button
-                              onClick={() => setNewAssignment({
+                              onClick={() => setNewClassAssignment({
                                 teacherId: '',
                                 subjectId: '',
                                 hoursPerWeek: 1,
                                 semester: '1',
                               })}
-                              disabled={!!newAssignment}
+                              disabled={!!newClassAssignment}
                               size="sm"
                               data-testid="button-add-assignment"
                             >
@@ -2026,16 +2300,16 @@ export default function Stundenplaene() {
                           </TableHeader>
                           <TableBody>
                             {/* New Assignment Row */}
-                            {newAssignment && isEditMode && (
+                            {newClassAssignment && isClassEditMode && (
                               <TableRow data-testid="row-new-assignment">
                                 <TableCell>
                                   {/* Empty cell for checkbox column in new assignment row */}
                                 </TableCell>
                                 <TableCell>
                                   <Select
-                                    value={newAssignment.teacherId}
+                                    value={newClassAssignment.teacherId}
                                     onValueChange={(value) =>
-                                      setNewAssignment(prev => prev ? { ...prev, teacherId: value } : null)
+                                      setNewClassAssignment(prev => prev ? { ...prev, teacherId: value } : null)
                                     }
                                     data-testid="select-new-teacher"
                                   >
@@ -2044,8 +2318,8 @@ export default function Stundenplaene() {
                                     </SelectTrigger>
                                     <SelectContent>
                                       {(() => {
-                                        const qualifiedTeachers = newAssignment?.subjectId ? 
-                                          getQualifiedTeachers(newAssignment.subjectId) : 
+                                        const qualifiedTeachers = newClassAssignment?.subjectId ? 
+                                          getQualifiedTeachers(newClassAssignment.subjectId) : 
                                           teachers || [];
                                         
                                         return qualifiedTeachers.map((teacher) => {
@@ -2067,9 +2341,9 @@ export default function Stundenplaene() {
                                 </TableCell>
                                 <TableCell>
                                   <Select
-                                    value={newAssignment.subjectId}
+                                    value={newClassAssignment.subjectId}
                                     onValueChange={(value) =>
-                                      setNewAssignment(prev => prev ? { ...prev, subjectId: value } : null)
+                                      setNewClassAssignment(prev => prev ? { ...prev, subjectId: value } : null)
                                     }
                                     data-testid="select-new-subject"
                                   >
@@ -2090,9 +2364,9 @@ export default function Stundenplaene() {
                                     type="number"
                                     min="1"
                                     max="40"
-                                    value={newAssignment.hoursPerWeek}
+                                    value={newClassAssignment.hoursPerWeek}
                                     onChange={(e) =>
-                                      setNewAssignment(prev => prev ? { ...prev, hoursPerWeek: parseInt(e.target.value) || 1 } : null)
+                                      setNewClassAssignment(prev => prev ? { ...prev, hoursPerWeek: parseInt(e.target.value) || 1 } : null)
                                     }
                                     data-testid="input-new-hours"
                                     className="w-20"
@@ -2100,9 +2374,9 @@ export default function Stundenplaene() {
                                 </TableCell>
                                 <TableCell>
                                   <Select
-                                    value={newAssignment.semester}
+                                    value={newClassAssignment.semester}
                                     onValueChange={(value: "1" | "2") =>
-                                      setNewAssignment(prev => prev ? { ...prev, semester: value } : null)
+                                      setNewClassAssignment(prev => prev ? { ...prev, semester: value } : null)
                                     }
                                     data-testid="select-new-semester"
                                   >
@@ -2118,15 +2392,15 @@ export default function Stundenplaene() {
                                 <TableCell>
                                   <div className="flex space-x-2">
                                     <Button
-                                      onClick={saveNewAssignment}
-                                      disabled={!newAssignment.teacherId || !newAssignment.subjectId || createAssignmentMutation.isPending}
+                                      onClick={saveNewClassAssignment}
+                                      disabled={!newClassAssignment.teacherId || !newClassAssignment.subjectId || createAssignmentMutation.isPending}
                                       size="sm"
                                       data-testid="button-save-new"
                                     >
                                       <Save className="h-3 w-3" />
                                     </Button>
                                     <Button
-                                      onClick={() => setNewAssignment(null)}
+                                      onClick={() => setNewClassAssignment(null)}
                                       variant="outline"
                                       size="sm"
                                       data-testid="button-cancel-new"
@@ -2142,7 +2416,7 @@ export default function Stundenplaene() {
                             {classAssignments.map((assignment) => (
                               <TableRow key={assignment.id} data-testid={`row-class-assignment-${assignment.id}`}>
                                 <TableCell>
-                                  {isEditMode ? (
+                                  {isClassEditMode ? (
                                     <Checkbox
                                       checked={selectedClassAssignments.has(assignment.id)}
                                       onCheckedChange={() => toggleClassAssignmentSelection(assignment.id)}
@@ -2153,7 +2427,7 @@ export default function Stundenplaene() {
                                   )}
                                 </TableCell>
                                 <TableCell>
-                                  {isEditMode ? (
+                                  {isClassEditMode ? (
                                     <Select
                                       value={getEffectiveValue(assignment, 'teacherId') as string}
                                       onValueChange={(value) => updateEditedAssignment(assignment.id, 'teacherId', value)}
@@ -2238,7 +2512,7 @@ export default function Stundenplaene() {
                                   )}
                                 </TableCell>
                                 <TableCell>
-                                  {isEditMode ? (
+                                  {isClassEditMode ? (
                                     <Select
                                       value={getEffectiveValue(assignment, 'subjectId') as string}
                                       onValueChange={(value) => updateEditedAssignment(assignment.id, 'subjectId', value)}
@@ -2327,7 +2601,7 @@ export default function Stundenplaene() {
                                   )}
                                 </TableCell>
                                 <TableCell>
-                                  {isEditMode ? (
+                                  {isClassEditMode ? (
                                     <Input
                                       type="number"
                                       min="1"
@@ -2342,7 +2616,7 @@ export default function Stundenplaene() {
                                   )}
                                 </TableCell>
                                 <TableCell>
-                                  {isEditMode ? (
+                                  {isClassEditMode ? (
                                     <Select
                                       value={getEffectiveValue(assignment, 'semester') as string}
                                       onValueChange={(value: "1" | "2") => updateEditedAssignment(assignment.id, 'semester', value)}
@@ -2367,7 +2641,7 @@ export default function Stundenplaene() {
                                   )}
                                 </TableCell>
                                 <TableCell>
-                                  {isEditMode && (
+                                  {isClassEditMode && (
                                     <div className="flex space-x-2">
                                     {hasChanges(assignment.id) && (
                                       <>
@@ -2458,7 +2732,7 @@ export default function Stundenplaene() {
                             ))}
 
                             {/* Empty state when no assignments */}
-                            {classAssignments.length === 0 && !newAssignment && (
+                            {classAssignments.length === 0 && !newClassAssignment && (
                               <TableRow>
                                 <TableCell colSpan={5} className="text-center py-8">
                                   <div className="text-muted-foreground" data-testid="empty-class-assignments">
