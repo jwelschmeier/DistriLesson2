@@ -455,11 +455,22 @@ export default function Stundenplaene() {
       // Skip 0-hour assignments as they're often placeholders
       if (hours <= 0) return;
       
+      // Check for Differenzierung parallel group on regular classes
+      const parallelGroup = assignment.subject?.parallelGroup;
+      const classType = assignment.class?.type;
+      const grade = assignment.class?.grade ?? 'na';
+      
       // For team teaching, we need to count the hours for each teacher individually
       // but avoid double-counting within the same teacher's workload
-      const groupKey = assignment.teamTeachingId 
-        ? `team-${assignment.teamTeachingId}-${assignment.classId}-${assignment.subjectId}-${assignment.semester}-${assignment.teacherId}`
-        : `individual-${assignment.classId}-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
+      // For Differenzierung on regular classes (klasse), group by subject+teacher+semester+grade (without classId)
+      let groupKey: string;
+      if (assignment.teamTeachingId) {
+        groupKey = `team-${assignment.teamTeachingId}-${assignment.classId}-${assignment.subjectId}-${assignment.semester}-${assignment.teacherId}`;
+      } else if (parallelGroup === 'Differenzierung' && classType === 'klasse') {
+        groupKey = `diff-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}-${grade}`;
+      } else {
+        groupKey = `individual-${assignment.classId}-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
+      }
       
       const existing = processedAssignments.get(groupKey);
       
@@ -697,11 +708,22 @@ export default function Stundenplaene() {
       // Skip 0-hour assignments as they're often placeholders
       if (hours <= 0) return;
       
+      // Check for Differenzierung parallel group on regular classes
+      const parallelGroup = assignment.subject?.parallelGroup;
+      const classType = assignment.class?.type;
+      const grade = assignment.class?.grade ?? 'na';
+      
       // For team teaching, we need to count the hours for each teacher individually
       // but avoid double-counting within the same teacher's workload
-      const groupKey = assignment.teamTeachingId 
-        ? `team-${assignment.teamTeachingId}-${assignment.classId}-${assignment.subjectId}-${assignment.semester}-${assignment.teacherId}`
-        : `individual-${assignment.classId}-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
+      // For Differenzierung on regular classes (klasse), group by subject+teacher+semester+grade (without classId)
+      let groupKey: string;
+      if (assignment.teamTeachingId) {
+        groupKey = `team-${assignment.teamTeachingId}-${assignment.classId}-${assignment.subjectId}-${assignment.semester}-${assignment.teacherId}`;
+      } else if (parallelGroup === 'Differenzierung' && classType === 'klasse') {
+        groupKey = `diff-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}-${grade}`;
+      } else {
+        groupKey = `individual-${assignment.classId}-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
+      }
       
       const existing = processedAssignments.get(groupKey);
       
