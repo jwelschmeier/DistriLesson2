@@ -124,7 +124,12 @@ export default function Stundenplaene() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.includes('/api/assignments');
+        }
+      });
       toast({
         title: "Erfolg",
         description: "Zuweisung wurde erfolgreich aktualisiert.",
@@ -144,7 +149,12 @@ export default function Stundenplaene() {
       await apiRequest("DELETE", `/api/assignments/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.includes('/api/assignments');
+        }
+      });
       toast({
         title: "Erfolg",
         description: "Zuweisung wurde erfolgreich gelöscht.",
@@ -171,7 +181,12 @@ export default function Stundenplaene() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.includes('/api/assignments');
+        }
+      });
       setNewClassAssignment(null);
       toast({
         title: "Erfolg",
@@ -194,7 +209,12 @@ export default function Stundenplaene() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.includes('/api/assignments');
+        }
+      });
       // Close the dialog and reset selections
       setTeamTeachingDialog({
         isOpen: false,
@@ -222,7 +242,12 @@ export default function Stundenplaene() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.includes('/api/assignments');
+        }
+      });
       toast({
         title: "Erfolg",
         description: "Lehrkraft wurde aus dem Team entfernt.",
@@ -243,7 +268,12 @@ export default function Stundenplaene() {
       await apiRequest("DELETE", "/api/assignments/bulk", { assignmentIds });
     },
     onSuccess: (_, deletedIds) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.includes('/api/assignments');
+        }
+      });
       // Clear selections for deleted assignments
       setSelectedTeacherAssignments(prev => {
         const newSet = new Set(prev);
