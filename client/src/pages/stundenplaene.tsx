@@ -1613,7 +1613,7 @@ export default function Stundenplaene() {
                             {groupedTeacherAssignments.map((group, groupIndex) => (
                               <Fragment key={`group-${groupIndex}`}>
                                 {/* Group Header Row */}
-                                <TableRow className="bg-muted/50">
+                                <TableRow className="bg-slate-100 dark:bg-slate-800/50">
                                   <TableCell></TableCell>
                                   <TableCell colSpan={6} className="font-semibold text-sm">
                                     {group.gradeLabel} - {group.semesterLabel}
