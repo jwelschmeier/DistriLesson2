@@ -16,17 +16,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, School, Search, Filter, Calendar } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
-import { insertClassSchema, type Class, type Teacher, type Subject } from "@shared/schema";
+import { insertClassSchema, type Class, type Teacher, type Subject, type Assignment } from "@shared/schema";
 import { getParallelGroupForSubject } from "@shared/parallel-subjects";
-
-type Assignment = {
-  id: string;
-  teacherId: string;
-  classId: string;
-  subjectId: string;
-  hoursPerWeek: string;
-  semester: string;
-};
 import { z } from "zod";
 
 const classFormSchema = insertClassSchema.extend({
