@@ -551,8 +551,8 @@ export default function KlassenMatrix() {
                         if (hours2 > 0) subjectHoursSem2[subject.shortName] = hours2;
                       });
                       
-                      const totalSem1 = calculateCorrectHours(subjectHoursSem1, classItem.grade, "1").totalHours;
-                      const totalSem2 = calculateCorrectHours(subjectHoursSem2, classItem.grade, "2").totalHours;
+                      const totalSem1 = calculateCorrectHours(subjectHoursSem1, classItem.grade).totalHours;
+                      const totalSem2 = calculateCorrectHours(subjectHoursSem2, classItem.grade).totalHours;
                       
                       return (
                         <React.Fragment key={classItem.id}>

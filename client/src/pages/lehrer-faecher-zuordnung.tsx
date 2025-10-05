@@ -1134,8 +1134,8 @@ export default function LehrerFaecherZuordnung() {
                       }
                     });
                     
-                    const totalSem1 = calculateCorrectHours(subjectHoursSem1, classData.grade, "1").totalHours;
-                    const totalSem2 = calculateCorrectHours(subjectHoursSem2, classData.grade, "2").totalHours;
+                    const totalSem1 = calculateCorrectHours(subjectHoursSem1, classData.grade).totalHours;
+                    const totalSem2 = calculateCorrectHours(subjectHoursSem2, classData.grade).totalHours;
 
                     return (
                       <React.Fragment key={classData.id}>
