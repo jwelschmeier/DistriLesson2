@@ -473,8 +473,46 @@ export default function Stundenplaene() {
       }
     });
     
-    return Array.from(groupMap.values());
+    const assignments = Array.from(groupMap.values());
+    
+    // Sort by grade, class name, and semester
+    assignments.sort((a, b) => {
+      const gradeA = a.class?.grade ?? 0;
+      const gradeB = b.class?.grade ?? 0;
+      if (gradeA !== gradeB) return gradeA - gradeB;
+      
+      const nameA = a.class?.name ?? '';
+      const nameB = b.class?.name ?? '';
+      if (nameA !== nameB) return nameA.localeCompare(nameB);
+      
+      return a.semester.localeCompare(b.semester);
+    });
+    
+    return assignments;
   }, [teacherAssignments]);
+
+  // Group teacher assignments by grade and semester for better overview
+  const groupedTeacherAssignments = useMemo(() => {
+    const groups: { gradeLabel: string; semesterLabel: string; rows: ExtendedAssignment[] }[] = [];
+    
+    displayedTeacherAssignments.forEach(assignment => {
+      const grade = assignment.class?.grade ?? 0;
+      const gradeLabel = grade > 0 ? `Jahrgangsstufe ${grade}` : 'Keine Jahrgangsstufe';
+      const semesterLabel = `${assignment.semester}. Halbjahr`;
+      
+      // Find existing group with same grade and semester
+      let group = groups.find(g => g.gradeLabel === gradeLabel && g.semesterLabel === semesterLabel);
+      
+      if (!group) {
+        group = { gradeLabel, semesterLabel, rows: [] };
+        groups.push(group);
+      }
+      
+      group.rows.push(assignment);
+    });
+    
+    return groups;
+  }, [displayedTeacherAssignments]);
 
   // Filter assignments for selected class
   const classAssignments = useMemo(() => {
@@ -1540,44 +1578,55 @@ export default function Stundenplaene() {
                               </TableRow>
                             )}
 
-                            {/* Existing Assignment Rows */}
-                            {displayedTeacherAssignments.map((assignment) => {
-                              // Calculate conflict status for this assignment
-                              const getAssignmentConflictStatus = () => {
-                                const teacher = teachers?.find(t => t.id === assignment.teacherId);
-                                const subject = subjects?.find(s => s.id === assignment.subjectId);
+                            {/* Existing Assignment Rows - Grouped by Grade and Semester */}
+                            {groupedTeacherAssignments.map((group, groupIndex) => (
+                              <>
+                                {/* Group Header Row */}
+                                <TableRow key={`header-${groupIndex}`} className="bg-muted/50">
+                                  <TableCell></TableCell>
+                                  <TableCell colSpan={6} className="font-semibold text-sm">
+                                    {group.gradeLabel} - {group.semesterLabel}
+                                  </TableCell>
+                                </TableRow>
                                 
-                                if (!teacher || !subject) return null;
-                                
-                                // Check qualification
-                                const teacherSubjects = teacher.subjects.flatMap(subjectString => 
-                                  subjectString.split(',').map(s => s.trim().toUpperCase())
-                                );
-                                const subjectShortName = subject.shortName.trim().toUpperCase();
-                                if (!teacherSubjects.includes(subjectShortName)) {
-                                  return { type: "error", message: "Keine Qualifikation" };
-                                }
-                                
-                                // Check semester workload
-                                const semesterAssignments = teacherAssignments.filter(a => a.semester === assignment.semester);
-                                const semesterHours = semesterAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
-                                const maxHours = parseFloat(teacher.maxHours);
-                                
-                                if (semesterHours > maxHours) {
-                                  return { type: "error", message: `Überbelastung ${assignment.semester}.HJ` };
-                                }
-                                
-                                if (semesterHours > maxHours * 0.9) {
-                                  return { type: "warning", message: `Hohe Belastung ${assignment.semester}.HJ` };
-                                }
-                                
-                                return { type: "success", message: "OK" };
-                              };
+                                {/* Assignment Rows for this group */}
+                                {group.rows.map((assignment) => {
+                                  // Calculate conflict status for this assignment
+                                  const getAssignmentConflictStatus = () => {
+                                    const teacher = teachers?.find(t => t.id === assignment.teacherId);
+                                    const subject = subjects?.find(s => s.id === assignment.subjectId);
+                                    
+                                    if (!teacher || !subject) return null;
+                                    
+                                    // Check qualification
+                                    const teacherSubjects = teacher.subjects.flatMap(subjectString => 
+                                      subjectString.split(',').map(s => s.trim().toUpperCase())
+                                    );
+                                    const subjectShortName = subject.shortName.trim().toUpperCase();
+                                    if (!teacherSubjects.includes(subjectShortName)) {
+                                      return { type: "error", message: "Keine Qualifikation" };
+                                    }
+                                    
+                                    // Check semester workload
+                                    const semesterAssignments = teacherAssignments.filter(a => a.semester === assignment.semester);
+                                    const semesterHours = semesterAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
+                                    const maxHours = parseFloat(teacher.maxHours);
+                                    
+                                    if (semesterHours > maxHours) {
+                                      return { type: "error", message: `Überbelastung ${assignment.semester}.HJ` };
+                                    }
+                                    
+                                    if (semesterHours > maxHours * 0.9) {
+                                      return { type: "warning", message: `Hohe Belastung ${assignment.semester}.HJ` };
+                                    }
+                                    
+                                    return { type: "success", message: "OK" };
+                                  };
 
-                              const conflictStatus = getAssignmentConflictStatus();
+                                  const conflictStatus = getAssignmentConflictStatus();
 
-                              return (
-                              <TableRow key={assignment.id} data-testid={`row-teacher-assignment-${assignment.id}`}>
+                                  return (
+                                  <TableRow key={assignment.id} data-testid={`row-teacher-assignment-${assignment.id}`}>
                                 <TableCell>
                                   {isTeacherEditMode ? (
                                     <Checkbox
@@ -1767,6 +1816,8 @@ export default function Stundenplaene() {
                               </TableRow>
                             );
                             })}
+                              </>
+                            ))}
                           </TableBody>
                         </Table>
                         </div>
