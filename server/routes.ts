@@ -46,15 +46,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/admin/invitations', isAuthenticated, isAdmin, async (req, res) => {
     try {
       const userId = (req as any).user.claims.sub;
-      console.log(`DEBUG: Creating invitation with userId: ${userId} (type: ${typeof userId})`);
+      
+      if (process.env.DEBUG_API === 'true') {
+        console.log(`DEBUG: Creating invitation with userId: ${userId}, email: ${req.body.email}`);
+      }
       
       const dataToValidate = {
         ...req.body,
         createdBy: userId,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
       };
-      
-      console.log('DEBUG: Data to validate:', JSON.stringify(dataToValidate, null, 2));
       
       const invitationData = insertInvitationSchema.parse(dataToValidate);
       
@@ -152,7 +153,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const teachers = await storage.getTeachers();
       const duration = Date.now() - startTime;
-      console.log(`[PERF] Teachers query completed in ${duration}ms`);
+      if (process.env.DEBUG_API === 'true') {
+        console.log(`[PERF] Teachers query completed in ${duration}ms (${teachers.length} teachers)`);
+      }
       res.json(teachers);
     } catch (error) {
       const duration = Date.now() - startTime;
@@ -188,8 +191,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/teachers/:id", async (req, res) => {
     try {
-      console.log("PUT /api/teachers/:id - Request body:", JSON.stringify(req.body, null, 2));
-      console.log("Teacher ID:", req.params.id);
+      if (process.env.DEBUG_API === 'true') {
+        console.log("PUT /api/teachers/:id - Teacher ID:", req.params.id);
+      }
       
       // Convert string fields to proper types before validation
       const processedData = { ...req.body };
@@ -216,13 +220,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         processedData.reductionHours = reductionHours;
       }
       
-      console.log("Processed data:", JSON.stringify(processedData, null, 2));
-      
       const teacherData = insertTeacherSchema.partial().parse(processedData);
-      console.log("Validated data:", JSON.stringify(teacherData, null, 2));
-      
       const teacher = await storage.updateTeacher(req.params.id, teacherData);
-      console.log("Updated teacher:", JSON.stringify(teacher, null, 2));
+      
+      if (process.env.DEBUG_API === 'true') {
+        console.log("Updated teacher ID:", teacher.id);
+      }
       
       res.json(teacher);
     } catch (error) {
@@ -240,9 +243,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/teachers/:id", async (req, res) => {
     try {
-      console.log("Attempting to delete teacher with ID:", req.params.id);
+      if (process.env.DEBUG_API === 'true') {
+        console.log("Deleting teacher ID:", req.params.id);
+      }
       await storage.deleteTeacher(req.params.id);
-      console.log("Teacher deleted successfully");
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting teacher:", error);
@@ -286,7 +290,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const type = req.query.type as string | undefined;
       const classes = await storage.getClassesByType(type);
       const duration = Date.now() - startTime;
-      console.log(`[PERF] Classes query completed in ${duration}ms${type ? ` (type: ${type})` : ''}`);
+      if (process.env.DEBUG_API === 'true') {
+        console.log(`[PERF] Classes query completed in ${duration}ms (${classes.length} classes${type ? `, type: ${type}` : ''})`);
+      }
       res.json(classes);
     } catch (error) {
       const duration = Date.now() - startTime;
@@ -516,7 +522,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const subjects = await storage.getSubjects();
       const duration = Date.now() - startTime;
-      console.log(`[PERF] Subjects query completed in ${duration}ms`);
+      if (process.env.DEBUG_API === 'true') {
+        console.log(`[PERF] Subjects query completed in ${duration}ms (${subjects.length} subjects)`);
+      }
       res.json(subjects);
     } catch (error) {
       const duration = Date.now() - startTime;
@@ -605,24 +613,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.query.minimal === 'true') {
         // If classId is provided, use class-specific query for better performance
         if (classId) {
-          console.log(`[PERF] Starting class-specific assignments query (class: ${classId}, semester: ${semester})`);
           const assignments = await storage.getAssignmentsByClassAndSemesterMinimal(classId, semester);
           const duration = Date.now() - startTime;
-          console.log(`[PERF] Class-specific assignments query completed in ${duration}ms`);
+          if (process.env.DEBUG_API === 'true') {
+            console.log(`[PERF] Class-specific assignments query completed in ${duration}ms (${assignments.length} assignments, class: ${classId})`);
+          }
           res.json(assignments);
         } else {
-          console.log(`[PERF] Starting minimal assignments query (semester: ${semester})`);
           const assignments = await storage.getAssignmentsMinimal(semester);
           const duration = Date.now() - startTime;
-          console.log(`[PERF] Minimal assignments query completed in ${duration}ms`);
+          if (process.env.DEBUG_API === 'true') {
+            console.log(`[PERF] Minimal assignments query completed in ${duration}ms (${assignments.length} assignments)`);
+          }
           res.json(assignments);
         }
       } else {
-        console.log(`[PERF] Starting full assignments query (semester: ${semester})`);
         // Use optimized method with pre-loaded relations for other uses
         const assignments = await storage.getAssignmentsWithRelations(semester);
         const duration = Date.now() - startTime;
-        console.log(`[PERF] Full assignments query completed in ${duration}ms`);
+        if (process.env.DEBUG_API === 'true') {
+          console.log(`[PERF] Full assignments query completed in ${duration}ms (${assignments.length} assignments)`);
+        }
         res.json(assignments);
       }
     } catch (error) {
@@ -737,14 +748,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "assignmentIds must be a non-empty array" });
       }
       
-      console.log(`Bulk deleting ${assignmentIds.length} assignments:`, assignmentIds);
+      if (process.env.DEBUG_API === 'true') {
+        console.log(`Bulk deleting ${assignmentIds.length} assignments`);
+      }
       
       // Delete all assignments
       for (const id of assignmentIds) {
         await storage.deleteAssignment(id);
       }
       
-      console.log("Bulk deletion completed successfully");
       res.status(204).send();
     } catch (error) {
       console.error("Error in bulk delete assignments:", error);
@@ -1413,13 +1425,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalHoursNeeded = currentWorkload + (semesterHours * 2); // Both semesters
       
       if (totalHoursNeeded > parseFloat(teacher.maxHours)) {
-        console.log(`    WORKLOAD LIMIT: ${teacher.shortName} (${totalHoursNeeded.toFixed(1)}h > ${teacher.maxHours}h)`);
+        if (process.env.DEBUG_API === 'true') {
+          console.log(`    WORKLOAD LIMIT: ${teacher.shortName} (${totalHoursNeeded.toFixed(1)}h > ${teacher.maxHours}h)`);
+        }
         return false;
       }
       
       // HARDCODED FIX: BEU should never teach KR or ER (only E, GE, EK)
       if ((baseSubject === 'KR' || baseSubject === 'ER') && teacher.shortName === 'BEU') {
-        console.log(`    BLOCKED: ${teacher.shortName} cannot teach ${baseSubject} (only E, GE, EK)`);
+        if (process.env.DEBUG_API === 'true') {
+          console.log(`    BLOCKED: ${teacher.shortName} cannot teach ${baseSubject} (only E, GE, EK)`);
+        }
         return false;
       }
       
@@ -1458,8 +1474,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teacherWorkloads.set(teacher.id, 0); // Start with 0 hours
       });
       
-      console.log("=== SEMESTER-BASED OPTIMIZATION STARTING ===");
-      console.log(`Teachers: ${teachers.length}, Classes: ${classes.length}, Subjects: ${subjects.length}`);
+      if (process.env.DEBUG_API === 'true') {
+        console.log("=== SEMESTER-BASED OPTIMIZATION STARTING ===");
+        console.log(`Teachers: ${teachers.length}, Classes: ${classes.length}, Subjects: ${subjects.length}`);
+      }
       
       // Define realistic semester subject mappings for Realschule
       const semesterSubjects: Record<string, { semesters: string[], hours: number }> = {
@@ -1516,7 +1534,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const currentWorkload = teacherWorkloads.get(qualifiedTeacher.id) || 0;
               teacherWorkloads.set(qualifiedTeacher.id, currentWorkload + hoursForBothSemesters);
               
-              console.log(`  ${baseSubject}: ${qualifiedTeacher.shortName} (${currentWorkload + hoursForBothSemesters}h / ${qualifiedTeacher.maxHours}h)`);
+              if (process.env.DEBUG_API === 'true') {
+                console.log(`  ${baseSubject}: ${qualifiedTeacher.shortName} (${currentWorkload + hoursForBothSemesters}h / ${qualifiedTeacher.maxHours}h)`);
+              }
               
               // Create assignments for both semesters with the same teacher
               for (let semester = 1; semester <= 2; semester++) {
@@ -1537,11 +1557,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   assignmentPromises.push(assignmentPromise);
                   createdAssignments++;
                 } else {
-                  console.log(`    Warning: Subject ${semesterSubjectName}/${baseSubject} not found in database`);
+                  if (process.env.DEBUG_API === 'true') {
+                    console.log(`    Warning: Subject ${semesterSubjectName}/${baseSubject} not found in database`);
+                  }
                 }
               }
             } else {
-              console.log(`  ${baseSubject}: No qualified teacher found`);
+              if (process.env.DEBUG_API === 'true') {
+                console.log(`  ${baseSubject}: No qualified teacher found`);
+              }
               
               // Better fallback: Find teacher with similar subjects or skip
               let fallbackTeacher = null;
@@ -1588,9 +1612,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
               
               if (fallbackTeacher) {
-                console.log(`    SMART FALLBACK: Assigned to ${fallbackTeacher.shortName} (${fallbackTeacher.firstName} ${fallbackTeacher.lastName})`);
-                console.log(`    Teacher subjects: ${fallbackTeacher.subjects.join(', ')}`);
-                console.log(`    Workload check: ${(teacherWorkloads.get(fallbackTeacher.id) || 0) + (semesterHours * 2)}h <= ${fallbackTeacher.maxHours}h`);
+                if (process.env.DEBUG_API === 'true') {
+                  console.log(`    SMART FALLBACK: Assigned to ${fallbackTeacher.shortName} (${fallbackTeacher.firstName} ${fallbackTeacher.lastName})`);
+                  console.log(`    Teacher subjects: ${fallbackTeacher.subjects.join(', ')}`);
+                  console.log(`    Workload check: ${(teacherWorkloads.get(fallbackTeacher.id) || 0) + (semesterHours * 2)}h <= ${fallbackTeacher.maxHours}h`);
+                }
                 
                 // UPDATE WORKLOAD TRACKER for fallback assignments too!
                 const hoursForBothSemesters = semesterHours * 2;
@@ -1615,7 +1641,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   }
                 }
               } else {
-                console.log(`    ERROR: No suitable teacher found for ${baseSubject} in class ${classData.name} - assignment skipped`);
+                if (process.env.DEBUG_API === 'true') {
+                  console.log(`    ERROR: No suitable teacher found for ${baseSubject} in class ${classData.name} - assignment skipped`);
+                }
               }
             }
           }
@@ -1884,8 +1912,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fs = await import('fs/promises');
       await fs.writeFile(filePath, req.file.buffer);
 
-      console.log('=== VALIDIERTER IMPORT GESTARTET ===');
-      console.log('Datei:', filePath);
+      if (process.env.DEBUG_API === 'true') {
+        console.log('=== VALIDIERTER IMPORT GESTARTET ===');
+        console.log('Datei:', filePath);
+      }
 
       // Get current school year
       const schoolYears = await storage.getSchoolYears();
@@ -1902,8 +1932,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Clean up temporary file
       await fs.unlink(filePath);
 
-      console.log('=== VALIDIERTER IMPORT ABGESCHLOSSEN ===');
-      console.log('Ergebnis:', result);
+      if (process.env.DEBUG_API === 'true') {
+        console.log('=== VALIDIERTER IMPORT ABGESCHLOSSEN ===');
+        console.log('Imported:', result.imported);
+      }
 
       res.json(result);
     } catch (error) {
