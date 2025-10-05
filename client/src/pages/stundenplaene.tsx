@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, Fragment } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -1491,28 +1491,28 @@ export default function Stundenplaene() {
                             <p>Keine Zuweisungen für diese Lehrkraft vorhanden.</p>
                           </div>
                         ) : (
-                          <div className="overflow-x-auto">
+                          <div className="overflow-x-auto max-h-[60vh]">
                             <Table data-testid="table-teacher-assignments">
                             <TableHeader>
-                              <TableRow>
-                                <TableHead className="w-12">
+                              <TableRow className="sticky top-0 z-10 bg-card border-b">
+                                <TableHead className="w-12 bg-card">
                                   <Checkbox
                                     checked={displayedTeacherAssignments.length > 0 && selectedTeacherAssignments.size === displayedTeacherAssignments.length}
                                     onCheckedChange={(checked) => selectAllTeacherAssignments(checked as boolean)}
                                     data-testid="checkbox-select-all-teacher"
                                   />
                                 </TableHead>
-                                <TableHead>Klasse</TableHead>
-                                <TableHead>Fach</TableHead>
-                                <TableHead>Stunden</TableHead>
-                                <TableHead>Semester</TableHead>
-                                <TableHead className="w-32">Aktionen</TableHead>
+                                <TableHead className="bg-card">Klasse</TableHead>
+                                <TableHead className="bg-card">Fach</TableHead>
+                                <TableHead className="bg-card">Stunden</TableHead>
+                                <TableHead className="bg-card">Semester</TableHead>
+                                <TableHead className="w-32 bg-card">Aktionen</TableHead>
                               </TableRow>
                             </TableHeader>
                           <TableBody>
                             {/* New Assignment Row */}
                             {newTeacherAssignment && isTeacherEditMode && (
-                              <TableRow data-testid="row-new-teacher-assignment">
+                              <TableRow className="bg-blue-50 dark:bg-blue-950/30" data-testid="row-new-teacher-assignment">
                                 <TableCell>
                                   {/* Empty cell for checkbox column */}
                                 </TableCell>
@@ -1611,9 +1611,9 @@ export default function Stundenplaene() {
 
                             {/* Existing Assignment Rows - Grouped by Grade and Semester */}
                             {groupedTeacherAssignments.map((group, groupIndex) => (
-                              <>
+                              <Fragment key={`group-${groupIndex}`}>
                                 {/* Group Header Row */}
-                                <TableRow key={`header-${groupIndex}`} className="bg-muted/50">
+                                <TableRow className="bg-muted/50">
                                   <TableCell></TableCell>
                                   <TableCell colSpan={6} className="font-semibold text-sm">
                                     {group.gradeLabel} - {group.semesterLabel}
@@ -1655,9 +1655,14 @@ export default function Stundenplaene() {
                                   };
 
                                   const conflictStatus = getAssignmentConflictStatus();
+                                  const hasEdits = editedAssignments[assignment.id];
 
                                   return (
-                                  <TableRow key={assignment.id} data-testid={`row-teacher-assignment-${assignment.id}`}>
+                                  <TableRow 
+                                    key={assignment.id} 
+                                    className={`odd:bg-muted/40 even:bg-background ${hasEdits ? 'border-l-4 border-l-orange-400' : ''}`}
+                                    data-testid={`row-teacher-assignment-${assignment.id}`}
+                                  >
                                 <TableCell>
                                   {isTeacherEditMode ? (
                                     <Checkbox
@@ -1847,7 +1852,7 @@ export default function Stundenplaene() {
                               </TableRow>
                             );
                             })}
-                              </>
+                              </Fragment>
                             ))}
                           </TableBody>
                         </Table>
