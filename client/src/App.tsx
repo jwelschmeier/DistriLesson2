@@ -63,7 +63,6 @@ function Router() {
           <Route path="/stundenplaene" component={Stundenplaene} />
           <Route path="/master-stundenplan" component={MasterStundenplan} />
           <Route path="/schuljahreswechsel" component={Schuljahreswechsel} />
-          <Route path="/lehrer-faecher-zuordnung" component={LehrerFaecherZuordnung} />
           <Route path="/lehrer-faecher-zuordnung/select" component={KlassenAuswahl} />
           <Route path="/lehrer-faecher-zuordnung/diff-kurse" component={DiffKurseMatrix} />
           <Route path="/lehrer-faecher-zuordnung/:classId" component={KlassenMatrix} />
