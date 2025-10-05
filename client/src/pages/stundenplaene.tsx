@@ -1660,7 +1660,7 @@ export default function Stundenplaene() {
                                   return (
                                   <TableRow 
                                     key={assignment.id} 
-                                    className={`odd:bg-muted/40 even:bg-background ${hasEdits ? 'border-l-4 border-l-orange-400' : ''}`}
+                                    className={hasEdits ? 'border-l-4 border-l-orange-400' : ''}
                                     data-testid={`row-teacher-assignment-${assignment.id}`}
                                   >
                                 <TableCell>
