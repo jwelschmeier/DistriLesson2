@@ -439,6 +439,23 @@ export default function LehrerFaecherZuordnung() {
       return [];
     }
     
+    // For grades 5 and 6, include EF, MF, DF (Förderfächer)
+    if (classData.grade === 5 || classData.grade === 6) {
+      const foerderSubjects = subjects.filter(s => 
+        ['EF', 'MF', 'DF'].includes(s.shortName.toUpperCase())
+      );
+      
+      // Combine filtered subjects with Förderfächer, avoiding duplicates
+      const combinedSubjects = [...filteredSubjects];
+      foerderSubjects.forEach(foerderSubject => {
+        if (!combinedSubjects.some(s => s.id === foerderSubject.id)) {
+          combinedSubjects.push(foerderSubject);
+        }
+      });
+      
+      return combinedSubjects;
+    }
+    
     return filteredSubjects;
   }, [subjects, filteredSubjects, subjectFilter]);
 
