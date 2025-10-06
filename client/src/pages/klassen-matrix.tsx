@@ -128,8 +128,35 @@ export default function KlassenMatrix() {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [allClasses, selectedClass]);
   
+  // Helper: Extract subject short name from course name
+  const extractSubjectFromCourseName = (courseName: string): string | null => {
+    // Match patterns like "10FS", "10INF_IF", "07NW_BI", "05ER1", "05KR2", "05PP1"
+    const match = courseName.match(/^\d{2}([A-Z_]+\d*)$/i);
+    if (!match) return null;
+    
+    let extracted = match[1].toUpperCase();
+    
+    // Remove trailing digits (e.g., "ER1" -> "ER", "KR2" -> "KR", "PP1" -> "PP")
+    extracted = extracted.replace(/\d+$/, '');
+    
+    // If there's an underscore, take the part after it (e.g., "INF_IF" -> "IF")
+    const underscoreIndex = extracted.indexOf('_');
+    return underscoreIndex !== -1 ? extracted.substring(underscoreIndex + 1) : extracted;
+  };
+  
   // Sort subjects according to predefined order (exclude ER, KR, PP as they are shown as courses)
   const sortedSubjects = useMemo(() => {
+    // If this is a course (not a regular class), show only the course's subject
+    if (selectedClass && selectedClass.type === 'kurs') {
+      const courseSubjectCode = extractSubjectFromCourseName(selectedClass.name);
+      if (courseSubjectCode) {
+        const courseSubject = subjects.find(s => s.shortName.toUpperCase() === courseSubjectCode);
+        return courseSubject ? [courseSubject] : [];
+      }
+      return [];
+    }
+    
+    // For regular classes, show all subjects except religion subjects
     return subjects
       .filter(subject => SUBJECT_ORDER.includes(subject.shortName) && !RELIGION_SUBJECTS.has(subject.shortName))
       .sort((a, b) => {
@@ -137,7 +164,7 @@ export default function KlassenMatrix() {
         const indexB = SUBJECT_ORDER.indexOf(b.shortName);
         return indexA - indexB;
       });
-  }, [subjects, SUBJECT_ORDER]);
+  }, [subjects, SUBJECT_ORDER, selectedClass]);
 
   // Team-Teaching helpers - semester-aware
   const getTeamTeachingGroups = useMemo(() => {
