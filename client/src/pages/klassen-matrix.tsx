@@ -727,9 +727,9 @@ export default function KlassenMatrix() {
                               </div>
                               
                               {/* 2. Halbjahr */}
-                              <div className="space-y-0 -mb-2">
+                              <div className="space-y-0">
                                 <div className="text-[10px] text-muted-foreground font-medium">2. HJ</div>
-                                <div className="flex items-center gap-1 justify-center">
+                                <div className="flex items-center gap-1 justify-center -mb-1">
                                 <Select
                                   value={currentTeacher2 || 'unassigned'}
                                   onValueChange={(teacherId) => 
