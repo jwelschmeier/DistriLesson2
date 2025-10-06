@@ -1240,10 +1240,7 @@ export default function LehrerFaecherZuordnung() {
                         {/* Summary row showing total hours per semester */}
                         <tr className="border-b bg-blue-50 dark:bg-blue-950/30">
                           <td className="p-2 font-semibold border-r bg-blue-100 dark:bg-blue-900/50 text-xs sticky left-0 z-10">
-                            Summe
-                          </td>
-                          <td colSpan={filteredSubjects.length} className="p-2 text-xs border-r">
-                            <div className="flex gap-6 items-center">
+                            <div className="flex flex-col gap-0.5">
                               <span className="font-medium">
                                 1. HJ: <span className="font-bold text-blue-700 dark:text-blue-400">{totalSem1.toFixed(1)}h</span>
                               </span>
@@ -1251,6 +1248,8 @@ export default function LehrerFaecherZuordnung() {
                                 2. HJ: <span className="font-bold text-blue-700 dark:text-blue-400">{totalSem2.toFixed(1)}h</span>
                               </span>
                             </div>
+                          </td>
+                          <td colSpan={filteredSubjects.length} className="p-2 text-xs border-r">
                           </td>
                         </tr>
                       </React.Fragment>
