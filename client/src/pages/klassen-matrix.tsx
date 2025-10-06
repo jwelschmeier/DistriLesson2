@@ -686,7 +686,7 @@ export default function KlassenMatrix() {
                               {/* 1. Halbjahr */}
                               <div className="mt-1">
                                 <div className="text-[10px] text-muted-foreground font-medium leading-none mb-0.5">1. HJ</div>
-                                <div className="flex items-center gap-1 justify-center">
+                                <div className="flex items-center gap-1 justify-center mb-1">
                                   <Select
                                     value={currentTeacher1 || 'unassigned'}
                                     onValueChange={(teacherId) => 
@@ -736,7 +736,7 @@ export default function KlassenMatrix() {
                               {/* 2. Halbjahr */}
                               <div className="mt-2">
                                 <div className="text-[10px] text-muted-foreground font-medium leading-none mb-0.5">2. HJ</div>
-                                <div className="flex items-center gap-1 justify-center">
+                                <div className="flex items-center gap-1 justify-center mb-1">
                                 <Select
                                   value={currentTeacher2 || 'unassigned'}
                                   onValueChange={(teacherId) => 
@@ -820,14 +820,15 @@ export default function KlassenMatrix() {
                               {/* 1. Halbjahr */}
                               <div className="mt-1">
                                 <div className="text-[10px] text-muted-foreground font-medium leading-none mb-0.5">1. HJ</div>
-                                <Select
-                                  value={currentTeacher1 || 'unassigned'}
-                                  onValueChange={(teacherId) => 
-                                    handleTeacherChange(course.id, "1", courseSubject.id, teacherId === 'unassigned' ? null : teacherId)
-                                  }
-                                  data-testid={`select-teacher-${course.id}-${courseSubject.id}-semester-1`}
-                                >
-                                  <SelectTrigger className="h-6 text-[10px] px-1 w-full">
+                                <div className="mb-1">
+                                  <Select
+                                    value={currentTeacher1 || 'unassigned'}
+                                    onValueChange={(teacherId) => 
+                                      handleTeacherChange(course.id, "1", courseSubject.id, teacherId === 'unassigned' ? null : teacherId)
+                                    }
+                                    data-testid={`select-teacher-${course.id}-${courseSubject.id}-semester-1`}
+                                  >
+                                    <SelectTrigger className="h-6 text-[10px] px-1 w-full">
                                     <SelectValue placeholder="--" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -841,14 +842,16 @@ export default function KlassenMatrix() {
                                       );
                                     })}
                                   </SelectContent>
-                                </Select>
+                                  </Select>
+                                </div>
                               </div>
                               
                               {/* 2. Halbjahr */}
                               <div className="mt-2">
                                 <div className="text-[10px] text-muted-foreground font-medium leading-none mb-0.5">2. HJ</div>
-                                <Select
-                                  value={currentTeacher2 || 'unassigned'}
+                                <div className="mb-1">
+                                  <Select
+                                    value={currentTeacher2 || 'unassigned'}
                                   onValueChange={(teacherId) => 
                                     handleTeacherChange(course.id, "2", courseSubject.id, teacherId === 'unassigned' ? null : teacherId)
                                   }
@@ -868,7 +871,8 @@ export default function KlassenMatrix() {
                                       );
                                     })}
                                   </SelectContent>
-                                </Select>
+                                  </Select>
+                                </div>
                               </div>
                             </div>
                           </td>
