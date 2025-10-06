@@ -435,12 +435,16 @@ export default function LehrerFaecherZuordnung() {
 
   // Helper: Extract subject short name from course name
   const extractSubjectFromCourseName = (courseName: string): string | null => {
-    // Match patterns like "10FS", "10INF_IF", "07NW_BI"
-    const match = courseName.match(/^\d{2}([A-Z_]+)$/i);
+    // Match patterns like "10FS", "10INF_IF", "07NW_BI", "05ER1", "05KR2", "05PP1"
+    const match = courseName.match(/^\d{2}([A-Z_]+\d*)$/i);
     if (!match) return null;
     
+    let extracted = match[1].toUpperCase();
+    
+    // Remove trailing digits (e.g., "ER1" -> "ER", "KR2" -> "KR", "PP1" -> "PP")
+    extracted = extracted.replace(/\d+$/, '');
+    
     // If there's an underscore, take the part after it (e.g., "INF_IF" -> "IF")
-    const extracted = match[1].toUpperCase();
     const underscoreIndex = extracted.indexOf('_');
     return underscoreIndex !== -1 ? extracted.substring(underscoreIndex + 1) : extracted;
   };
