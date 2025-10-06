@@ -1147,7 +1147,7 @@ export default function LehrerFaecherZuordnung() {
                   <tr className="border-b bg-muted/50">
                     <th className="text-left p-2 font-medium text-xs border-r bg-muted/80 sticky left-0 z-10">KLASSE</th>
                     {filteredSubjects.map(subject => (
-                      <th key={subject.id} className="text-center px-1 py-2 font-medium text-xs border-r min-w-[160px]">
+                      <th key={subject.id} className="text-center px-0.5 py-2 font-medium text-xs border-r min-w-[140px]">
                         {subject.shortName.toUpperCase()}
                       </th>
                     ))}
