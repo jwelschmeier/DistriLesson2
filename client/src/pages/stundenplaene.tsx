@@ -115,10 +115,22 @@ export default function Stundenplaene() {
     queryKey: ["/api/subjects"],
   });
 
-  const { data: assignments, isLoading: assignmentsLoading } = useQuery<Assignment[]>({
-    queryKey: ["/api/assignments"],
-    queryFn: () => fetch("/api/assignments?minimal=true").then(res => res.json())
+  // Load assignments for both semesters separately for consistency with klassen-matrix
+  const { data: assignments1 = [], isLoading: assignments1Loading } = useQuery<Assignment[]>({
+    queryKey: ["/api/assignments", "semester", "1"],
+    queryFn: () => fetch("/api/assignments?minimal=true&semester=1").then(res => res.json()),
+    staleTime: 30000
   });
+
+  const { data: assignments2 = [], isLoading: assignments2Loading } = useQuery<Assignment[]>({
+    queryKey: ["/api/assignments", "semester", "2"],
+    queryFn: () => fetch("/api/assignments?minimal=true&semester=2").then(res => res.json()),
+    staleTime: 30000
+  });
+
+  // Combine both semesters for backward compatibility
+  const assignments = useMemo(() => [...assignments1, ...assignments2], [assignments1, assignments2]);
+  const assignmentsLoading = assignments1Loading || assignments2Loading;
 
   // Mutations for assignment operations
   const updateAssignmentMutation = useMutation({
