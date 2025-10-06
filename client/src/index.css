@@ -63,3 +63,23 @@
     font-family: var(--font-sans);
   }
 }
+
+/* Force narrow columns in Lehrer-Fächer-Zuordnung table */
+.table-fixed th[class*="w-[90px]"],
+.table-fixed td[class*="w-[90px]"] {
+  width: 90px !important;
+  max-width: 90px !important;
+  min-width: 90px !important;
+}
+
+.table-fixed button.w-12 {
+  width: 3rem !important;
+  max-width: 3rem !important;
+  min-width: 3rem !important;
+}
+
+.table-fixed button.w-8 {
+  width: 2rem !important;
+  max-width: 2rem !important;
+  min-width: 2rem !important;
+}
