@@ -407,9 +407,31 @@ export default function LehrerFaecherZuordnung() {
   }, [classes, gradeFilter]);
 
   const filteredSubjects = useMemo(() => {
-    if (subjectFilter === 'alle') return subjects;
-    return subjects.filter(s => s.id === subjectFilter);
-  }, [subjects, subjectFilter]);
+    let baseSubjects: Subject[];
+    if (subjectFilter === 'alle') {
+      baseSubjects = subjects;
+    } else {
+      baseSubjects = subjects.filter(s => s.id === subjectFilter);
+    }
+
+    // For grades 5 and 6, add EF, MF, DF (Förderfächer) if not already included
+    if (gradeFilter === '5' || gradeFilter === '6') {
+      const foerderSubjects = subjects.filter(s => 
+        ['EF', 'MF', 'DF'].includes(s.shortName.toUpperCase())
+      );
+      
+      const combinedSubjects = [...baseSubjects];
+      foerderSubjects.forEach(foerderSubject => {
+        if (!combinedSubjects.some(s => s.id === foerderSubject.id)) {
+          combinedSubjects.push(foerderSubject);
+        }
+      });
+      
+      return combinedSubjects;
+    }
+
+    return baseSubjects;
+  }, [subjects, subjectFilter, gradeFilter]);
 
   // Helper: Extract subject short name from course name
   const extractSubjectFromCourseName = (courseName: string): string | null => {
