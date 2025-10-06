@@ -1,0 +1,208 @@
+@@ -44,142 +44,142 @@ const MatrixCell = React.memo(({
+  subjectShortName,
+  assignmentSem1,
+  assignmentSem2, 
+  qualifiedTeachers,
+  remainingHoursByTeacherSem1,
+  remainingHoursByTeacherSem2,
+  onUpdate,
+  onHoursUpdate,
+  teamTextSem1,
+  teamTextSem2
+}: {
+  classId: string;
+  subjectId: string;
+  subjectShortName: string;
+  assignmentSem1?: AssignmentData;
+  assignmentSem2?: AssignmentData;
+  qualifiedTeachers: Teacher[];
+  remainingHoursByTeacherSem1: Map<string, number>;
+  remainingHoursByTeacherSem2: Map<string, number>;
+  onUpdate: (classId: string, subjectId: string, semester: "1" | "2", teacherId: string | null) => void;
+  onHoursUpdate: (classId: string, subjectId: string, semester: "1" | "2", hours: number) => void;
+  teamTextSem1?: string;
+  teamTextSem2?: string;
+}) => {
+  return (
+    <td className="px-0.5 py-1.5 border-r">
+    <td className="px-0 py-1.5 border-r">
+      <div className="flex flex-col gap-1">
+        {/* 1. Halbjahr Dropdown + Hours Dropdown */}
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-0.5">
+            <span className="text-[10px] text-muted-foreground font-medium w-5">1.HJ</span>
+            <Select
+              value={assignmentSem1?.teacherId || 'unassigned'}
+              onValueChange={(teacherId) => 
+              onValueChange={(teacherId) =>
+                onUpdate(classId, subjectId, "1", teacherId === 'unassigned' ? null : teacherId)
+              }
+            >
+              <SelectTrigger className="w-16 h-6 text-[11px]">
+              <SelectTrigger className="w-14 h-6 text-[11px]">
+                <SelectValue placeholder="--" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">--</SelectItem>
+                {qualifiedTeachers.map(teacher => {
+                  const remainingHours = remainingHoursByTeacherSem1.get(teacher.id) || 0;
+                  return (
+                    <SelectItem key={teacher.id} value={teacher.id}>
+                      {teacher.shortName} ({remainingHours.toFixed(0)}h frei)
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+            <Select
+              value={assignmentSem1?.hoursPerWeek ? Math.round(parseFloat(assignmentSem1.hoursPerWeek)).toString() : ''}
+              onValueChange={(value) => {
+                if (value && assignmentSem1) {
+                  onHoursUpdate(classId, subjectId, "1", parseInt(value));
+                }
+              }}
+              disabled={!assignmentSem1}
+            >
+              <SelectTrigger className="w-12 h-6 text-[11px]" data-testid={`select-hours-s1-${classId}-${subjectId}`}>
+              <SelectTrigger className="w-11 h-6 text-[11px]" data-testid={`select-hours-s1-${classId}-${subjectId}`}>
+                <SelectValue placeholder="--" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1h</SelectItem>
+                <SelectItem value="2">2h</SelectItem>
+                <SelectItem value="3">3h</SelectItem>
+                <SelectItem value="4">4h</SelectItem>
+                <SelectItem value="5">5h</SelectItem>
+                <SelectItem value="6">6h</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {teamTextSem1 && (
+            <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 w-fit">
+              <Users className="h-2.5 w-2.5 mr-0.5" />
+              {teamTextSem1}
+            </Badge>
+          )}
+        </div>
+        
+        {/* 2. Halbjahr Dropdown + Hours Dropdown */}
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-0.5">
+            <span className="text-[10px] text-muted-foreground font-medium w-5">2.HJ</span>
+            <Select
+              value={assignmentSem2?.teacherId || 'unassigned'}
+              onValueChange={(teacherId) => 
+              onValueChange={(teacherId) =>
+                onUpdate(classId, subjectId, "2", teacherId === 'unassigned' ? null : teacherId)
+              }
+            >
+              <SelectTrigger className="w-16 h-6 text-[11px]">
+              <SelectTrigger className="w-14 h-6 text-[11px]">
+                <SelectValue placeholder="--" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">--</SelectItem>
+                {qualifiedTeachers.map(teacher => {
+                  const remainingHours = remainingHoursByTeacherSem2.get(teacher.id) || 0;
+                  return (
+                    <SelectItem key={teacher.id} value={teacher.id}>
+                      {teacher.shortName} ({remainingHours.toFixed(0)}h frei)
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+            <Select
+              value={assignmentSem2?.hoursPerWeek ? Math.round(parseFloat(assignmentSem2.hoursPerWeek)).toString() : ''}
+              onValueChange={(value) => {
+                if (value && assignmentSem2) {
+                  onHoursUpdate(classId, subjectId, "2", parseInt(value));
+                }
+              }}
+              disabled={!assignmentSem2}
+            >
+              <SelectTrigger className="w-12 h-6 text-[11px]" data-testid={`select-hours-s2-${classId}-${subjectId}`}>
+              <SelectTrigger className="w-11 h-6 text-[11px]" data-testid={`select-hours-s2-${classId}-${subjectId}`}>
+                <SelectValue placeholder="--" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1h</SelectItem>
+                <SelectItem value="2">2h</SelectItem>
+                <SelectItem value="3">3h</SelectItem>
+                <SelectItem value="4">4h</SelectItem>
+                <SelectItem value="5">5h</SelectItem>
+                <SelectItem value="6">6h</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {teamTextSem2 && (
+            <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 w-fit">
+              <Users className="h-2.5 w-2.5 mr-0.5" />
+              {teamTextSem2}
+            </Badge>
+          )}
+        </div>
+      </div>
+    </td>
+  );
+});
+
+export default function LehrerFaecherZuordnung() {
+@@ -1120,56 +1120,56 @@ export default function LehrerFaecherZuordnung() {
+                      </p>
+                      <Button 
+                        onClick={performDataSynchronization}
+                        disabled={isSyncing}
+                        size="sm"
+                        variant="default"
+                        data-testid="button-sync-data"
+                      >
+                        {isSyncing ? (
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                        )}
+                        Synchronisieren
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Assignment Matrix */}
+          <div className="bg-card border rounded-lg overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-max w-full">
+              <table className="min-w-max w-full border-collapse">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="text-left p-2 font-medium text-xs border-r bg-muted/80 sticky left-0 z-10">KLASSE</th>
+                    {filteredSubjects.map(subject => (
+                      <th key={subject.id} className="text-center px-0 py-1 font-medium text-xs border-r w-[135px]">
+                      <th key={subject.id} className="text-center px-0 py-1 font-medium text-xs border-r w-[120px]">
+                        {subject.shortName.toUpperCase()}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredClasses.map(classData => {
+                    const classSubjects = getSubjectsForClass(classData);
+                    
+                    const classAssignments = classSubjects.flatMap(subject => [
+                      getAssignment(classData.id, subject.id, "1"),
+                      getAssignment(classData.id, subject.id, "2")
+                    ]).filter(Boolean);
+                    
+                    const hasMatchingTeacher = searchQuery === '' || classAssignments.some(assignment => {
+                      const teacher = teachers.find(t => t.id === assignment?.teacherId);
+                      if (!teacher) return false;
+                      const query = searchQuery.toLowerCase();
+                      return (
+                        teacher.firstName.toLowerCase().includes(query) ||
+                        teacher.lastName.toLowerCase().includes(query) ||
+                        teacher.shortName.toLowerCase().includes(query)
+                      );
+                    });
