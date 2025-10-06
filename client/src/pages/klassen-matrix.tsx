@@ -243,8 +243,9 @@ export default function KlassenMatrix() {
     const subject = subjects.find(s => s.id === subjectId);
     const classInfo = allClasses.find(c => c.id === classItemId);
     
-    // Falls es ein Religionsfach ist, synchronisiere alle Parallelklassen des Jahrgangs
-    if (subject && classInfo && RELIGION_SUBJECTS.has(subject.shortName)) {
+    // Falls es ein Religionsfach ist UND es sich um eine normale Klasse handelt (nicht Kurs)
+    // synchronisiere alle Parallelklassen des Jahrgangs
+    if (subject && classInfo && RELIGION_SUBJECTS.has(subject.shortName) && classInfo.type === 'klasse') {
       const jahrgangClasses = allClasses.filter(c => 
         c.grade === classInfo.grade && c.type === 'klasse'
       );
@@ -263,7 +264,8 @@ export default function KlassenMatrix() {
         setChanges2(prev => ({ ...prev, ...updates }));
       }
     } else {
-      // Normales Verhalten für nicht-Religionsfächer
+      // Normales Verhalten für nicht-Religionsfächer UND für Kurse
+      // (Kurse werden NICHT synchronisiert, auch wenn es Religionsfächer sind)
       if (semester === "1") {
         setChanges1(prev => ({ ...prev, [key]: teacherId }));
       } else {
