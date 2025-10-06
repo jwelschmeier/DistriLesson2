@@ -669,13 +669,13 @@ export default function KlassenMatrix() {
                           <td 
                             key={subject.id} 
                             style={{ width: '130px', maxWidth: '130px', minWidth: '130px' }}
-                            className={`border-b border-r px-1 py-0 text-center ${
+                            className={`border-b border-r px-1 py-0 text-center align-top ${
                               index % 2 === 0 
                                 ? 'bg-blue-50 dark:bg-blue-900/30' 
                                 : 'bg-emerald-50 dark:bg-emerald-900/30'
                             }`}
                           >
-                            <div className="space-y-0.5 -mt-2">
+                            <div className="space-y-0.5">
                               {/* 1. Halbjahr */}
                               <div className="space-y-0">
                                 <div className="text-[10px] text-muted-foreground font-medium">1. HJ</div>
