@@ -675,10 +675,10 @@ export default function KlassenMatrix() {
                                 : 'bg-emerald-50 dark:bg-emerald-900/30'
                             }`}
                           >
-                            <div className="space-y-0">
+                            <div>
                               {/* 1. Halbjahr */}
-                              <div className="space-y-0">
-                                <div className="text-[10px] text-muted-foreground font-medium">1. HJ</div>
+                              <div>
+                                <div className="text-[10px] text-muted-foreground font-medium leading-none mb-0.5">1. HJ</div>
                                 <div className="flex items-center gap-1 justify-center">
                                   <Select
                                     value={currentTeacher1 || 'unassigned'}
@@ -719,7 +719,7 @@ export default function KlassenMatrix() {
                                   </Select>
                                 </div>
                                 {teamText1 && (
-                                  <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
+                                  <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 mt-0.5">
                                     <Users className="h-2.5 w-2.5 mr-0.5" />
                                     {teamText1}
                                   </Badge>
@@ -727,9 +727,9 @@ export default function KlassenMatrix() {
                               </div>
                               
                               {/* 2. Halbjahr */}
-                              <div className="space-y-0">
-                                <div className="text-[10px] text-muted-foreground font-medium">2. HJ</div>
-                                <div className="flex items-center gap-1 justify-center -mb-1">
+                              <div className="mt-1">
+                                <div className="text-[10px] text-muted-foreground font-medium leading-none mb-0.5">2. HJ</div>
+                                <div className="flex items-center gap-1 justify-center">
                                 <Select
                                   value={currentTeacher2 || 'unassigned'}
                                   onValueChange={(teacherId) => 
@@ -769,7 +769,7 @@ export default function KlassenMatrix() {
                                 </Select>
                                 </div>
                                 {teamText2 && (
-                                  <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
+                                  <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 mt-0.5">
                                     <Users className="h-2.5 w-2.5 mr-0.5" />
                                     {teamText2}
                                   </Badge>
@@ -802,62 +802,66 @@ export default function KlassenMatrix() {
                         return (
                           <td 
                             key={course.id} 
-                            className={`border-b border-r p-2 text-center ${
+                            className={`border-b border-r px-1 py-0 text-center align-top ${
                               index % 2 === 0 
                                 ? 'bg-green-50 dark:bg-green-900/30' 
                                 : 'bg-teal-50 dark:bg-teal-900/30'
                             }`}
                           >
-                            <div className="space-y-2">
+                            <div>
                               {/* 1. Halbjahr */}
-                              <div className="text-xs text-muted-foreground font-medium">1. HJ</div>
-                              <Select
-                                value={currentTeacher1 || 'unassigned'}
-                                onValueChange={(teacherId) => 
-                                  handleTeacherChange(course.id, "1", courseSubject.id, teacherId === 'unassigned' ? null : teacherId)
-                                }
-                                data-testid={`select-teacher-${course.id}-${courseSubject.id}-semester-1`}
-                              >
-                                <SelectTrigger className="w-full h-8 text-xs">
-                                  <SelectValue placeholder="--" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="unassigned">--</SelectItem>
-                                  {qualifiedForSubject.map(teacher => {
-                                    const workload = getTeacherWorkload(teacher.id, "1");
-                                    return (
-                                      <SelectItem key={teacher.id} value={teacher.id}>
-                                        {teacher.shortName} ({workload.assigned}/{workload.total}h)
-                                      </SelectItem>
-                                    );
-                                  })}
-                                </SelectContent>
-                              </Select>
+                              <div>
+                                <div className="text-[10px] text-muted-foreground font-medium leading-none mb-0.5">1. HJ</div>
+                                <Select
+                                  value={currentTeacher1 || 'unassigned'}
+                                  onValueChange={(teacherId) => 
+                                    handleTeacherChange(course.id, "1", courseSubject.id, teacherId === 'unassigned' ? null : teacherId)
+                                  }
+                                  data-testid={`select-teacher-${course.id}-${courseSubject.id}-semester-1`}
+                                >
+                                  <SelectTrigger className="h-6 text-[10px] px-1" style={{ width: '60px', minWidth: '60px', maxWidth: '60px' }}>
+                                    <SelectValue placeholder="--" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="unassigned">--</SelectItem>
+                                    {qualifiedForSubject.map(teacher => {
+                                      const workload = getTeacherWorkload(teacher.id, "1");
+                                      return (
+                                        <SelectItem key={teacher.id} value={teacher.id}>
+                                          {teacher.shortName} ({workload.assigned}/{workload.total}h)
+                                        </SelectItem>
+                                      );
+                                    })}
+                                  </SelectContent>
+                                </Select>
+                              </div>
                               
                               {/* 2. Halbjahr */}
-                              <div className="text-xs text-muted-foreground font-medium">2. HJ</div>
-                              <Select
-                                value={currentTeacher2 || 'unassigned'}
-                                onValueChange={(teacherId) => 
-                                  handleTeacherChange(course.id, "2", courseSubject.id, teacherId === 'unassigned' ? null : teacherId)
-                                }
-                                data-testid={`select-teacher-${course.id}-${courseSubject.id}-semester-2`}
-                              >
-                                <SelectTrigger className="w-full h-8 text-xs">
-                                  <SelectValue placeholder="--" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="unassigned">--</SelectItem>
-                                  {qualifiedForSubject.map(teacher => {
-                                    const workload = getTeacherWorkload(teacher.id, "2");
-                                    return (
-                                      <SelectItem key={teacher.id} value={teacher.id}>
-                                        {teacher.shortName} ({workload.assigned}/{workload.total}h)
-                                      </SelectItem>
-                                    );
-                                  })}
-                                </SelectContent>
-                              </Select>
+                              <div className="mt-1">
+                                <div className="text-[10px] text-muted-foreground font-medium leading-none mb-0.5">2. HJ</div>
+                                <Select
+                                  value={currentTeacher2 || 'unassigned'}
+                                  onValueChange={(teacherId) => 
+                                    handleTeacherChange(course.id, "2", courseSubject.id, teacherId === 'unassigned' ? null : teacherId)
+                                  }
+                                  data-testid={`select-teacher-${course.id}-${courseSubject.id}-semester-2`}
+                                >
+                                  <SelectTrigger className="h-6 text-[10px] px-1" style={{ width: '60px', minWidth: '60px', maxWidth: '60px' }}>
+                                    <SelectValue placeholder="--" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="unassigned">--</SelectItem>
+                                    {qualifiedForSubject.map(teacher => {
+                                      const workload = getTeacherWorkload(teacher.id, "2");
+                                      return (
+                                        <SelectItem key={teacher.id} value={teacher.id}>
+                                          {teacher.shortName} ({workload.assigned}/{workload.total}h)
+                                        </SelectItem>
+                                      );
+                                    })}
+                                  </SelectContent>
+                                </Select>
+                              </div>
                             </div>
                           </td>
                         );
