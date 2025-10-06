@@ -70,15 +70,15 @@ const MatrixCell = React.memo(({
       <div className="flex flex-col gap-1">
         {/* 1. Halbjahr Dropdown + Hours Dropdown */}
         <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-1">
-            <span className="text-[10px] text-muted-foreground font-medium w-6">1.HJ</span>
+          <div className="flex items-center gap-0.5">
+            <span className="text-[10px] text-muted-foreground font-medium w-5">1.HJ</span>
             <Select
               value={assignmentSem1?.teacherId || 'unassigned'}
               onValueChange={(teacherId) => 
                 onUpdate(classId, subjectId, "1", teacherId === 'unassigned' ? null : teacherId)
               }
             >
-              <SelectTrigger className="w-20 h-6 text-[11px]">
+              <SelectTrigger className="w-16 h-6 text-[11px]">
                 <SelectValue placeholder="--" />
               </SelectTrigger>
               <SelectContent>
@@ -102,7 +102,7 @@ const MatrixCell = React.memo(({
               }}
               disabled={!assignmentSem1}
             >
-              <SelectTrigger className="w-14 h-6 text-[11px]" data-testid={`select-hours-s1-${classId}-${subjectId}`}>
+              <SelectTrigger className="w-12 h-6 text-[11px]" data-testid={`select-hours-s1-${classId}-${subjectId}`}>
                 <SelectValue placeholder="--" />
               </SelectTrigger>
               <SelectContent>
@@ -125,15 +125,15 @@ const MatrixCell = React.memo(({
         
         {/* 2. Halbjahr Dropdown + Hours Dropdown */}
         <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-1">
-            <span className="text-[10px] text-muted-foreground font-medium w-6">2.HJ</span>
+          <div className="flex items-center gap-0.5">
+            <span className="text-[10px] text-muted-foreground font-medium w-5">2.HJ</span>
             <Select
               value={assignmentSem2?.teacherId || 'unassigned'}
               onValueChange={(teacherId) => 
                 onUpdate(classId, subjectId, "2", teacherId === 'unassigned' ? null : teacherId)
               }
             >
-              <SelectTrigger className="w-20 h-6 text-[11px]">
+              <SelectTrigger className="w-16 h-6 text-[11px]">
                 <SelectValue placeholder="--" />
               </SelectTrigger>
               <SelectContent>
@@ -157,7 +157,7 @@ const MatrixCell = React.memo(({
               }}
               disabled={!assignmentSem2}
             >
-              <SelectTrigger className="w-14 h-6 text-[11px]" data-testid={`select-hours-s2-${classId}-${subjectId}`}>
+              <SelectTrigger className="w-12 h-6 text-[11px]" data-testid={`select-hours-s2-${classId}-${subjectId}`}>
                 <SelectValue placeholder="--" />
               </SelectTrigger>
               <SelectContent>
