@@ -617,7 +617,8 @@ export default function KlassenMatrix() {
                       {religionCourses.map((course, index) => (
                         <th 
                           key={course.id} 
-                          className={`border-b border-r p-3 text-center text-sm font-medium min-w-[140px] ${
+                          style={{ width: '90px', maxWidth: '90px', minWidth: '90px' }}
+                          className={`border-b border-r p-2 text-center text-xs font-medium ${
                             index % 2 === 0 
                               ? 'bg-green-100 dark:bg-green-900/50' 
                               : 'bg-teal-100 dark:bg-teal-900/50'
