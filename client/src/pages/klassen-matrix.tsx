@@ -677,7 +677,7 @@ export default function KlassenMatrix() {
                               {/* 1. Halbjahr */}
                               <div className="space-y-1">
                                 <div className="text-xs text-muted-foreground font-medium">1. HJ</div>
-                                <div className="flex items-center gap-1 justify-center">
+                                <div className="flex items-center gap-0.5 justify-center">
                                   <Select
                                     value={currentTeacher1 || 'unassigned'}
                                     onValueChange={(teacherId) => 
@@ -727,7 +727,7 @@ export default function KlassenMatrix() {
                               {/* 2. Halbjahr */}
                               <div className="space-y-1">
                                 <div className="text-xs text-muted-foreground font-medium">2. HJ</div>
-                                <div className="flex items-center gap-1 justify-center">
+                                <div className="flex items-center gap-0.5 justify-center">
                                 <Select
                                   value={currentTeacher2 || 'unassigned'}
                                   onValueChange={(teacherId) => 
