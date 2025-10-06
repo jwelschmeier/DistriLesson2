@@ -600,12 +600,12 @@ export default function KlassenMatrix() {
               <table className="border-collapse w-full table-fixed">
                   <thead>
                     <tr className="bg-muted/50">
-                      <th className="border-b border-r p-2 text-left text-xs font-medium bg-slate-200 dark:bg-slate-700 sticky left-0 z-10" style={{ width: '80px' }}>KLASSE</th>
+                      <th className="border-b border-r p-2 text-left text-xs font-medium bg-slate-200 dark:bg-slate-700 sticky left-0 z-10" style={{ width: '100px' }}>KLASSE</th>
                       {sortedSubjects.map((subject, index) => (
                         <th 
                           key={subject.id} 
-                          style={{ width: '70px', maxWidth: '70px', minWidth: '70px' }}
-                          className={`border-b border-r p-1 text-center text-[10px] font-medium ${
+                          style={{ width: '110px', maxWidth: '110px', minWidth: '110px' }}
+                          className={`border-b border-r p-2 text-center text-xs font-medium ${
                             index % 2 === 0 
                               ? 'bg-blue-100 dark:bg-blue-900/50' 
                               : 'bg-emerald-100 dark:bg-emerald-900/50'
@@ -668,18 +668,18 @@ export default function KlassenMatrix() {
                         return (
                           <td 
                             key={subject.id} 
-                            style={{ width: '70px', maxWidth: '70px', minWidth: '70px' }}
-                            className={`border-b border-r p-0 text-center ${
+                            style={{ width: '110px', maxWidth: '110px', minWidth: '110px' }}
+                            className={`border-b border-r p-1 text-center ${
                               index % 2 === 0 
                                 ? 'bg-blue-50 dark:bg-blue-900/30' 
                                 : 'bg-emerald-50 dark:bg-emerald-900/30'
                             }`}
                           >
-                            <div className="space-y-0.5">
+                            <div className="space-y-1">
                               {/* 1. Halbjahr */}
-                              <div className="space-y-0">
-                                <div className="text-[9px] text-muted-foreground font-medium" style={{ width: '8px', display: 'inline-block' }}>1</div>
-                                <div className="flex items-center gap-0 justify-center">
+                              <div className="space-y-0.5">
+                                <div className="text-[10px] text-muted-foreground font-medium">1. HJ</div>
+                                <div className="flex items-center gap-1 justify-center">
                                   <Select
                                     value={currentTeacher1 || 'unassigned'}
                                     onValueChange={(teacherId) => 
@@ -687,7 +687,7 @@ export default function KlassenMatrix() {
                                     }
                                     data-testid={`select-teacher-${classItem.id}-${subject.id}-semester-1`}
                                   >
-                                    <SelectTrigger className="h-5 text-[9px] px-0.5" style={{ width: '36px', minWidth: '36px', maxWidth: '36px' }}>
+                                    <SelectTrigger className="h-6 text-[10px] px-1" style={{ width: '50px', minWidth: '50px', maxWidth: '50px' }}>
                                       <SelectValue placeholder="--" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -708,7 +708,7 @@ export default function KlassenMatrix() {
                                     disabled={!currentTeacher1}
                                     data-testid={`select-hours-${classItem.id}-${subject.id}-semester-1`}
                                   >
-                                    <SelectTrigger className="h-5 text-[9px] px-0.5" style={{ width: '26px', minWidth: '26px', maxWidth: '26px' }}>
+                                    <SelectTrigger className="h-6 text-[10px] px-1" style={{ width: '36px', minWidth: '36px', maxWidth: '36px' }}>
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -727,9 +727,9 @@ export default function KlassenMatrix() {
                               </div>
                               
                               {/* 2. Halbjahr */}
-                              <div className="space-y-0">
-                                <div className="text-[9px] text-muted-foreground font-medium" style={{ width: '8px', display: 'inline-block' }}>2</div>
-                                <div className="flex items-center gap-0 justify-center">
+                              <div className="space-y-0.5">
+                                <div className="text-[10px] text-muted-foreground font-medium">2. HJ</div>
+                                <div className="flex items-center gap-1 justify-center">
                                 <Select
                                   value={currentTeacher2 || 'unassigned'}
                                   onValueChange={(teacherId) => 
@@ -737,7 +737,7 @@ export default function KlassenMatrix() {
                                   }
                                   data-testid={`select-teacher-${classItem.id}-${subject.id}-semester-2`}
                                 >
-                                  <SelectTrigger className="h-5 text-[9px] px-0.5" style={{ width: '36px', minWidth: '36px', maxWidth: '36px' }}>
+                                  <SelectTrigger className="h-6 text-[10px] px-1" style={{ width: '50px', minWidth: '50px', maxWidth: '50px' }}>
                                     <SelectValue placeholder="--" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -758,7 +758,7 @@ export default function KlassenMatrix() {
                                   disabled={!currentTeacher2}
                                   data-testid={`select-hours-${classItem.id}-${subject.id}-semester-2`}
                                 >
-                                  <SelectTrigger className="h-5 text-[9px] px-0.5" style={{ width: '26px', minWidth: '26px', maxWidth: '26px' }}>
+                                  <SelectTrigger className="h-6 text-[10px] px-1" style={{ width: '36px', minWidth: '36px', maxWidth: '36px' }}>
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
