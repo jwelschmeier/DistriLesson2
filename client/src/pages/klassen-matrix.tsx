@@ -649,7 +649,7 @@ export default function KlassenMatrix() {
                       return (
                         <React.Fragment key={classItem.id}>
                           <tr className="hover:bg-muted/25">
-                        <td className="border-b border-r px-4 py-0 font-semibold text-sm bg-slate-100 dark:bg-slate-800 sticky left-0 z-10 align-top leading-tight">
+                        <td className="border-b border-r px-4 py-0 font-semibold text-sm bg-slate-100 dark:bg-slate-800 sticky left-0 z-10 text-center align-middle leading-tight">
                           {classItem.name}
                         </td>
                         {sortedSubjects.map((subject, index) => {
@@ -670,7 +670,7 @@ export default function KlassenMatrix() {
                           <td 
                             key={subject.id} 
                             style={{ width: '130px', maxWidth: '130px', minWidth: '130px' }}
-                            className={`border-b border-r px-1 py-0 text-center align-top ${
+                            className={`border-b border-r px-1 py-1 text-center align-top ${
                               index % 2 === 0 
                                 ? 'bg-blue-50 dark:bg-blue-900/30' 
                                 : 'bg-emerald-50 dark:bg-emerald-900/30'
@@ -804,7 +804,7 @@ export default function KlassenMatrix() {
                           <td 
                             key={course.id} 
                             style={{ width: '90px', maxWidth: '90px', minWidth: '90px' }}
-                            className={`border-b border-r px-1 py-0 text-center align-top ${
+                            className={`border-b border-r px-1 py-1 text-center align-top ${
                               index % 2 === 0 
                                 ? 'bg-green-50 dark:bg-green-900/30' 
                                 : 'bg-teal-50 dark:bg-teal-900/30'
