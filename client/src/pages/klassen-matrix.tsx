@@ -648,7 +648,7 @@ export default function KlassenMatrix() {
                       return (
                         <React.Fragment key={classItem.id}>
                           <tr className="hover:bg-muted/25">
-                        <td className="border-b border-r p-4 font-semibold text-lg bg-slate-100 dark:bg-slate-800 sticky left-0 z-10">
+                        <td className="border-b border-r px-4 py-1 font-semibold text-lg bg-slate-100 dark:bg-slate-800 sticky left-0 z-10">
                           {classItem.name}
                         </td>
                         {sortedSubjects.map((subject, index) => {
