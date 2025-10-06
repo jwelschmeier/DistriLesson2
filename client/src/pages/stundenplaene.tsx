@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Calendar, Clock, Users, BookOpen, Presentation, School, GraduationCap, Save, Trash2, Plus, Edit, Eye, AlertTriangle } from "lucide-react";
+import { Calendar, Clock, Users, BookOpen, Presentation, School, GraduationCap, Save, Trash2, Plus, Edit, Eye, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { insertAssignmentSchema, type InsertAssignment } from "@shared/schema";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
@@ -44,6 +44,9 @@ export default function Stundenplaene() {
   const [selectedClassType, setSelectedClassType] = useState<string>("all");
   const [teacherSearchTerm, setTeacherSearchTerm] = useState('');
   
+  // Sort states for teacher and class tables
+  const [teacherSort, setTeacherSort] = useState<{ column: 'class' | 'subject' | 'hours' | 'semester'; direction: 'asc' | 'desc' }>({ column: 'class', direction: 'asc' });
+  const [classSort, setClassSort] = useState<{ column: 'teacher' | 'subject' | 'hours' | 'semester'; direction: 'asc' | 'desc' }>({ column: 'teacher', direction: 'asc' });
   
   // State for editable table
   const [editedAssignments, setEditedAssignments] = useState<Record<string, Partial<Assignment>>>({});
@@ -363,6 +366,31 @@ export default function Stundenplaene() {
     }
   };
 
+  // Sort handler functions
+  const handleTeacherSort = (column: 'class' | 'subject' | 'hours' | 'semester') => {
+    setTeacherSort(prev => {
+      if (prev.column === column) {
+        // Toggle direction if same column
+        return { column, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      } else {
+        // Set new column with ascending direction
+        return { column, direction: 'asc' };
+      }
+    });
+  };
+
+  const handleClassSort = (column: 'teacher' | 'subject' | 'hours' | 'semester') => {
+    setClassSort(prev => {
+      if (prev.column === column) {
+        // Toggle direction if same column
+        return { column, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      } else {
+        // Set new column with ascending direction
+        return { column, direction: 'asc' };
+      }
+    });
+  };
+
   // State for team teaching dialog
   const [teamTeachingDialog, setTeamTeachingDialog] = useState<{
     isOpen: boolean;
@@ -511,20 +539,7 @@ export default function Stundenplaene() {
     
     let assignments = Array.from(groupMap.values());
     
-    // Sort by grade, class name, and semester
-    assignments.sort((a, b) => {
-      const gradeA = a.class?.grade ?? 0;
-      const gradeB = b.class?.grade ?? 0;
-      if (gradeA !== gradeB) return gradeA - gradeB;
-      
-      const nameA = a.class?.name ?? '';
-      const nameB = b.class?.name ?? '';
-      if (nameA !== nameB) return nameA.localeCompare(nameB);
-      
-      return a.semester.localeCompare(b.semester);
-    });
-    
-    // Apply search filter
+    // Apply search filter first
     if (teacherSearchTerm) {
       const searchLower = teacherSearchTerm.toLowerCase();
       assignments = assignments.filter(a => {
@@ -540,8 +555,36 @@ export default function Stundenplaene() {
       });
     }
     
+    // Apply dynamic sorting based on teacherSort state
+    assignments.sort((a, b) => {
+      let compareResult = 0;
+      
+      switch (teacherSort.column) {
+        case 'class':
+          const classNameA = a.class?.name ?? '';
+          const classNameB = b.class?.name ?? '';
+          compareResult = classNameA.localeCompare(classNameB);
+          break;
+        case 'subject':
+          const subjectNameA = a.subject?.shortName ?? '';
+          const subjectNameB = b.subject?.shortName ?? '';
+          compareResult = subjectNameA.localeCompare(subjectNameB);
+          break;
+        case 'hours':
+          const hoursA = parseFloat(a.hoursPerWeek);
+          const hoursB = parseFloat(b.hoursPerWeek);
+          compareResult = hoursA - hoursB;
+          break;
+        case 'semester':
+          compareResult = a.semester.localeCompare(b.semester);
+          break;
+      }
+      
+      return teacherSort.direction === 'asc' ? compareResult : -compareResult;
+    });
+    
     return assignments;
-  }, [teacherAssignments, teacherSearchTerm]);
+  }, [teacherAssignments, teacherSearchTerm, teacherSort]);
 
   // Group teacher assignments by grade and semester for better overview
   const groupedTeacherAssignments = useMemo(() => {
@@ -576,8 +619,36 @@ export default function Stundenplaene() {
       filtered = filtered.filter(assignment => assignment.semester === selectedSemester);
     }
     
+    // Apply dynamic sorting based on classSort state
+    filtered.sort((a, b) => {
+      let compareResult = 0;
+      
+      switch (classSort.column) {
+        case 'teacher':
+          const teacherNameA = a.teacher?.lastName ?? '';
+          const teacherNameB = b.teacher?.lastName ?? '';
+          compareResult = teacherNameA.localeCompare(teacherNameB);
+          break;
+        case 'subject':
+          const subjectNameA = a.subject?.shortName ?? '';
+          const subjectNameB = b.subject?.shortName ?? '';
+          compareResult = subjectNameA.localeCompare(subjectNameB);
+          break;
+        case 'hours':
+          const hoursA = parseFloat(a.hoursPerWeek);
+          const hoursB = parseFloat(b.hoursPerWeek);
+          compareResult = hoursA - hoursB;
+          break;
+        case 'semester':
+          compareResult = a.semester.localeCompare(b.semester);
+          break;
+      }
+      
+      return classSort.direction === 'asc' ? compareResult : -compareResult;
+    });
+    
     return filtered;
-  }, [extendedAssignments, selectedClassId, selectedSemester]);
+  }, [extendedAssignments, selectedClassId, selectedSemester, classSort]);
 
   // Calculate teacher summary statistics with team teaching support
   const teacherSummary = useMemo(() => {
@@ -1532,10 +1603,66 @@ export default function Stundenplaene() {
                                     data-testid="checkbox-select-all-teacher"
                                   />
                                 </TableHead>
-                                <TableHead className="bg-card">Klasse</TableHead>
-                                <TableHead className="bg-card">Fach</TableHead>
-                                <TableHead className="bg-card">Stunden</TableHead>
-                                <TableHead className="bg-card">Semester</TableHead>
+                                <TableHead className="bg-card">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 px-2 hover:bg-muted/50"
+                                    onClick={() => handleTeacherSort('class')}
+                                    data-testid="sort-class"
+                                  >
+                                    Klasse
+                                    {teacherSort.column === 'class' && (
+                                      teacherSort.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                                    )}
+                                    {teacherSort.column !== 'class' && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
+                                  </Button>
+                                </TableHead>
+                                <TableHead className="bg-card">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 px-2 hover:bg-muted/50"
+                                    onClick={() => handleTeacherSort('subject')}
+                                    data-testid="sort-subject"
+                                  >
+                                    Fach
+                                    {teacherSort.column === 'subject' && (
+                                      teacherSort.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                                    )}
+                                    {teacherSort.column !== 'subject' && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
+                                  </Button>
+                                </TableHead>
+                                <TableHead className="bg-card">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 px-2 hover:bg-muted/50"
+                                    onClick={() => handleTeacherSort('hours')}
+                                    data-testid="sort-hours"
+                                  >
+                                    Stunden
+                                    {teacherSort.column === 'hours' && (
+                                      teacherSort.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                                    )}
+                                    {teacherSort.column !== 'hours' && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
+                                  </Button>
+                                </TableHead>
+                                <TableHead className="bg-card">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 px-2 hover:bg-muted/50"
+                                    onClick={() => handleTeacherSort('semester')}
+                                    data-testid="sort-semester"
+                                  >
+                                    Semester
+                                    {teacherSort.column === 'semester' && (
+                                      teacherSort.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                                    )}
+                                    {teacherSort.column !== 'semester' && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
+                                  </Button>
+                                </TableHead>
                                 <TableHead className="w-32 bg-card">Aktionen</TableHead>
                               </TableRow>
                             </TableHeader>
@@ -2420,10 +2547,66 @@ export default function Stundenplaene() {
                                   data-testid="checkbox-select-all-class"
                                 />
                               </TableHead>
-                              <TableHead>Lehrkraft</TableHead>
-                              <TableHead>Fach</TableHead>
-                              <TableHead>Stunden</TableHead>
-                              <TableHead>Semester</TableHead>
+                              <TableHead>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 px-2 hover:bg-muted/50"
+                                  onClick={() => handleClassSort('teacher')}
+                                  data-testid="sort-teacher"
+                                >
+                                  Lehrkraft
+                                  {classSort.column === 'teacher' && (
+                                    classSort.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                                  )}
+                                  {classSort.column !== 'teacher' && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
+                                </Button>
+                              </TableHead>
+                              <TableHead>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 px-2 hover:bg-muted/50"
+                                  onClick={() => handleClassSort('subject')}
+                                  data-testid="sort-subject-class"
+                                >
+                                  Fach
+                                  {classSort.column === 'subject' && (
+                                    classSort.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                                  )}
+                                  {classSort.column !== 'subject' && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
+                                </Button>
+                              </TableHead>
+                              <TableHead>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 px-2 hover:bg-muted/50"
+                                  onClick={() => handleClassSort('hours')}
+                                  data-testid="sort-hours-class"
+                                >
+                                  Stunden
+                                  {classSort.column === 'hours' && (
+                                    classSort.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                                  )}
+                                  {classSort.column !== 'hours' && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
+                                </Button>
+                              </TableHead>
+                              <TableHead>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 px-2 hover:bg-muted/50"
+                                  onClick={() => handleClassSort('semester')}
+                                  data-testid="sort-semester-class"
+                                >
+                                  Semester
+                                  {classSort.column === 'semester' && (
+                                    classSort.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                                  )}
+                                  {classSort.column !== 'semester' && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
+                                </Button>
+                              </TableHead>
                               <TableHead className="w-32">Aktionen</TableHead>
                             </TableRow>
                           </TableHeader>
