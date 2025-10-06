@@ -653,7 +653,8 @@ export default function KlassenMatrix() {
                           <div className="flex flex-col gap-1">
                             <div>{classItem.name}</div>
                             <div className="text-[10px] font-normal text-muted-foreground">
-                              1. HJ: {Math.round(totalSem1)}h  |  2. HJ: {Math.round(totalSem2)}h
+                              <div>1. HJ: {Math.round(totalSem1)}h</div>
+                              <div>2. HJ: {Math.round(totalSem2)}h</div>
                             </div>
                           </div>
                         </td>
