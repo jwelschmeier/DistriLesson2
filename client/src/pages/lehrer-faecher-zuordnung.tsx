@@ -71,14 +71,14 @@ const MatrixCell = React.memo(({
         {/* 1. Halbjahr Dropdown + Hours Dropdown */}
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-0.5">
-            <span className="text-[10px] text-muted-foreground font-medium w-5">1.HJ</span>
+            <span className="text-[10px] text-muted-foreground font-medium w-4">1.</span>
             <Select
               value={assignmentSem1?.teacherId || 'unassigned'}
               onValueChange={(teacherId) => 
                 onUpdate(classId, subjectId, "1", teacherId === 'unassigned' ? null : teacherId)
               }
             >
-              <SelectTrigger className="w-16 h-6 text-[11px]">
+              <SelectTrigger className="w-14 h-6 text-[10px] px-1">
                 <SelectValue placeholder="--" />
               </SelectTrigger>
               <SelectContent>
@@ -102,7 +102,7 @@ const MatrixCell = React.memo(({
               }}
               disabled={!assignmentSem1}
             >
-              <SelectTrigger className="w-12 h-6 text-[11px]" data-testid={`select-hours-s1-${classId}-${subjectId}`}>
+              <SelectTrigger className="w-10 h-6 text-[10px] px-1" data-testid={`select-hours-s1-${classId}-${subjectId}`}>
                 <SelectValue placeholder="--" />
               </SelectTrigger>
               <SelectContent>
@@ -126,14 +126,14 @@ const MatrixCell = React.memo(({
         {/* 2. Halbjahr Dropdown + Hours Dropdown */}
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-0.5">
-            <span className="text-[10px] text-muted-foreground font-medium w-5">2.HJ</span>
+            <span className="text-[10px] text-muted-foreground font-medium w-4">2.</span>
             <Select
               value={assignmentSem2?.teacherId || 'unassigned'}
               onValueChange={(teacherId) => 
                 onUpdate(classId, subjectId, "2", teacherId === 'unassigned' ? null : teacherId)
               }
             >
-              <SelectTrigger className="w-16 h-6 text-[11px]">
+              <SelectTrigger className="w-14 h-6 text-[10px] px-1">
                 <SelectValue placeholder="--" />
               </SelectTrigger>
               <SelectContent>
@@ -157,7 +157,7 @@ const MatrixCell = React.memo(({
               }}
               disabled={!assignmentSem2}
             >
-              <SelectTrigger className="w-12 h-6 text-[11px]" data-testid={`select-hours-s2-${classId}-${subjectId}`}>
+              <SelectTrigger className="w-10 h-6 text-[10px] px-1" data-testid={`select-hours-s2-${classId}-${subjectId}`}>
                 <SelectValue placeholder="--" />
               </SelectTrigger>
               <SelectContent>
@@ -1147,7 +1147,7 @@ export default function LehrerFaecherZuordnung() {
                   <tr className="border-b bg-muted/50">
                     <th className="text-left p-2 font-medium text-xs border-r bg-muted/80 sticky left-0 z-10 w-24">KLASSE</th>
                     {filteredSubjects.map(subject => (
-                      <th key={subject.id} className="text-center px-0 py-1 font-medium text-xs border-r w-[135px]">
+                      <th key={subject.id} className="text-center px-0 py-1 font-medium text-xs border-r w-[115px]">
                         {subject.shortName.toUpperCase()}
                       </th>
                     ))}
