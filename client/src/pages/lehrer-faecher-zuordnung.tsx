@@ -66,7 +66,7 @@ const MatrixCell = React.memo(({
   teamTextSem2?: string;
 }) => {
   return (
-    <td className="p-1.5 border-r">
+    <td className="px-0.5 py-1.5 border-r">
       <div className="flex flex-col gap-1">
         {/* 1. Halbjahr Dropdown + Hours Dropdown */}
         <div className="flex flex-col gap-0.5">
