@@ -694,7 +694,7 @@ export default function KlassenMatrix() {
                                     }
                                     data-testid={`select-teacher-${classItem.id}-${subject.id}-semester-1`}
                                   >
-                                    <SelectTrigger className="h-6 text-[10px] px-1" style={{ width: '60px', minWidth: '60px', maxWidth: '60px' }}>
+                                    <SelectTrigger className="h-6 text-[10px] px-1 text-center" style={{ width: '60px', minWidth: '60px', maxWidth: '60px' }}>
                                       <SelectValue placeholder="--" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -715,7 +715,7 @@ export default function KlassenMatrix() {
                                     disabled={!currentTeacher1}
                                     data-testid={`select-hours-${classItem.id}-${subject.id}-semester-1`}
                                   >
-                                    <SelectTrigger className="h-6 text-[10px] px-1" style={{ width: '42px', minWidth: '42px', maxWidth: '42px' }}>
+                                    <SelectTrigger className="h-6 text-[10px] px-1 text-center" style={{ width: '42px', minWidth: '42px', maxWidth: '42px' }}>
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -828,7 +828,7 @@ export default function KlassenMatrix() {
                                     }
                                     data-testid={`select-teacher-${course.id}-${courseSubject.id}-semester-1`}
                                   >
-                                    <SelectTrigger className="h-6 text-[10px] px-1 w-full">
+                                    <SelectTrigger className="h-6 text-[10px] px-1 text-center w-full">
                                     <SelectValue placeholder="--" />
                                   </SelectTrigger>
                                   <SelectContent>
