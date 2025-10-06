@@ -649,8 +649,13 @@ export default function KlassenMatrix() {
                       return (
                         <React.Fragment key={classItem.id}>
                           <tr className="hover:bg-muted/25">
-                        <td className="border-b border-r px-4 py-0 font-semibold text-sm bg-slate-100 dark:bg-slate-800 sticky left-0 z-10 text-center align-middle leading-tight">
-                          {classItem.name}
+                        <td className="border-b border-r px-4 py-2 font-semibold text-sm bg-slate-100 dark:bg-slate-800 sticky left-0 z-10 text-center align-middle leading-tight">
+                          <div className="flex flex-col gap-1">
+                            <div>{classItem.name}</div>
+                            <div className="text-[10px] font-normal text-muted-foreground">
+                              1. HJ: {Math.round(totalSem1)}h  |  2. HJ: {Math.round(totalSem2)}h
+                            </div>
+                          </div>
                         </td>
                         {sortedSubjects.map((subject, index) => {
                         // Get teachers qualified for this subject
@@ -868,24 +873,6 @@ export default function KlassenMatrix() {
                           </td>
                         );
                       })}
-                      </tr>
-                      {/* Summary row showing total hours per semester */}
-                      <tr className="border-t-2 border-blue-500 bg-blue-50 dark:bg-blue-950/30">
-                        <td className="border-b border-r p-3 font-bold text-sm bg-blue-100 dark:bg-blue-900/50 sticky left-0 z-10">
-                          <div className="flex flex-col gap-1">
-                            <div className="font-bold">Summe</div>
-                            <div className="flex gap-4 text-xs">
-                              <span className="font-medium">
-                                1. HJ: <span className="font-bold text-blue-700 dark:text-blue-400">{totalSem1.toFixed(1)}h</span>
-                              </span>
-                              <span className="font-medium">
-                                2. HJ: <span className="font-bold text-blue-700 dark:text-blue-400">{totalSem2.toFixed(1)}h</span>
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-                        <td colSpan={sortedSubjects.length + religionCourses.length} className="border-b border-r p-3 text-sm bg-blue-50 dark:bg-blue-950/30">
-                        </td>
                       </tr>
                     </React.Fragment>
                   );
