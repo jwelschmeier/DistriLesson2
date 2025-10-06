@@ -767,13 +767,13 @@ export default function KlassenMatrix() {
                                     ))}
                                   </SelectContent>
                                 </Select>
-                              </div>
-                              {teamText2 && (
-                                <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
-                                  <Users className="h-2.5 w-2.5 mr-0.5" />
-                                  {teamText2}
-                                </Badge>
-                              )}
+                                </div>
+                                {teamText2 && (
+                                  <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
+                                    <Users className="h-2.5 w-2.5 mr-0.5" />
+                                    {teamText2}
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                           </td>
