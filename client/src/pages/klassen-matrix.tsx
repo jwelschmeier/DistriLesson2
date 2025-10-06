@@ -675,7 +675,7 @@ export default function KlassenMatrix() {
                                 : 'bg-emerald-50 dark:bg-emerald-900/30'
                             }`}
                           >
-                            <div className="space-y-0.5">
+                            <div className="space-y-0">
                               {/* 1. Halbjahr */}
                               <div className="space-y-0">
                                 <div className="text-[10px] text-muted-foreground font-medium">1. HJ</div>
