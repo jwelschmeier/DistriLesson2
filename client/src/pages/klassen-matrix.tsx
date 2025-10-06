@@ -675,7 +675,7 @@ export default function KlassenMatrix() {
                                 : 'bg-emerald-50 dark:bg-emerald-900/30'
                             }`}
                           >
-                            <div className="space-y-0 -mb-1">
+                            <div className="space-y-0">
                               {/* 1. Halbjahr */}
                               <div className="space-y-0">
                                 <div className="text-[10px] text-muted-foreground font-medium">1. HJ</div>
@@ -727,7 +727,7 @@ export default function KlassenMatrix() {
                               </div>
                               
                               {/* 2. Halbjahr */}
-                              <div className="space-y-0">
+                              <div className="space-y-0 -mb-2">
                                 <div className="text-[10px] text-muted-foreground font-medium">2. HJ</div>
                                 <div className="flex items-center gap-1 justify-center">
                                 <Select
