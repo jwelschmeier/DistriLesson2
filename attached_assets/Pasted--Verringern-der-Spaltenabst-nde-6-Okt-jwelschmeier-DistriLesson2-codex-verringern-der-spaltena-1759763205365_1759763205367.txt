@@ -1,0 +1,99 @@
+
+Verringern der Spaltenabstände
+6. Okt.
+·
+jwelschmeier/DistriLesson2
+·
+codex/verringern-der-spaltenabstande
+·
++1
+-1
+
+Archivieren
+
+Weitergeben
+PR anzeigen
+
+
+Bildanhang
+ich will die Abstände zwischen den Spalten der fächer verringern.dargestellt durch den roten strich ist das, was ich meine.  wie stelle ich das an
+Kopieren
+Summary
+
+Reduced the horizontal spacing between subject columns in the teacher-subject matrix by collapsing table borders.
+
+Testing
+
+⚠️ npm run dev -- --host 0.0.0.0 --port 4173 *(fails: DATABASE_URL must be set in this environment)*
+
+Screenshot capture was not possible because the development server cannot start without the required DATABASE_URL configuration.
+
+
+Datei (1)
+
+client/src/pages/lehrer-faecher-zuordnung.tsx
++1
+-1
+
+
+
+Diffs
+Protokolle
+
+client/src/pages/lehrer-faecher-zuordnung.tsx
++1
+-1
+
+@@ -1120,51 +1120,51 @@ export default function LehrerFaecherZuordnung() {
+                      </p>
+                      <Button 
+                        onClick={performDataSynchronization}
+                        disabled={isSyncing}
+                        size="sm"
+                        variant="default"
+                        data-testid="button-sync-data"
+                      >
+                        {isSyncing ? (
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                        )}
+                        Synchronisieren
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Assignment Matrix */}
+          <div className="bg-card border rounded-lg overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-max w-full">
+              <table className="min-w-max w-full border-collapse">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="text-left p-2 font-medium text-xs border-r bg-muted/80 sticky left-0 z-10">KLASSE</th>
+                    {filteredSubjects.map(subject => (
+                      <th key={subject.id} className="text-center px-0 py-1 font-medium text-xs border-r w-[135px]">
+                        {subject.shortName.toUpperCase()}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredClasses.map(classData => {
+                    const classSubjects = getSubjectsForClass(classData);
+                    
+                    const classAssignments = classSubjects.flatMap(subject => [
+                      getAssignment(classData.id, subject.id, "1"),
+                      getAssignment(classData.id, subject.id, "2")
+                    ]).filter(Boolean);
+                    
+                    const hasMatchingTeacher = searchQuery === '' || classAssignments.some(assignment => {
+                      const teacher = teachers.find(t => t.id === assignment?.teacherId);
+                      if (!teacher) return false;
+                      const query = searchQuery.toLowerCase();
+                      return (
+                        teacher.firstName.toLowerCase().includes(query) ||
