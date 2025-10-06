@@ -586,27 +586,42 @@ export default function Stundenplaene() {
     return assignments;
   }, [teacherAssignments, teacherSearchTerm, teacherSort]);
 
-  // Group teacher assignments by grade and semester for better overview
+  // Group teacher assignments by class+subject to show both semesters in one row
+  interface GroupedAssignment {
+    key: string;
+    class: Class | undefined;
+    subject: Subject | undefined;
+    classId: string;
+    subjectId: string;
+    semester1?: ExtendedAssignment;
+    semester2?: ExtendedAssignment;
+  }
+  
   const groupedTeacherAssignments = useMemo(() => {
-    const groups: { gradeLabel: string; semesterLabel: string; rows: ExtendedAssignment[] }[] = [];
+    const groupMap = new Map<string, GroupedAssignment>();
     
     displayedTeacherAssignments.forEach(assignment => {
-      const grade = assignment.class?.grade ?? 0;
-      const gradeLabel = grade > 0 ? `Jahrgangsstufe ${grade}` : 'Keine Jahrgangsstufe';
-      const semesterLabel = `${assignment.semester}. Halbjahr`;
+      const key = `${assignment.classId}-${assignment.subjectId}`;
       
-      // Find existing group with same grade and semester
-      let group = groups.find(g => g.gradeLabel === gradeLabel && g.semesterLabel === semesterLabel);
-      
-      if (!group) {
-        group = { gradeLabel, semesterLabel, rows: [] };
-        groups.push(group);
+      if (!groupMap.has(key)) {
+        groupMap.set(key, {
+          key,
+          class: assignment.class,
+          subject: assignment.subject,
+          classId: assignment.classId,
+          subjectId: assignment.subjectId,
+        });
       }
       
-      group.rows.push(assignment);
+      const group = groupMap.get(key)!;
+      if (assignment.semester === '1') {
+        group.semester1 = assignment;
+      } else {
+        group.semester2 = assignment;
+      }
     });
     
-    return groups;
+    return Array.from(groupMap.values());
   }, [displayedTeacherAssignments]);
 
   // Filter assignments for selected class
@@ -1567,22 +1582,6 @@ export default function Stundenplaene() {
                               className="w-64"
                               data-testid="input-teacher-search"
                             />
-                            {isTeacherEditMode && (
-                              <Button
-                                onClick={() => setNewTeacherAssignment({
-                                  classId: '',
-                                  subjectId: '',
-                                  hoursPerWeek: 1,
-                                semester: '1',
-                              })}
-                              disabled={!!newTeacherAssignment}
-                              size="sm"
-                              data-testid="button-add-teacher-assignment"
-                            >
-                              <Plus className="h-4 w-4 mr-2" />
-                              Neue Zuordnung
-                            </Button>
-                          )}
                           </div>
                         </div>
 
@@ -1596,417 +1595,181 @@ export default function Stundenplaene() {
                             <Table data-testid="table-teacher-assignments">
                             <TableHeader>
                               <TableRow className="sticky top-0 z-10 bg-card border-b">
-                                <TableHead className="w-12 bg-card">
-                                  <Checkbox
-                                    checked={displayedTeacherAssignments.length > 0 && selectedTeacherAssignments.size === displayedTeacherAssignments.length}
-                                    onCheckedChange={(checked) => selectAllTeacherAssignments(checked as boolean)}
-                                    data-testid="checkbox-select-all-teacher"
-                                  />
-                                </TableHead>
-                                <TableHead className="bg-card">
+                                {isTeacherEditMode && (
+                                  <TableHead className="w-12 bg-card px-2">
+                                    {/* Checkbox placeholder - bulk operations could be added here */}
+                                  </TableHead>
+                                )}
+                                <TableHead className="bg-card px-2">
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-8 px-2 hover:bg-muted/50"
+                                    className="h-8 px-1 hover:bg-muted/50 text-xs"
                                     onClick={() => handleTeacherSort('class')}
                                     data-testid="sort-class"
                                   >
                                     Klasse
                                     {teacherSort.column === 'class' && (
-                                      teacherSort.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                                      teacherSort.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
                                     )}
-                                    {teacherSort.column !== 'class' && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
+                                    {teacherSort.column !== 'class' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
                                   </Button>
                                 </TableHead>
-                                <TableHead className="bg-card">
+                                <TableHead className="bg-card px-2">
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-8 px-2 hover:bg-muted/50"
+                                    className="h-8 px-1 hover:bg-muted/50 text-xs"
                                     onClick={() => handleTeacherSort('subject')}
                                     data-testid="sort-subject"
                                   >
                                     Fach
                                     {teacherSort.column === 'subject' && (
-                                      teacherSort.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                                      teacherSort.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
                                     )}
-                                    {teacherSort.column !== 'subject' && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
+                                    {teacherSort.column !== 'subject' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
                                   </Button>
                                 </TableHead>
-                                <TableHead className="bg-card">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 px-2 hover:bg-muted/50"
-                                    onClick={() => handleTeacherSort('hours')}
-                                    data-testid="sort-hours"
-                                  >
-                                    Stunden
-                                    {teacherSort.column === 'hours' && (
-                                      teacherSort.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
-                                    )}
-                                    {teacherSort.column !== 'hours' && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
-                                  </Button>
-                                </TableHead>
-                                <TableHead className="bg-card">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 px-2 hover:bg-muted/50"
-                                    onClick={() => handleTeacherSort('semester')}
-                                    data-testid="sort-semester"
-                                  >
-                                    Semester
-                                    {teacherSort.column === 'semester' && (
-                                      teacherSort.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
-                                    )}
-                                    {teacherSort.column !== 'semester' && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
-                                  </Button>
-                                </TableHead>
-                                <TableHead className="w-32 bg-card">Aktionen</TableHead>
+                                <TableHead className="bg-card px-2 text-center text-xs">1. HJ</TableHead>
+                                <TableHead className="bg-card px-2 text-center text-xs">2. HJ</TableHead>
+                                {isTeacherEditMode && <TableHead className="w-24 bg-card px-2 text-xs">Aktionen</TableHead>}
                               </TableRow>
                             </TableHeader>
                           <TableBody>
-                            {/* New Assignment Row */}
-                            {newTeacherAssignment && isTeacherEditMode && (
-                              <TableRow className="bg-blue-50 dark:bg-blue-950/30" data-testid="row-new-teacher-assignment">
-                                <TableCell>
-                                  {/* Empty cell for checkbox column */}
-                                </TableCell>
-                                <TableCell>
-                                  <Select
-                                    value={newTeacherAssignment.classId}
-                                    onValueChange={(value) =>
-                                      setNewTeacherAssignment(prev => prev ? { ...prev, classId: value } : null)
-                                    }
-                                    data-testid="select-new-class"
-                                  >
-                                    <SelectTrigger className="w-full">
-                                      <SelectValue placeholder="Klasse wählen..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {classes?.map((cls) => (
-                                        <SelectItem key={cls.id} value={cls.id}>
-                                          {cls.name}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </TableCell>
-                                <TableCell>
-                                  <Select
-                                    value={newTeacherAssignment.subjectId}
-                                    onValueChange={(value) =>
-                                      setNewTeacherAssignment(prev => prev ? { ...prev, subjectId: value } : null)
-                                    }
-                                    data-testid="select-new-subject"
-                                  >
-                                    <SelectTrigger className="w-full">
-                                      <SelectValue placeholder="Fach wählen..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {subjects?.map((subject) => (
-                                        <SelectItem key={subject.id} value={subject.id}>
-                                          {subject.shortName} - {subject.name}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </TableCell>
-                                <TableCell>
-                                  <Input
-                                    type="number"
-                                    min="1"
-                                    max="40"
-                                    value={newTeacherAssignment.hoursPerWeek}
-                                    onChange={(e) =>
-                                      setNewTeacherAssignment(prev => prev ? { ...prev, hoursPerWeek: parseInt(e.target.value) || 1 } : null)
-                                    }
-                                    data-testid="input-new-hours"
-                                    className="w-20"
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                  <Select
-                                    value={newTeacherAssignment.semester}
-                                    onValueChange={(value: "1" | "2") =>
-                                      setNewTeacherAssignment(prev => prev ? { ...prev, semester: value } : null)
-                                    }
-                                    data-testid="select-new-semester"
-                                  >
-                                    <SelectTrigger className="w-24">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="1">1. HJ</SelectItem>
-                                      <SelectItem value="2">2. HJ</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex space-x-2">
-                                    <Button
-                                      onClick={saveNewTeacherAssignment}
-                                      disabled={!newTeacherAssignment.classId || !newTeacherAssignment.subjectId || createAssignmentMutation.isPending}
-                                      size="sm"
-                                      data-testid="button-save-new-teacher"
-                                    >
-                                      <Save className="h-3 w-3" />
-                                    </Button>
-                                    <Button
-                                      onClick={() => setNewTeacherAssignment(null)}
-                                      variant="outline"
-                                      size="sm"
-                                      data-testid="button-cancel-new-teacher"
-                                    >
-                                      ✕
-                                    </Button>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            )}
+                            {/* Grouped Assignment Rows (Both Semesters in One Row) */}
+                            {groupedTeacherAssignments.map((group) => {
+                              const hasEditsSem1 = group.semester1 && editedAssignments[group.semester1.id];
+                              const hasEditsSem2 = group.semester2 && editedAssignments[group.semester2.id];
 
-                            {/* Existing Assignment Rows */}
-                            {displayedTeacherAssignments.map((assignment) => {
-                                  // Calculate conflict status for this assignment
-                                  const getAssignmentConflictStatus = () => {
-                                    const teacher = teachers?.find(t => t.id === assignment.teacherId);
-                                    const subject = subjects?.find(s => s.id === assignment.subjectId);
-                                    
-                                    if (!teacher || !subject) return null;
-                                    
-                                    // Check qualification
-                                    const teacherSubjects = teacher.subjects.flatMap(subjectString => 
-                                      subjectString.split(',').map(s => s.trim().toUpperCase())
-                                    );
-                                    const subjectShortName = subject.shortName.trim().toUpperCase();
-                                    if (!teacherSubjects.includes(subjectShortName)) {
-                                      return { type: "error", message: "Keine Qualifikation" };
-                                    }
-                                    
-                                    // Check semester workload
-                                    const semesterAssignments = teacherAssignments.filter(a => a.semester === assignment.semester);
-                                    const semesterHours = semesterAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
-                                    const maxHours = parseFloat(teacher.maxHours);
-                                    
-                                    if (semesterHours > maxHours) {
-                                      return { type: "error", message: `Überbelastung ${assignment.semester}.HJ` };
-                                    }
-                                    
-                                    if (semesterHours > maxHours * 0.9) {
-                                      return { type: "warning", message: `Hohe Belastung ${assignment.semester}.HJ` };
-                                    }
-                                    
-                                    return { type: "success", message: "OK" };
-                                  };
-
-                                  const conflictStatus = getAssignmentConflictStatus();
-                                  const hasEdits = editedAssignments[assignment.id];
-
-                                  return (
-                                  <TableRow 
-                                    key={assignment.id} 
-                                    className={hasEdits ? 'border-l-4 border-l-orange-400' : ''}
-                                    data-testid={`row-teacher-assignment-${assignment.id}`}
-                                  >
-                                <TableCell>
-                                  {isTeacherEditMode ? (
-                                    <Checkbox
-                                      checked={selectedTeacherAssignments.has(assignment.id)}
-                                      onCheckedChange={() => toggleTeacherAssignmentSelection(assignment.id)}
-                                      data-testid={`checkbox-teacher-assignment-${assignment.id}`}
-                                    />
-                                  ) : (
-                                    <div className="w-4"></div>
+                              return (
+                                <TableRow 
+                                  key={group.key} 
+                                  className={(hasEditsSem1 || hasEditsSem2) ? 'border-l-4 border-l-orange-400' : ''}
+                                  data-testid={`row-teacher-assignment-${group.key}`}
+                                >
+                                  {isTeacherEditMode && (
+                                    <TableCell className="px-2">
+                                      {/* Checkbox for bulk operations could be added here */}
+                                    </TableCell>
                                   )}
-                                </TableCell>
-                                <TableCell className="font-medium">
-                                  {isTeacherEditMode ? (
-                                    <Select
-                                      value={getEffectiveValue(assignment, 'classId') as string}
-                                      onValueChange={(value) => updateEditedAssignment(assignment.id, 'classId', value)}
-                                      data-testid={`select-class-${assignment.id}`}
-                                    >
-                                      <SelectTrigger className="w-full">
-                                        <SelectValue>
-                                          {assignment.class?.name || 'Unbekannt'}
-                                        </SelectValue>
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {classes?.map((cls) => (
-                                          <SelectItem key={cls.id} value={cls.id}>
-                                            {cls.name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  ) : (
-                                    assignment.class?.name || 'Unbekannt'
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  {isTeacherEditMode ? (
-                                    <Select
-                                      value={getEffectiveValue(assignment, 'subjectId') as string}
-                                      onValueChange={(value) => updateEditedAssignment(assignment.id, 'subjectId', value)}
-                                      data-testid={`select-subject-${assignment.id}`}
-                                    >
-                                      <SelectTrigger className="w-full">
-                                        <SelectValue>
-                                          <Badge variant="light">
-                                            {assignment.subject?.shortName || assignment.subject?.name || 'Unbekannt'}
-                                          </Badge>
-                                        </SelectValue>
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {subjects?.map((subject) => (
-                                          <SelectItem key={subject.id} value={subject.id}>
-                                            {subject.shortName} - {subject.name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  ) : (
-                                    <Badge variant="light">
-                                      {assignment.subject?.shortName || assignment.subject?.name || 'Unbekannt'}
+                                  <TableCell className="font-medium px-2 text-sm">
+                                    {group.class?.name || 'Unbekannt'}
+                                  </TableCell>
+                                  <TableCell className="px-2">
+                                    <Badge variant="light" className="text-xs">
+                                      {group.subject?.shortName || group.subject?.name || 'Unbekannt'}
                                     </Badge>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  {isTeacherEditMode ? (
-                                    <Input
-                                      type="number"
-                                      min="1"
-                                      max="40"
-                                      value={parseFloat(getEffectiveValue(assignment, 'hoursPerWeek') as string)}
-                                      onChange={(e) => updateEditedAssignment(assignment.id, 'hoursPerWeek', parseInt(e.target.value) || 1)}
-                                      data-testid={`input-hours-${assignment.id}`}
-                                      className="w-20"
-                                    />
-                                  ) : (
-                                    <Badge 
-                                      className={
-                                        Math.round(parseFloat(assignment.hoursPerWeek)) <= 2
-                                          ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
-                                          : Math.round(parseFloat(assignment.hoursPerWeek)) <= 4
-                                          ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300"
-                                          : "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300"
-                                      }
-                                    >
-                                      {Math.round(parseFloat(assignment.hoursPerWeek))}h
-                                    </Badge>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  {isTeacherEditMode ? (
-                                    <Select
-                                      value={getEffectiveValue(assignment, 'semester') as string}
-                                      onValueChange={(value: "1" | "2") => updateEditedAssignment(assignment.id, 'semester', value)}
-                                      data-testid={`select-semester-${assignment.id}`}
-                                    >
-                                      <SelectTrigger className="w-24">
-                                        <SelectValue>
-                                          <Badge variant="light">
-                                            {assignment.semester === "1" ? "1. HJ" : "2. HJ"}
-                                          </Badge>
-                                        </SelectValue>
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="1">1. HJ</SelectItem>
-                                        <SelectItem value="2">2. HJ</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  ) : (
-                                    <Badge variant="light">
-                                      {assignment.semester === "1" ? "1. HJ" : "2. HJ"}
-                                    </Badge>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  {isTeacherEditMode ? (
-                                    <div className="flex space-x-2">
-                                      {hasChanges(assignment.id) && (
-                                        <>
-                                          <Button
-                                            onClick={() => saveAssignment(assignment)}
-                                            disabled={updateAssignmentMutation.isPending}
-                                            size="sm"
-                                            data-testid={`button-save-${assignment.id}`}
-                                          >
-                                            <Save className="h-3 w-3" />
-                                          </Button>
-                                          <Button
-                                            onClick={() => cancelEdit(assignment.id)}
-                                            variant="outline"
-                                            size="sm"
-                                            data-testid={`button-cancel-${assignment.id}`}
-                                          >
-                                            ✕
-                                          </Button>
-                                        </>
-                                      )}
-                                      <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                          <Button
-                                            variant="destructive"
-                                            size="sm"
-                                            className="h-8 w-8 p-0"
-                                            data-testid={`button-delete-assignment-${assignment.id}`}
-                                          >
-                                            <Trash2 className="h-4 w-4" />
-                                          </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                          <AlertDialogHeader>
-                                            <AlertDialogTitle>Zuweisung löschen?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                              Möchten Sie die Zuweisung <strong>{assignment.subject?.shortName}</strong> 
-                                              in Klasse <strong>{assignment.class?.name}</strong> 
-                                              ({assignment.hoursPerWeek}h, {assignment.semester === "1" ? "1. HJ" : "2. HJ"}) 
-                                              wirklich löschen?
-                                              <br /><br />
-                                              Diese Stunden werden wieder für andere Kollegen verfügbar.
-                                            </AlertDialogDescription>
-                                          </AlertDialogHeader>
-                                          <AlertDialogFooter>
-                                            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                                            <AlertDialogAction
-                                              onClick={() => deleteAssignment(assignment.id)}
-                                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                              data-testid={`confirm-delete-assignment-${assignment.id}`}
-                                            >
-                                              Löschen
-                                            </AlertDialogAction>
-                                          </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                      </AlertDialog>
-                                    </div>
-                                  ) : (
-                                    conflictStatus && (
-                                      <div className="flex items-center">
-                                        {conflictStatus.type === "error" && (
-                                          <AlertTriangle className="w-4 h-4 text-red-500 mr-1" />
+                                  </TableCell>
+                                  <TableCell className="px-2 text-center">
+                                    {group.semester1 ? (
+                                      <Badge 
+                                        className={
+                                          Math.round(parseFloat(group.semester1.hoursPerWeek)) <= 2
+                                            ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs"
+                                            : Math.round(parseFloat(group.semester1.hoursPerWeek)) <= 4
+                                            ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 text-xs"
+                                            : "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-xs"
+                                        }
+                                      >
+                                        {Math.round(parseFloat(group.semester1.hoursPerWeek))}h
+                                      </Badge>
+                                    ) : (
+                                      <span className="text-muted-foreground text-xs">—</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="px-2 text-center">
+                                    {group.semester2 ? (
+                                      <Badge 
+                                        className={
+                                          Math.round(parseFloat(group.semester2.hoursPerWeek)) <= 2
+                                            ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs"
+                                            : Math.round(parseFloat(group.semester2.hoursPerWeek)) <= 4
+                                            ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 text-xs"
+                                            : "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-xs"
+                                        }
+                                      >
+                                        {Math.round(parseFloat(group.semester2.hoursPerWeek))}h
+                                      </Badge>
+                                    ) : (
+                                      <span className="text-muted-foreground text-xs">—</span>
+                                    )}
+                                  </TableCell>
+                                  {isTeacherEditMode && (
+                                    <TableCell className="px-2">
+                                      <div className="flex space-x-1">
+                                        {group.semester1 && (
+                                          <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                              <Button
+                                                variant="destructive"
+                                                size="sm"
+                                                className="h-7 w-7 p-0"
+                                                data-testid={`button-delete-assignment-${group.semester1.id}`}
+                                              >
+                                                <Trash2 className="h-3 w-3" />
+                                              </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                              <AlertDialogHeader>
+                                                <AlertDialogTitle>Zuweisung löschen?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                  Möchten Sie die Zuweisung <strong>{group.subject?.shortName}</strong> 
+                                                  in Klasse <strong>{group.class?.name}</strong> 
+                                                  ({group.semester1.hoursPerWeek}h, 1. HJ) 
+                                                  wirklich löschen?
+                                                </AlertDialogDescription>
+                                              </AlertDialogHeader>
+                                              <AlertDialogFooter>
+                                                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                                                <AlertDialogAction
+                                                  onClick={() => deleteAssignment(group.semester1!.id)}
+                                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                >
+                                                  Löschen
+                                                </AlertDialogAction>
+                                              </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                          </AlertDialog>
                                         )}
-                                        {conflictStatus.type === "warning" && (
-                                          <AlertTriangle className="w-4 h-4 text-orange-500 mr-1" />
+                                        {group.semester2 && (
+                                          <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                              <Button
+                                                variant="destructive"
+                                                size="sm"
+                                                className="h-7 w-7 p-0"
+                                                data-testid={`button-delete-assignment-${group.semester2.id}`}
+                                              >
+                                                <Trash2 className="h-3 w-3" />
+                                              </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                              <AlertDialogHeader>
+                                                <AlertDialogTitle>Zuweisung löschen?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                  Möchten Sie die Zuweisung <strong>{group.subject?.shortName}</strong> 
+                                                  in Klasse <strong>{group.class?.name}</strong> 
+                                                  ({group.semester2.hoursPerWeek}h, 2. HJ) 
+                                                  wirklich löschen?
+                                                </AlertDialogDescription>
+                                              </AlertDialogHeader>
+                                              <AlertDialogFooter>
+                                                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                                                <AlertDialogAction
+                                                  onClick={() => deleteAssignment(group.semester2!.id)}
+                                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                >
+                                                  Löschen
+                                                </AlertDialogAction>
+                                              </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                          </AlertDialog>
                                         )}
-                                        {conflictStatus.type === "success" && (
-                                          <div className="w-4 h-4 rounded-full bg-green-500 mr-1"></div>
-                                        )}
-                                        <Badge 
-                                          variant={
-                                            conflictStatus.type === "error" ? "destructive" :
-                                            conflictStatus.type === "warning" ? "light" : "light"
-                                          }
-                                        >
-                                          {conflictStatus.message}
-                                        </Badge>
                                       </div>
-                                    )
+                                    </TableCell>
                                   )}
-                                </TableCell>
-                              </TableRow>
-                            );
+                                </TableRow>
+                              );
                             })}
                           </TableBody>
                         </Table>
