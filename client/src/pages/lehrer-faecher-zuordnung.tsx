@@ -1142,10 +1142,10 @@ export default function LehrerFaecherZuordnung() {
           {/* Assignment Matrix */}
           <div className="bg-card border rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="min-w-max w-full">
+              <table className="table-fixed">
                 <thead>
                   <tr className="border-b bg-muted/50">
-                    <th className="text-left p-2 font-medium text-xs border-r bg-muted/80 sticky left-0 z-10">KLASSE</th>
+                    <th className="text-left p-2 font-medium text-xs border-r bg-muted/80 sticky left-0 z-10 w-24">KLASSE</th>
                     {filteredSubjects.map(subject => (
                       <th key={subject.id} className="text-center px-0 py-1 font-medium text-xs border-r w-[135px]">
                         {subject.shortName.toUpperCase()}
