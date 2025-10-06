@@ -604,7 +604,7 @@ export default function KlassenMatrix() {
                       {sortedSubjects.map((subject, index) => (
                         <th 
                           key={subject.id} 
-                          style={{ width: '110px', maxWidth: '110px', minWidth: '110px' }}
+                          style={{ width: '130px', maxWidth: '130px', minWidth: '130px' }}
                           className={`border-b border-r p-2 text-center text-xs font-medium ${
                             index % 2 === 0 
                               ? 'bg-blue-100 dark:bg-blue-900/50' 
@@ -668,7 +668,7 @@ export default function KlassenMatrix() {
                         return (
                           <td 
                             key={subject.id} 
-                            style={{ width: '110px', maxWidth: '110px', minWidth: '110px' }}
+                            style={{ width: '130px', maxWidth: '130px', minWidth: '130px' }}
                             className={`border-b border-r p-1 text-center ${
                               index % 2 === 0 
                                 ? 'bg-blue-50 dark:bg-blue-900/30' 
@@ -687,7 +687,7 @@ export default function KlassenMatrix() {
                                     }
                                     data-testid={`select-teacher-${classItem.id}-${subject.id}-semester-1`}
                                   >
-                                    <SelectTrigger className="h-6 text-[10px] px-1" style={{ width: '50px', minWidth: '50px', maxWidth: '50px' }}>
+                                    <SelectTrigger className="h-6 text-[10px] px-1" style={{ width: '60px', minWidth: '60px', maxWidth: '60px' }}>
                                       <SelectValue placeholder="--" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -708,7 +708,7 @@ export default function KlassenMatrix() {
                                     disabled={!currentTeacher1}
                                     data-testid={`select-hours-${classItem.id}-${subject.id}-semester-1`}
                                   >
-                                    <SelectTrigger className="h-6 text-[10px] px-1" style={{ width: '36px', minWidth: '36px', maxWidth: '36px' }}>
+                                    <SelectTrigger className="h-6 text-[10px] px-1" style={{ width: '42px', minWidth: '42px', maxWidth: '42px' }}>
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -737,7 +737,7 @@ export default function KlassenMatrix() {
                                   }
                                   data-testid={`select-teacher-${classItem.id}-${subject.id}-semester-2`}
                                 >
-                                  <SelectTrigger className="h-6 text-[10px] px-1" style={{ width: '50px', minWidth: '50px', maxWidth: '50px' }}>
+                                  <SelectTrigger className="h-6 text-[10px] px-1" style={{ width: '60px', minWidth: '60px', maxWidth: '60px' }}>
                                     <SelectValue placeholder="--" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -758,7 +758,7 @@ export default function KlassenMatrix() {
                                   disabled={!currentTeacher2}
                                   data-testid={`select-hours-${classItem.id}-${subject.id}-semester-2`}
                                 >
-                                  <SelectTrigger className="h-6 text-[10px] px-1" style={{ width: '36px', minWidth: '36px', maxWidth: '36px' }}>
+                                  <SelectTrigger className="h-6 text-[10px] px-1" style={{ width: '42px', minWidth: '42px', maxWidth: '42px' }}>
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
