@@ -1630,6 +1630,7 @@ export default function Stundenplaene() {
                                     {teacherSort.column !== 'subject' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
                                   </Button>
                                 </TableHead>
+                                {isTeacherEditMode && <TableHead className="bg-card px-2 text-xs">Lehrkraft</TableHead>}
                                 <TableHead className="bg-card px-2 text-center text-xs">1. HJ</TableHead>
                                 <TableHead className="bg-card px-2 text-center text-xs">2. HJ</TableHead>
                                 {isTeacherEditMode && <TableHead className="w-24 bg-card px-2 text-xs">Aktionen</TableHead>}
@@ -1739,6 +1740,37 @@ export default function Stundenplaene() {
                                       </Badge>
                                     )}
                                   </TableCell>
+                                  {isTeacherEditMode && (
+                                    <TableCell className="px-2">
+                                      {group.semester1 && (
+                                        <Select
+                                          value={getEffectiveValue(group.semester1, 'teacherId') as string}
+                                          onValueChange={(value) => {
+                                            if (group.semester1) updateEditedAssignment(group.semester1.id, 'teacherId', value);
+                                            if (group.semester2) updateEditedAssignment(group.semester2.id, 'teacherId', value);
+                                          }}
+                                          data-testid={`select-teacher-${group.key}`}
+                                        >
+                                          <SelectTrigger className="w-full h-7 text-xs">
+                                            <SelectValue>
+                                              <span className="text-xs">
+                                                {group.semester1.teacher ? 
+                                                  `${group.semester1.teacher.shortName}` : 
+                                                  'Unbekannt'}
+                                              </span>
+                                            </SelectValue>
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {teachers?.map((teacher) => (
+                                              <SelectItem key={teacher.id} value={teacher.id}>
+                                                {teacher.shortName} - {teacher.lastName}, {teacher.firstName}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      )}
+                                    </TableCell>
+                                  )}
                                   <TableCell className="px-2 text-center">
                                     {group.semester1 ? (
                                       isTeacherEditMode ? (
