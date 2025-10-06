@@ -1766,19 +1766,8 @@ export default function Stundenplaene() {
                               </TableRow>
                             )}
 
-                            {/* Existing Assignment Rows - Grouped by Grade and Semester */}
-                            {groupedTeacherAssignments.map((group, groupIndex) => (
-                              <Fragment key={`group-${groupIndex}`}>
-                                {/* Group Header Row */}
-                                <TableRow className="bg-slate-100 dark:bg-slate-800/50">
-                                  <TableCell></TableCell>
-                                  <TableCell colSpan={6} className="font-semibold text-sm">
-                                    {group.gradeLabel} - {group.semesterLabel}
-                                  </TableCell>
-                                </TableRow>
-                                
-                                {/* Assignment Rows for this group */}
-                                {group.rows.map((assignment) => {
+                            {/* Existing Assignment Rows */}
+                            {displayedTeacherAssignments.map((assignment) => {
                                   // Calculate conflict status for this assignment
                                   const getAssignmentConflictStatus = () => {
                                     const teacher = teachers?.find(t => t.id === assignment.teacherId);
@@ -1895,7 +1884,17 @@ export default function Stundenplaene() {
                                       className="w-20"
                                     />
                                   ) : (
-                                    <span className="font-medium">{assignment.hoursPerWeek}h</span>
+                                    <Badge 
+                                      className={
+                                        Math.round(parseFloat(assignment.hoursPerWeek)) <= 2
+                                          ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                                          : Math.round(parseFloat(assignment.hoursPerWeek)) <= 4
+                                          ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300"
+                                          : "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300"
+                                      }
+                                    >
+                                      {Math.round(parseFloat(assignment.hoursPerWeek))}h
+                                    </Badge>
                                   )}
                                 </TableCell>
                                 <TableCell>
@@ -2009,8 +2008,6 @@ export default function Stundenplaene() {
                               </TableRow>
                             );
                             })}
-                              </Fragment>
-                            ))}
                           </TableBody>
                         </Table>
                         </div>
