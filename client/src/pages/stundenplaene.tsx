@@ -1640,56 +1640,159 @@ export default function Stundenplaene() {
                             {groupedTeacherAssignments.map((group) => {
                               const hasEditsSem1 = group.semester1 && editedAssignments[group.semester1.id];
                               const hasEditsSem2 = group.semester2 && editedAssignments[group.semester2.id];
+                              const hasAnyEdits = hasEditsSem1 || hasEditsSem2;
 
                               return (
                                 <TableRow 
                                   key={group.key} 
-                                  className={(hasEditsSem1 || hasEditsSem2) ? 'border-l-4 border-l-orange-400' : ''}
+                                  className={hasAnyEdits ? 'border-l-4 border-l-orange-400' : ''}
                                   data-testid={`row-teacher-assignment-${group.key}`}
                                 >
                                   {isTeacherEditMode && (
                                     <TableCell className="px-2">
-                                      {/* Checkbox for bulk operations could be added here */}
+                                      {/* Actions column for save/cancel */}
+                                      {hasAnyEdits && (
+                                        <div className="flex space-x-1">
+                                          <Button
+                                            onClick={() => {
+                                              if (group.semester1 && hasEditsSem1) saveAssignment(group.semester1);
+                                              if (group.semester2 && hasEditsSem2) saveAssignment(group.semester2);
+                                            }}
+                                            disabled={updateAssignmentMutation.isPending}
+                                            size="sm"
+                                            className="h-6 w-6 p-0"
+                                            data-testid={`button-save-${group.key}`}
+                                          >
+                                            <Save className="h-3 w-3" />
+                                          </Button>
+                                          <Button
+                                            onClick={() => {
+                                              if (group.semester1) cancelEdit(group.semester1.id);
+                                              if (group.semester2) cancelEdit(group.semester2.id);
+                                            }}
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-6 w-6 p-0"
+                                            data-testid={`button-cancel-${group.key}`}
+                                          >
+                                            ✕
+                                          </Button>
+                                        </div>
+                                      )}
                                     </TableCell>
                                   )}
                                   <TableCell className="font-medium px-2 text-sm">
-                                    {group.class?.name || 'Unbekannt'}
+                                    {isTeacherEditMode && group.semester1 ? (
+                                      <Select
+                                        value={getEffectiveValue(group.semester1, 'classId') as string}
+                                        onValueChange={(value) => {
+                                          if (group.semester1) updateEditedAssignment(group.semester1.id, 'classId', value);
+                                          if (group.semester2) updateEditedAssignment(group.semester2.id, 'classId', value);
+                                        }}
+                                        data-testid={`select-class-${group.key}`}
+                                      >
+                                        <SelectTrigger className="w-full h-7 text-xs">
+                                          <SelectValue>
+                                            {group.class?.name || 'Unbekannt'}
+                                          </SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {classes?.map((cls) => (
+                                            <SelectItem key={cls.id} value={cls.id}>
+                                              {cls.name}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    ) : (
+                                      group.class?.name || 'Unbekannt'
+                                    )}
                                   </TableCell>
                                   <TableCell className="px-2">
-                                    <Badge variant="light" className="text-xs">
-                                      {group.subject?.shortName || group.subject?.name || 'Unbekannt'}
-                                    </Badge>
+                                    {isTeacherEditMode && group.semester1 ? (
+                                      <Select
+                                        value={getEffectiveValue(group.semester1, 'subjectId') as string}
+                                        onValueChange={(value) => {
+                                          if (group.semester1) updateEditedAssignment(group.semester1.id, 'subjectId', value);
+                                          if (group.semester2) updateEditedAssignment(group.semester2.id, 'subjectId', value);
+                                        }}
+                                        data-testid={`select-subject-${group.key}`}
+                                      >
+                                        <SelectTrigger className="w-full h-7 text-xs">
+                                          <SelectValue>
+                                            <Badge variant="light" className="text-xs">
+                                              {group.subject?.shortName || group.subject?.name || 'Unbekannt'}
+                                            </Badge>
+                                          </SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {subjects?.map((subject) => (
+                                            <SelectItem key={subject.id} value={subject.id}>
+                                              {subject.shortName} - {subject.name}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    ) : (
+                                      <Badge variant="light" className="text-xs">
+                                        {group.subject?.shortName || group.subject?.name || 'Unbekannt'}
+                                      </Badge>
+                                    )}
                                   </TableCell>
                                   <TableCell className="px-2 text-center">
                                     {group.semester1 ? (
-                                      <Badge 
-                                        className={
-                                          Math.round(parseFloat(group.semester1.hoursPerWeek)) <= 2
-                                            ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs"
-                                            : Math.round(parseFloat(group.semester1.hoursPerWeek)) <= 4
-                                            ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 text-xs"
-                                            : "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-xs"
-                                        }
-                                      >
-                                        {Math.round(parseFloat(group.semester1.hoursPerWeek))}h
-                                      </Badge>
+                                      isTeacherEditMode ? (
+                                        <Input
+                                          type="number"
+                                          min="1"
+                                          max="40"
+                                          value={parseFloat(getEffectiveValue(group.semester1, 'hoursPerWeek') as string)}
+                                          onChange={(e) => updateEditedAssignment(group.semester1!.id, 'hoursPerWeek', parseInt(e.target.value) || 1)}
+                                          data-testid={`input-hours-sem1-${group.key}`}
+                                          className="w-16 h-7 text-xs text-center"
+                                        />
+                                      ) : (
+                                        <Badge 
+                                          className={
+                                            Math.round(parseFloat(group.semester1.hoursPerWeek)) <= 2
+                                              ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs"
+                                              : Math.round(parseFloat(group.semester1.hoursPerWeek)) <= 4
+                                              ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 text-xs"
+                                              : "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-xs"
+                                          }
+                                        >
+                                          {Math.round(parseFloat(group.semester1.hoursPerWeek))}h
+                                        </Badge>
+                                      )
                                     ) : (
                                       <span className="text-muted-foreground text-xs">—</span>
                                     )}
                                   </TableCell>
                                   <TableCell className="px-2 text-center">
                                     {group.semester2 ? (
-                                      <Badge 
-                                        className={
-                                          Math.round(parseFloat(group.semester2.hoursPerWeek)) <= 2
-                                            ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs"
-                                            : Math.round(parseFloat(group.semester2.hoursPerWeek)) <= 4
-                                            ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 text-xs"
-                                            : "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-xs"
-                                        }
-                                      >
-                                        {Math.round(parseFloat(group.semester2.hoursPerWeek))}h
-                                      </Badge>
+                                      isTeacherEditMode ? (
+                                        <Input
+                                          type="number"
+                                          min="1"
+                                          max="40"
+                                          value={parseFloat(getEffectiveValue(group.semester2, 'hoursPerWeek') as string)}
+                                          onChange={(e) => updateEditedAssignment(group.semester2!.id, 'hoursPerWeek', parseInt(e.target.value) || 1)}
+                                          data-testid={`input-hours-sem2-${group.key}`}
+                                          className="w-16 h-7 text-xs text-center"
+                                        />
+                                      ) : (
+                                        <Badge 
+                                          className={
+                                            Math.round(parseFloat(group.semester2.hoursPerWeek)) <= 2
+                                              ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs"
+                                              : Math.round(parseFloat(group.semester2.hoursPerWeek)) <= 4
+                                              ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 text-xs"
+                                              : "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-xs"
+                                          }
+                                        >
+                                          {Math.round(parseFloat(group.semester2.hoursPerWeek))}h
+                                        </Badge>
+                                      )
                                     ) : (
                                       <span className="text-muted-foreground text-xs">—</span>
                                     )}
