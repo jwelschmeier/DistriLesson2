@@ -802,6 +802,7 @@ export default function KlassenMatrix() {
                         return (
                           <td 
                             key={course.id} 
+                            style={{ width: '90px', maxWidth: '90px', minWidth: '90px' }}
                             className={`border-b border-r px-1 py-0 text-center align-top ${
                               index % 2 === 0 
                                 ? 'bg-green-50 dark:bg-green-900/30' 
@@ -819,7 +820,7 @@ export default function KlassenMatrix() {
                                   }
                                   data-testid={`select-teacher-${course.id}-${courseSubject.id}-semester-1`}
                                 >
-                                  <SelectTrigger className="h-6 text-[10px] px-1" style={{ width: '60px', minWidth: '60px', maxWidth: '60px' }}>
+                                  <SelectTrigger className="h-6 text-[10px] px-1 w-full">
                                     <SelectValue placeholder="--" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -846,7 +847,7 @@ export default function KlassenMatrix() {
                                   }
                                   data-testid={`select-teacher-${course.id}-${courseSubject.id}-semester-2`}
                                 >
-                                  <SelectTrigger className="h-6 text-[10px] px-1" style={{ width: '60px', minWidth: '60px', maxWidth: '60px' }}>
+                                  <SelectTrigger className="h-6 text-[10px] px-1 w-full">
                                     <SelectValue placeholder="--" />
                                   </SelectTrigger>
                                   <SelectContent>
