@@ -116,9 +116,12 @@ export default function KlassenMatrix() {
     return baseSubjectOrder;
   }, [selectedClass]);
   
-  // Get religion courses for the current grade
+  // Get religion courses for the current grade (only in jahrgang view for regular classes)
   const religionCourses = useMemo(() => {
     if (!selectedClass) return [];
+    // Don't show religion courses when viewing a single course
+    if (selectedClass.type === 'kurs') return [];
+    
     return allClasses
       .filter(c => 
         c.grade === selectedClass.grade && 
@@ -284,6 +287,8 @@ export default function KlassenMatrix() {
   const saveChanges = useMutation({
     mutationFn: async () => {
       setSaving(true);
+      
+      // Collect all teacher changes
       const allChanges = [
         ...Object.entries(changes1).map(([key, teacherId]) => ({ 
           key,
@@ -297,6 +302,21 @@ export default function KlassenMatrix() {
         }))
       ];
 
+      // Collect all hours changes
+      const allHoursChanges = [
+        ...Object.entries(changesHours1).map(([key, hours]) => ({ 
+          key,
+          semester: '1', 
+          hours 
+        })),
+        ...Object.entries(changesHours2).map(([key, hours]) => ({ 
+          key,
+          semester: '2', 
+          hours 
+        }))
+      ];
+
+      // Process teacher changes
       for (const change of allChanges) {
         const [changeClassId, changeSubjectId, _semester] = change.key.split('::');
         if (change.teacherId) {
@@ -312,8 +332,36 @@ export default function KlassenMatrix() {
             hoursPerWeek: hours
           });
         } else {
-          // TODO: Delete assignment if teacherId is null
-          // This would require an API endpoint to delete assignments
+          // Delete assignment if teacherId is null
+          const assignments = change.semester === '1' ? assignments1 : assignments2;
+          const existingAssignment = assignments.find(
+            a => a.classId === changeClassId && a.subjectId === changeSubjectId
+          );
+          if (existingAssignment) {
+            await apiRequest('DELETE', `/api/assignments/${existingAssignment.id}`, {});
+          }
+        }
+      }
+      
+      // Process hours-only changes (where teacher didn't change but hours did)
+      for (const hoursChange of allHoursChanges) {
+        const [changeClassId, changeSubjectId, _semester] = hoursChange.key.split('::');
+        
+        // Skip if this was already handled by a teacher change
+        if (allChanges.some(c => c.key === hoursChange.key)) {
+          continue;
+        }
+        
+        // Find existing assignment and update hours
+        const assignments = hoursChange.semester === '1' ? assignments1 : assignments2;
+        const existingAssignment = assignments.find(
+          a => a.classId === changeClassId && a.subjectId === changeSubjectId
+        );
+        
+        if (existingAssignment) {
+          await apiRequest('PATCH', `/api/assignments/${existingAssignment.id}`, {
+            hoursPerWeek: hoursChange.hours
+          });
         }
       }
     },
