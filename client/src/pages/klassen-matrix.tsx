@@ -648,8 +648,8 @@ export default function KlassenMatrix() {
                       return (
                         <React.Fragment key={classItem.id}>
                           <tr className="hover:bg-muted/25">
-                        <td className="border-b border-r px-4 py-0 font-semibold text-lg bg-slate-100 dark:bg-slate-800 sticky left-0 z-10 align-top">
-                          <div className="py-1">{classItem.name}</div>
+                        <td className="border-b border-r px-4 py-0 font-semibold text-base bg-slate-100 dark:bg-slate-800 sticky left-0 z-10 align-top leading-none">
+                          <div className="py-0.5">{classItem.name}</div>
                         </td>
                         {sortedSubjects.map((subject, index) => {
                         // Get teachers qualified for this subject
@@ -774,7 +774,7 @@ export default function KlassenMatrix() {
                                   {teamText2}
                                 </Badge>
                               )}
-                            </div>
+                              </div>
                             </div>
                           </td>
                         );
