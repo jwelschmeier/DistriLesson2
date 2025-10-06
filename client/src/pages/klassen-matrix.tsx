@@ -105,8 +105,16 @@ export default function KlassenMatrix() {
   });
 
   // Subject order for consistent display
-  const SUBJECT_ORDER = ['D', 'M', 'E', 'FS', 'NW', 'SW', 'IF', 'TC', 'PK', 'GE', 'EK', 'BI', 'PH', 'CH', 'HW', 'KU', 'MU', 'TX', 'ER', 'KR', 'PP', 'SO', 'BO', 'SP'];
+  const baseSubjectOrder = ['D', 'M', 'E', 'FS', 'NW', 'SW', 'IF', 'TC', 'PK', 'GE', 'EK', 'BI', 'PH', 'CH', 'HW', 'KU', 'MU', 'TX', 'ER', 'KR', 'PP', 'SO', 'BO', 'SP'];
   const RELIGION_SUBJECTS = new Set(['ER', 'KR', 'PP']);
+  
+  // For grades 5 and 6, add Förderfächer (EF, MF, DF) after main subjects
+  const SUBJECT_ORDER = useMemo(() => {
+    if (selectedClass && (selectedClass.grade === 5 || selectedClass.grade === 6)) {
+      return [...baseSubjectOrder, 'EF', 'MF', 'DF'];
+    }
+    return baseSubjectOrder;
+  }, [selectedClass]);
   
   // Get religion courses for the current grade
   const religionCourses = useMemo(() => {
@@ -129,7 +137,7 @@ export default function KlassenMatrix() {
         const indexB = SUBJECT_ORDER.indexOf(b.shortName);
         return indexA - indexB;
       });
-  }, [subjects]);
+  }, [subjects, SUBJECT_ORDER]);
 
   // Team-Teaching helpers - semester-aware
   const getTeamTeachingGroups = useMemo(() => {
