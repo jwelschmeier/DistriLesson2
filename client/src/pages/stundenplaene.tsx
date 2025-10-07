@@ -1807,9 +1807,9 @@ export default function Stundenplaene() {
                                     </TableCell>
                                   )}
                                   <TableCell className="font-medium px-2 text-sm">
-                                    {isTeacherEditMode && group.semester1 ? (
+                                    {isTeacherEditMode && (group.semester1 || group.semester2) ? (
                                       <Select
-                                        value={getEffectiveValue(group.semester1, 'classId') as string}
+                                        value={getEffectiveValue(group.semester1 || group.semester2!, 'classId') as string}
                                         onValueChange={(value) => {
                                           if (group.semester1) updateEditedAssignment(group.semester1.id, 'classId', value);
                                           if (group.semester2) updateEditedAssignment(group.semester2.id, 'classId', value);
@@ -1834,9 +1834,9 @@ export default function Stundenplaene() {
                                     )}
                                   </TableCell>
                                   <TableCell className="px-2">
-                                    {isTeacherEditMode && group.semester1 ? (
+                                    {isTeacherEditMode && (group.semester1 || group.semester2) ? (
                                       <Select
-                                        value={getEffectiveValue(group.semester1, 'subjectId') as string}
+                                        value={getEffectiveValue(group.semester1 || group.semester2!, 'subjectId') as string}
                                         onValueChange={(value) => {
                                           if (group.semester1) updateEditedAssignment(group.semester1.id, 'subjectId', value);
                                           if (group.semester2) updateEditedAssignment(group.semester2.id, 'subjectId', value);
@@ -1866,9 +1866,9 @@ export default function Stundenplaene() {
                                   </TableCell>
                                   {isTeacherEditMode && (
                                     <TableCell className="px-2">
-                                      {group.semester1 && (
+                                      {(group.semester1 || group.semester2) && (
                                         <Select
-                                          value={getEffectiveValue(group.semester1, 'teacherId') as string}
+                                          value={getEffectiveValue(group.semester1 || group.semester2!, 'teacherId') as string}
                                           onValueChange={(value) => {
                                             if (group.semester1) updateEditedAssignment(group.semester1.id, 'teacherId', value);
                                             if (group.semester2) updateEditedAssignment(group.semester2.id, 'teacherId', value);
@@ -1878,8 +1878,8 @@ export default function Stundenplaene() {
                                           <SelectTrigger className="w-full h-7 text-xs">
                                             <SelectValue>
                                               <span className="text-xs">
-                                                {group.semester1.teacher ? 
-                                                  `${group.semester1.teacher.shortName}` : 
+                                                {(group.semester1 || group.semester2)?.teacher ? 
+                                                  `${(group.semester1 || group.semester2)!.teacher!.shortName}` : 
                                                   'Unbekannt'}
                                               </span>
                                             </SelectValue>
