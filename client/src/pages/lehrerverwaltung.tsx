@@ -130,6 +130,11 @@ export default function Lehrerverwaltung() {
     queryFn: () => fetch("/api/assignments?minimal=true").then(res => res.json())
   });
 
+  // Load classes for correct hours calculation
+  const { data: classes = [] } = useQuery<Class[]>({
+    queryKey: ["/api/classes"],
+  });
+
   // OPTIMIZATION: Build teacherId->assignments index with single O(n) pass instead of O(n·m) filters
   const teacherAssignmentsMap = useMemo(() => {
     const map = new Map<string, Assignment[]>();
@@ -145,45 +150,92 @@ export default function Lehrerverwaltung() {
   const teacherHoursMap = useMemo(() => {
     const hoursMap = new Map<string, number>();
     
-    teacherAssignmentsMap.forEach((teacherAssignments, teacherId) => {
-      // Group assignments to prevent double-counting of team teaching hours
-      const processedAssignments = new Map<string, { hours: number; semester: string }>();
+    // Group assignments by class and semester to calculate correct hours
+    const assignmentsByClassAndSemester = new Map<string, Assignment[]>();
+    assignments.forEach(assignment => {
+      const key = `${assignment.classId}-${assignment.semester}`;
+      const existing = assignmentsByClassAndSemester.get(key) || [];
+      existing.push(assignment);
+      assignmentsByClassAndSemester.set(key, existing);
+    });
+    
+    // Calculate teacher hours using calculateCorrectHours to avoid double-counting parallel subjects
+    const teacherHoursBySemester = new Map<string, { sem1: number; sem2: number }>();
+    
+    assignmentsByClassAndSemester.forEach((classAssignments, key) => {
+      const [classId, semester] = key.split('-');
+      const classData = classes.find(c => c.id === classId);
+      if (!classData) return;
       
-      teacherAssignments.forEach(assignment => {
-        const hours = Number.parseFloat(assignment.hoursPerWeek);
+      // Build subject hours map for this class and semester
+      const subjectHours: Record<string, number> = {};
+      const teacherAssignments = new Map<string, { subjectName: string; hours: number }[]>();
+      
+      classAssignments.forEach(assignment => {
+        if (!assignment.teacherId) return;
         
-        // Skip 0-hour assignments as they're often placeholders
-        if (!Number.isFinite(hours) || hours <= 0) return;
+        const subject = subjects.find(s => s.id === assignment.subjectId);
+        if (!subject) return;
         
-        // For team teaching, we need to count the hours for each teacher individually
-        // but avoid double-counting within the same teacher's workload
-        const groupKey = assignment.teamTeachingId 
-          ? `team-${assignment.teamTeachingId}-${assignment.classId}-${assignment.subjectId}-${assignment.semester}-${assignment.teacherId}`
-          : `individual-${assignment.classId}-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
+        const hours = parseFloat(assignment.hoursPerWeek) || 0;
+        subjectHours[subject.shortName] = hours;
         
-        const existing = processedAssignments.get(groupKey);
-        
-        // Keep the assignment with maximum hours (handles duplicates)
-        if (!existing || hours > existing.hours) {
-          processedAssignments.set(groupKey, { hours: hours, semester: assignment.semester });
-        }
+        // Track which teacher teaches which subject
+        const teacherKey = assignment.teacherId;
+        const existing = teacherAssignments.get(teacherKey) || [];
+        existing.push({ subjectName: subject.shortName, hours });
+        teacherAssignments.set(teacherKey, existing);
       });
       
-      // Calculate semester hours separately
-      const s1Hours = Array.from(processedAssignments.values())
-        .filter(p => p.semester === "1")
-        .reduce((sum, p) => sum + p.hours, 0);
-        
-      const s2Hours = Array.from(processedAssignments.values())
-        .filter(p => p.semester === "2")
-        .reduce((sum, p) => sum + p.hours, 0);
+      // Calculate correct hours for this class (handles parallel subjects)
+      const { totalHours, parallelGroupHours, regularHours } = calculateCorrectHours(
+        subjectHours,
+        classData.grade
+      );
       
-      // Store the maximum of the two semesters (teacher's weekly workload)
-      hoursMap.set(teacherId, Math.max(s1Hours, s2Hours));
+      // Distribute correct hours to teachers
+      teacherAssignments.forEach((subjectList, teacherId) => {
+        let teacherHoursForClass = 0;
+        const countedParallelGroups = new Set<string>();
+        
+        subjectList.forEach(({ subjectName, hours }) => {
+          // Check if subject is in a parallel group
+          const parallelGroupEntry = Object.entries(parallelGroupHours).find(([groupId]) => {
+            const group = Object.values(PARALLEL_GROUPS).find(g => g.id === groupId);
+            return group?.subjects.includes(subjectName);
+          });
+          
+          if (parallelGroupEntry) {
+            // For parallel subjects, count the group hours only once per teacher per class
+            const [groupId, groupHours] = parallelGroupEntry;
+            if (!countedParallelGroups.has(groupId)) {
+              teacherHoursForClass += groupHours;
+              countedParallelGroups.add(groupId);
+            }
+          } else if (regularHours[subjectName]) {
+            // For regular subjects, use the subject hours
+            teacherHoursForClass += regularHours[subjectName];
+          }
+        });
+        
+        // Update teacher hours for this semester
+        const semesterHours = teacherHoursBySemester.get(teacherId) || { sem1: 0, sem2: 0 };
+        if (semester === '1') {
+          semesterHours.sem1 += teacherHoursForClass;
+        } else {
+          semesterHours.sem2 += teacherHoursForClass;
+        }
+        teacherHoursBySemester.set(teacherId, semesterHours);
+      });
+    });
+    
+    // Store the maximum of the two semesters (teacher's weekly workload)
+    teacherHoursBySemester.forEach((hours, teacherId) => {
+      hoursMap.set(teacherId, Math.max(hours.sem1, hours.sem2));
     });
     
     return hoursMap;
-  }, [teacherAssignmentsMap]);
+  }, [assignments, classes, subjects]);
 
   // OPTIMIZATION: Use memoized lookup instead of recalculating on every call
   const calculateActualCurrentHours = useCallback((teacherId: string): number => {
