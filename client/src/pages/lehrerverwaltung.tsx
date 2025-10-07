@@ -483,7 +483,15 @@ export default function Lehrerverwaltung() {
   const averageWorkload = teachers?.length ? 
     teachers.reduce((sum, t) => {
       const actualCurrentHours = calculateActualCurrentHours(t.id);
-      return sum + (actualCurrentHours / parseFloat(t.maxHours));
+      // Calculate available hours after reduction
+      const totalReductionHours = t.reductionHours 
+        ? Object.values(t.reductionHours as Record<string, number>).reduce((sum, hours) => {
+            const numeric = typeof hours === "number" ? hours : parseFloat(hours ?? "0");
+            return sum + (Number.isFinite(numeric) ? numeric : 0);
+          }, 0)
+        : 0;
+      const availableHours = Math.max(0, parseFloat(t.maxHours) - totalReductionHours);
+      return sum + (availableHours > 0 ? (actualCurrentHours / availableHours) : 0);
     }, 0) / teachers.length * 100 : 0;
 
   return (
@@ -1139,7 +1147,16 @@ export default function Lehrerverwaltung() {
                     <tbody className="bg-card divide-y divide-border">
                       {filteredTeachers.map((teacher) => {
                         const actualCurrentHours = calculateActualCurrentHours(teacher.id);
-                        const workloadPercentage = (actualCurrentHours / parseFloat(teacher.maxHours)) * 100;
+                        // Calculate total reduction hours
+                        const totalReductionHours = teacher.reductionHours 
+                          ? Object.values(teacher.reductionHours as Record<string, number>).reduce((sum, hours) => {
+                              const numeric = typeof hours === "number" ? hours : parseFloat(hours ?? "0");
+                              return sum + (Number.isFinite(numeric) ? numeric : 0);
+                            }, 0)
+                          : 0;
+                        // Calculate available hours after reduction
+                        const availableHours = Math.max(0, parseFloat(teacher.maxHours) - totalReductionHours);
+                        const workloadPercentage = availableHours > 0 ? (actualCurrentHours / availableHours) * 100 : 0;
                         return (
                           <tr key={teacher.id} data-testid={`row-teacher-${teacher.id}`}>
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -1167,7 +1184,7 @@ export default function Lehrerverwaltung() {
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                              {actualCurrentHours.toFixed(1)} / {teacher.maxHours}
+                              {actualCurrentHours.toFixed(1)} / {availableHours.toFixed(1)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center space-x-2">
