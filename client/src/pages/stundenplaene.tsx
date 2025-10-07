@@ -1484,29 +1484,102 @@ export default function Stundenplaene() {
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground font-medium">Konflikte</p>
-                            <p className="text-2xl font-bold" data-testid="text-teacher-conflicts">
-                              {(() => {
-                                const conflicts = teacherAssignments.filter(assignment => {
-                                  const teacher = teachers?.find(t => t.id === assignment.teacherId);
-                                  const subject = subjects?.find(s => s.id === assignment.subjectId);
-                                  
-                                  if (!teacher || !subject) return false;
-                                  
-                                  // Check qualification
-                                  const teacherSubjects = teacher.subjects.flatMap(subjectString => 
-                                    subjectString.split(',').map(s => s.trim().toUpperCase())
-                                  );
-                                  const subjectShortName = subject.shortName.trim().toUpperCase();
-                                  if (!teacherSubjects.includes(subjectShortName)) return true;
-                                  
-                                  // Check overload
-                                  const semesterAssignments = teacherAssignments.filter(a => a.semester === assignment.semester);
-                                  const semesterHours = semesterAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
-                                  return semesterHours > parseFloat(teacher.maxHours);
-                                });
-                                return conflicts.length;
-                              })()}
-                            </p>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  className="h-auto p-0 hover:bg-transparent"
+                                  data-testid="button-view-conflicts"
+                                >
+                                  <p className="text-2xl font-bold text-red-600 dark:text-red-400 hover:underline" data-testid="text-teacher-conflicts">
+                                    {(() => {
+                                      const conflicts = teacherAssignments.filter(assignment => {
+                                        const teacher = teachers?.find(t => t.id === assignment.teacherId);
+                                        const subject = subjects?.find(s => s.id === assignment.subjectId);
+                                        
+                                        if (!teacher || !subject) return false;
+                                        
+                                        // Check qualification
+                                        const teacherSubjects = teacher.subjects.flatMap(subjectString => 
+                                          subjectString.split(',').map(s => s.trim().toUpperCase())
+                                        );
+                                        const subjectShortName = subject.shortName.trim().toUpperCase();
+                                        if (!teacherSubjects.includes(subjectShortName)) return true;
+                                        
+                                        // Check overload - use available hours after reduction
+                                        const semesterAssignments = teacherAssignments.filter(a => a.semester === assignment.semester);
+                                        const semesterHours = semesterAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
+                                        return semesterHours > availableHours;
+                                      });
+                                      return conflicts.length;
+                                    })()}
+                                  </p>
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-3xl">
+                                <DialogHeader>
+                                  <DialogTitle>Konflikte für {selectedTeacher?.firstName} {selectedTeacher?.lastName}</DialogTitle>
+                                  <DialogDescription>
+                                    Liste aller Zuweisungen mit Konflikten
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="max-h-96 overflow-y-auto">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Klasse</TableHead>
+                                        <TableHead>Fach</TableHead>
+                                        <TableHead>Halbjahr</TableHead>
+                                        <TableHead>Stunden</TableHead>
+                                        <TableHead>Konflikt</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {teacherAssignments.map(assignment => {
+                                        const teacher = teachers?.find(t => t.id === assignment.teacherId);
+                                        const subject = subjects?.find(s => s.id === assignment.subjectId);
+                                        const cls = classes?.find(c => c.id === assignment.classId);
+                                        
+                                        if (!teacher || !subject) return null;
+                                        
+                                        const teacherSubjects = teacher.subjects.flatMap(subjectString => 
+                                          subjectString.split(',').map(s => s.trim().toUpperCase())
+                                        );
+                                        const subjectShortName = subject.shortName.trim().toUpperCase();
+                                        const qualificationConflict = !teacherSubjects.includes(subjectShortName);
+                                        
+                                        const semesterAssignments = teacherAssignments.filter(a => a.semester === assignment.semester);
+                                        const semesterHours = semesterAssignments.reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
+                                        const overloadConflict = semesterHours > availableHours;
+                                        
+                                        if (!qualificationConflict && !overloadConflict) return null;
+                                        
+                                        return (
+                                          <TableRow key={assignment.id}>
+                                            <TableCell>{cls?.name || 'Unbekannt'}</TableCell>
+                                            <TableCell>{subject.shortName}</TableCell>
+                                            <TableCell>{assignment.semester}. HJ</TableCell>
+                                            <TableCell>{assignment.hoursPerWeek}h</TableCell>
+                                            <TableCell>
+                                              {qualificationConflict && (
+                                                <Badge variant="destructive" className="mr-1">
+                                                  Keine Qualifikation
+                                                </Badge>
+                                              )}
+                                              {overloadConflict && (
+                                                <Badge variant="destructive">
+                                                  Überlastung ({semesterHours}h &gt; {availableHours}h)
+                                                </Badge>
+                                              )}
+                                            </TableCell>
+                                          </TableRow>
+                                        );
+                                      })}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
                           </div>
                         </div>
 
