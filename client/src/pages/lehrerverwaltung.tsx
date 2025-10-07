@@ -150,64 +150,69 @@ export default function Lehrerverwaltung() {
   const teacherHoursMap = useMemo(() => {
     const hoursMap = new Map<string, number>();
     
-    // Wait for subjects to be loaded
-    if (subjects.length === 0) {
-      return hoursMap;
-    }
-    
     teacherAssignmentsMap.forEach((teacherAssignments, teacherId) => {
-      // Group assignments to prevent double-counting of team teaching and parallel subjects
-      const processedAssignments = new Map<string, { hours: number; semester: string }>();
+      // Track hours per class per semester, grouping parallel subjects
+      const classHoursBySemester = new Map<string, number>(); // key: "classId-semester"
       
+      // First, collect all subject assignments by class and semester
+      const assignmentsByClassSemester = new Map<string, Assignment[]>();
       teacherAssignments.forEach(assignment => {
-        const hours = Number.parseFloat(assignment.hoursPerWeek);
-        
-        // Skip 0-hour assignments as they're often placeholders
-        if (!Number.isFinite(hours) || hours <= 0) return;
-        
-        // Check for parallel group (Differenzierung, Religion)
-        const subject = subjects.find(s => s.id === assignment.subjectId);
-        const subjectShortName = subject?.shortName;
-        const parallelGroup = subjectShortName 
-          ? Object.values(PARALLEL_GROUPS).find(g => g.subjects.includes(subjectShortName))
-          : null;
-        
-        // Create grouping key to avoid double-counting
-        let groupKey: string;
-        if (assignment.teamTeachingId) {
-          // Team teaching: group by team teaching ID
-          groupKey = `team-${assignment.teamTeachingId}-${assignment.classId}-${assignment.subjectId}-${assignment.semester}-${assignment.teacherId}`;
-        } else if (parallelGroup) {
-          // Parallel subjects (Religion, Differenzierung): group by parallel group + class + semester
-          groupKey = `parallel-${parallelGroup.id}-${assignment.classId}-${assignment.semester}-${assignment.teacherId}`;
-        } else {
-          // Regular assignment
-          groupKey = `individual-${assignment.classId}-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
-        }
-        
-        const existing = processedAssignments.get(groupKey);
-        
-        // Keep the assignment with maximum hours (handles duplicates)
-        if (!existing || hours > existing.hours) {
-          processedAssignments.set(groupKey, { hours: hours, semester: assignment.semester });
-        }
+        const key = `${assignment.classId}-${assignment.semester}`;
+        const existing = assignmentsByClassSemester.get(key) || [];
+        existing.push(assignment);
+        assignmentsByClassSemester.set(key, existing);
       });
       
-      // Calculate semester hours separately
-      const s1Hours = Array.from(processedAssignments.values())
-        .filter(p => p.semester === "1")
-        .reduce((sum, p) => sum + p.hours, 0);
+      // For each class-semester combination, calculate hours considering parallel groups
+      assignmentsByClassSemester.forEach((classAssignments, key) => {
+        const countedParallelGroups = new Set<string>();
+        let totalHours = 0;
         
-      const s2Hours = Array.from(processedAssignments.values())
-        .filter(p => p.semester === "2")
-        .reduce((sum, p) => sum + p.hours, 0);
+        classAssignments.forEach(assignment => {
+          const hours = Number.parseFloat(assignment.hoursPerWeek);
+          if (!Number.isFinite(hours) || hours <= 0) return;
+          
+          // Check if this subject is part of a parallel group
+          const subject = subjects.find(s => s.id === assignment.subjectId);
+          const subjectShortName = subject?.shortName;
+          const parallelGroup = subjectShortName 
+            ? Object.values(PARALLEL_GROUPS).find(g => g.subjects.includes(subjectShortName))
+            : null;
+          
+          if (parallelGroup) {
+            // Parallel subject: count only once per group
+            if (!countedParallelGroups.has(parallelGroup.id)) {
+              totalHours += hours;
+              countedParallelGroups.add(parallelGroup.id);
+            }
+          } else {
+            // Regular subject or team teaching: count normally
+            totalHours += hours;
+          }
+        });
+        
+        classHoursBySemester.set(key, totalHours);
+      });
+      
+      // Calculate semester totals
+      let s1Hours = 0;
+      let s2Hours = 0;
+      
+      classHoursBySemester.forEach((hours, key) => {
+        const semester = key.split('-')[1];
+        if (semester === "1") {
+          s1Hours += hours;
+        } else {
+          s2Hours += hours;
+        }
+      });
       
       // Store the maximum of the two semesters (teacher's weekly workload)
       hoursMap.set(teacherId, Math.max(s1Hours, s2Hours));
     });
     
     return hoursMap;
-  }, [teacherAssignmentsMap, subjects, classes]);
+  }, [teacherAssignmentsMap, subjects]);
 
   // OPTIMIZATION: Use memoized lookup instead of recalculating on every call
   const calculateActualCurrentHours = useCallback((teacherId: string): number => {
