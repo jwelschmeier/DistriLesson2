@@ -43,6 +43,8 @@ export default function Stundenplaene() {
   const [selectedSemester, setSelectedSemester] = useState<'all' | '1' | '2'>('all');
   const [selectedClassType, setSelectedClassType] = useState<string>("all");
   const [teacherSearchTerm, setTeacherSearchTerm] = useState('');
+  const [teacherClassFilter, setTeacherClassFilter] = useState<string>('all');
+  const [teacherSubjectFilter, setTeacherSubjectFilter] = useState<string>('all');
   
   // Sort states for teacher and class tables
   const [teacherSort, setTeacherSort] = useState<{ column: 'class' | 'subject' | 'hours' | 'semester'; direction: 'asc' | 'desc' }>({ column: 'class', direction: 'asc' });
@@ -457,9 +459,11 @@ export default function Stundenplaene() {
     setSelectedTeacherAssignments(new Set());
   }, [selectedTeacherId]);
 
-  // Reset search term when changing selected teacher
+  // Reset search term and filters when changing selected teacher
   useEffect(() => {
     setTeacherSearchTerm('');
+    setTeacherClassFilter('all');
+    setTeacherSubjectFilter('all');
   }, [selectedTeacherId]);
 
   // Reset class selections when changing selected class
@@ -551,7 +555,17 @@ export default function Stundenplaene() {
     
     let assignments = Array.from(groupMap.values());
     
-    // Apply search filter first
+    // Apply class filter
+    if (teacherClassFilter !== 'all') {
+      assignments = assignments.filter(a => a.classId === teacherClassFilter);
+    }
+    
+    // Apply subject filter
+    if (teacherSubjectFilter !== 'all') {
+      assignments = assignments.filter(a => a.subjectId === teacherSubjectFilter);
+    }
+    
+    // Apply search filter
     if (teacherSearchTerm) {
       const searchLower = teacherSearchTerm.toLowerCase();
       assignments = assignments.filter(a => {
@@ -596,7 +610,7 @@ export default function Stundenplaene() {
     });
     
     return assignments;
-  }, [teacherAssignments, teacherSearchTerm, teacherSort]);
+  }, [teacherAssignments, teacherClassFilter, teacherSubjectFilter, teacherSearchTerm, teacherSort]);
 
   // Group teacher assignments by class+subject to show both semesters in one row
   interface GroupedAssignment {
@@ -1587,11 +1601,37 @@ export default function Stundenplaene() {
                             {isTeacherEditMode && <span className="ml-2 text-orange-600 dark:text-orange-400">• Bearbeitungsmodus</span>}
                           </p>
                           <div className="flex items-center gap-2">
+                            <Select value={teacherClassFilter} onValueChange={setTeacherClassFilter}>
+                              <SelectTrigger className="w-40" data-testid="select-teacher-class-filter">
+                                <SelectValue placeholder="Alle Klassen" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Alle Klassen</SelectItem>
+                                {classes?.sort((a, b) => a.grade - b.grade || a.name.localeCompare(b.name)).map((cls) => (
+                                  <SelectItem key={cls.id} value={cls.id}>
+                                    {cls.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Select value={teacherSubjectFilter} onValueChange={setTeacherSubjectFilter}>
+                              <SelectTrigger className="w-40" data-testid="select-teacher-subject-filter">
+                                <SelectValue placeholder="Alle Fächer" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Alle Fächer</SelectItem>
+                                {subjects?.sort((a, b) => a.shortName.localeCompare(b.shortName)).map((subject) => (
+                                  <SelectItem key={subject.id} value={subject.id}>
+                                    {subject.shortName} - {subject.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <Input
-                              placeholder="Klasse oder Fach suchen..."
+                              placeholder="Suchen..."
                               value={teacherSearchTerm}
                               onChange={(e) => setTeacherSearchTerm(e.target.value)}
-                              className="w-64"
+                              className="w-48"
                               data-testid="input-teacher-search"
                             />
                           </div>
