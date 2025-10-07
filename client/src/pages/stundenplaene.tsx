@@ -58,6 +58,15 @@ export default function Stundenplaene() {
     hoursPerWeek: number;
     semester: "1" | "2";
   } | null>(null);
+  
+  const [newAssignmentDialog, setNewAssignmentDialog] = useState(false);
+  const [newAssignmentForm, setNewAssignmentForm] = useState({
+    classId: '',
+    subjectId: '',
+    hoursPerWeekSem1: 1,
+    hoursPerWeekSem2: 1,
+    bothSemesters: true,
+  });
   const [newClassAssignment, setNewClassAssignment] = useState<{
     teacherId: string;
     subjectId: string;
@@ -1268,6 +1277,51 @@ export default function Stundenplaene() {
     }
   };
 
+  const saveNewAssignmentFromDialog = async () => {
+    if (!selectedTeacherId || !newAssignmentForm.classId || !newAssignmentForm.subjectId) return;
+
+    try {
+      if (newAssignmentForm.bothSemesters) {
+        // Create assignments for both semesters
+        await createAssignmentMutation.mutateAsync({
+          teacherId: selectedTeacherId,
+          classId: newAssignmentForm.classId,
+          subjectId: newAssignmentForm.subjectId,
+          hoursPerWeek: newAssignmentForm.hoursPerWeekSem1,
+          semester: "1",
+        });
+        await createAssignmentMutation.mutateAsync({
+          teacherId: selectedTeacherId,
+          classId: newAssignmentForm.classId,
+          subjectId: newAssignmentForm.subjectId,
+          hoursPerWeek: newAssignmentForm.hoursPerWeekSem2,
+          semester: "2",
+        });
+      } else {
+        // Create assignment for one semester only
+        await createAssignmentMutation.mutateAsync({
+          teacherId: selectedTeacherId,
+          classId: newAssignmentForm.classId,
+          subjectId: newAssignmentForm.subjectId,
+          hoursPerWeek: newAssignmentForm.hoursPerWeekSem1,
+          semester: "1",
+        });
+      }
+      
+      // Reset form and close dialog
+      setNewAssignmentDialog(false);
+      setNewAssignmentForm({
+        classId: '',
+        subjectId: '',
+        hoursPerWeekSem1: 1,
+        hoursPerWeekSem2: 1,
+        bothSemesters: true,
+      });
+    } catch (error) {
+      // Error handled by mutation onError
+    }
+  };
+
 
   const isLoading = teachersLoading || classesLoading || subjectsLoading || assignmentsLoading;
 
@@ -1603,13 +1657,7 @@ export default function Stundenplaene() {
                             </p>
                             {isTeacherEditMode && (
                               <Button
-                                onClick={() => setNewTeacherAssignment({
-                                  classId: '',
-                                  subjectId: '',
-                                  hoursPerWeek: 1,
-                                  semester: '1',
-                                })}
-                                disabled={!!newTeacherAssignment}
+                                onClick={() => setNewAssignmentDialog(true)}
                                 size="sm"
                                 data-testid="button-add-teacher-assignment"
                               >
@@ -1707,118 +1755,6 @@ export default function Stundenplaene() {
                               </TableRow>
                             </TableHeader>
                           <TableBody>
-                            {/* New Assignment Row */}
-                            {newTeacherAssignment && (
-                              <TableRow className="bg-blue-50 dark:bg-blue-950 border-l-4 border-l-blue-500" data-testid="row-new-teacher-assignment">
-                                <TableCell className="px-2">
-                                  <div className="flex space-x-1">
-                                    <Button
-                                      onClick={saveNewTeacherAssignment}
-                                      disabled={createAssignmentMutation.isPending || !newTeacherAssignment.classId || !newTeacherAssignment.subjectId}
-                                      size="sm"
-                                      className="h-6 w-6 p-0"
-                                      data-testid="button-save-new-assignment"
-                                    >
-                                      <Save className="h-3 w-3" />
-                                    </Button>
-                                    <Button
-                                      onClick={() => setNewTeacherAssignment(null)}
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-6 w-6 p-0"
-                                      data-testid="button-cancel-new-assignment"
-                                    >
-                                      ✕
-                                    </Button>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="px-2">
-                                  <Select
-                                    value={newTeacherAssignment.classId}
-                                    onValueChange={(value) => setNewTeacherAssignment({...newTeacherAssignment, classId: value})}
-                                    data-testid="select-new-class"
-                                  >
-                                    <SelectTrigger className="w-full h-7 text-xs">
-                                      <SelectValue placeholder="Klasse wählen..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {classes?.map((cls) => (
-                                        <SelectItem key={cls.id} value={cls.id}>
-                                          {cls.name} {cls.type !== 'klasse' && `(${cls.type === 'kurs' ? 'Kurs' : 'AG'})`}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </TableCell>
-                                <TableCell className="px-2">
-                                  <Select
-                                    value={newTeacherAssignment.subjectId}
-                                    onValueChange={(value) => setNewTeacherAssignment({...newTeacherAssignment, subjectId: value})}
-                                    data-testid="select-new-subject"
-                                  >
-                                    <SelectTrigger className="w-full h-7 text-xs">
-                                      <SelectValue placeholder="Fach wählen..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {subjects?.map((subject) => (
-                                        <SelectItem key={subject.id} value={subject.id}>
-                                          {subject.shortName} - {subject.name}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </TableCell>
-                                <TableCell className="px-2">
-                                  <span className="text-xs text-muted-foreground">{selectedTeacher?.shortName}</span>
-                                </TableCell>
-                                <TableCell className="px-2 text-center">
-                                  {newTeacherAssignment.semester === "1" ? (
-                                    <Input
-                                      type="number"
-                                      min="1"
-                                      max="40"
-                                      value={newTeacherAssignment.hoursPerWeek}
-                                      onChange={(e) => setNewTeacherAssignment({...newTeacherAssignment, hoursPerWeek: parseInt(e.target.value) || 1})}
-                                      data-testid="input-new-hours-sem1"
-                                      className="w-16 h-7 text-xs text-center"
-                                    />
-                                  ) : (
-                                    <span className="text-muted-foreground text-xs">—</span>
-                                  )}
-                                </TableCell>
-                                <TableCell className="px-2 text-center">
-                                  {newTeacherAssignment.semester === "2" ? (
-                                    <Input
-                                      type="number"
-                                      min="1"
-                                      max="40"
-                                      value={newTeacherAssignment.hoursPerWeek}
-                                      onChange={(e) => setNewTeacherAssignment({...newTeacherAssignment, hoursPerWeek: parseInt(e.target.value) || 1})}
-                                      data-testid="input-new-hours-sem2"
-                                      className="w-16 h-7 text-xs text-center"
-                                    />
-                                  ) : (
-                                    <span className="text-muted-foreground text-xs">—</span>
-                                  )}
-                                </TableCell>
-                                <TableCell className="px-2">
-                                  <Select
-                                    value={newTeacherAssignment.semester}
-                                    onValueChange={(value: "1" | "2") => setNewTeacherAssignment({...newTeacherAssignment, semester: value})}
-                                    data-testid="select-new-semester"
-                                  >
-                                    <SelectTrigger className="w-20 h-7 text-xs">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="1">1. HJ</SelectItem>
-                                      <SelectItem value="2">2. HJ</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </TableCell>
-                              </TableRow>
-                            )}
-                            
                             {/* Grouped Assignment Rows (Both Semesters in One Row) */}
                             {groupedTeacherAssignments.map((group) => {
                               const hasEditsSem1 = group.semester1 && editedAssignments[group.semester1.id];
@@ -2113,6 +2049,115 @@ export default function Stundenplaene() {
                   </Card>
                 </>
               )}
+              
+              {/* Dialog for New Assignment */}
+              <Dialog open={newAssignmentDialog} onOpenChange={setNewAssignmentDialog}>
+                <DialogContent className="sm:max-w-[500px]" data-testid="dialog-new-assignment">
+                  <DialogHeader>
+                    <DialogTitle>Neue Zuweisung erstellen</DialogTitle>
+                    <DialogDescription>
+                      Weisen Sie {selectedTeacher?.firstName} {selectedTeacher?.lastName} eine neue Klasse/Kurs/AG zu.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold">Klasse/Kurs/AG</label>
+                      <Select
+                        value={newAssignmentForm.classId}
+                        onValueChange={(value) => setNewAssignmentForm({...newAssignmentForm, classId: value})}
+                        data-testid="select-dialog-class"
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Wählen Sie eine Klasse/Kurs/AG aus..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {classes?.sort((a, b) => a.grade - b.grade || a.name.localeCompare(b.name)).map((cls) => (
+                            <SelectItem key={cls.id} value={cls.id}>
+                              {cls.name} {cls.type !== 'klasse' && `(${cls.type === 'kurs' ? 'Kurs' : 'AG'})`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold">Fach</label>
+                      <Select
+                        value={newAssignmentForm.subjectId}
+                        onValueChange={(value) => setNewAssignmentForm({...newAssignmentForm, subjectId: value})}
+                        data-testid="select-dialog-subject"
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Wählen Sie ein Fach aus..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {subjects?.sort((a, b) => a.shortName.localeCompare(b.shortName)).map((subject) => (
+                            <SelectItem key={subject.id} value={subject.id}>
+                              {subject.shortName} - {subject.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="both-semesters"
+                          checked={newAssignmentForm.bothSemesters}
+                          onChange={(e) => setNewAssignmentForm({...newAssignmentForm, bothSemesters: e.target.checked})}
+                          className="h-4 w-4 rounded border-gray-300"
+                          data-testid="checkbox-both-semesters"
+                        />
+                        <label htmlFor="both-semesters" className="text-sm font-medium cursor-pointer">
+                          Für beide Halbjahre eintragen
+                        </label>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold">Stunden 1. HJ</label>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="40"
+                          value={newAssignmentForm.hoursPerWeekSem1}
+                          onChange={(e) => setNewAssignmentForm({...newAssignmentForm, hoursPerWeekSem1: parseInt(e.target.value) || 1})}
+                          data-testid="input-dialog-hours-sem1"
+                        />
+                      </div>
+                      
+                      {newAssignmentForm.bothSemesters && (
+                        <div className="space-y-2">
+                          <label className="text-sm font-semibold">Stunden 2. HJ</label>
+                          <Input
+                            type="number"
+                            min="1"
+                            max="40"
+                            value={newAssignmentForm.hoursPerWeekSem2}
+                            onChange={(e) => setNewAssignmentForm({...newAssignmentForm, hoursPerWeekSem2: parseInt(e.target.value) || 1})}
+                            data-testid="input-dialog-hours-sem2"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setNewAssignmentDialog(false)} data-testid="button-dialog-cancel">
+                      Abbrechen
+                    </Button>
+                    <Button
+                      onClick={saveNewAssignmentFromDialog}
+                      disabled={!newAssignmentForm.classId || !newAssignmentForm.subjectId || createAssignmentMutation.isPending}
+                      data-testid="button-dialog-save"
+                    >
+                      {createAssignmentMutation.isPending ? 'Wird gespeichert...' : 'Speichern'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </TabsContent>
 
             {/* Class Tab Content */}
