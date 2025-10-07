@@ -21,7 +21,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, Presentation, Search, Filter, Calendar, ChevronLeft, ChevronRight, User } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
-import { insertTeacherSchema, type Teacher, type InsertTeacher, type Subject, type Assignment } from "@shared/schema";
+import { insertTeacherSchema, type Teacher, type InsertTeacher, type Subject, type Assignment, type Class } from "@shared/schema";
+import { calculateCorrectHours, PARALLEL_GROUPS } from '@shared/parallel-subjects';
 import { z } from "zod";
 
 const teacherFormSchema = insertTeacherSchema.extend({
