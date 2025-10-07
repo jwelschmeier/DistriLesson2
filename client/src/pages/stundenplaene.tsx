@@ -1930,7 +1930,7 @@ export default function Stundenplaene() {
                                             }
                                           }}
                                           data-testid={`input-hours-sem1-${group.key}`}
-                                          className="w-16 h-7 text-xs text-center bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400"
+                                          className="w-16 h-7 text-xs text-center bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-300"
                                         />
                                       )
                                     ) : (
@@ -1988,7 +1988,7 @@ export default function Stundenplaene() {
                                             }
                                           }}
                                           data-testid={`input-hours-sem2-${group.key}`}
-                                          className="w-16 h-7 text-xs text-center bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400"
+                                          className="w-16 h-7 text-xs text-center bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-300"
                                         />
                                       )
                                     ) : (
