@@ -1845,9 +1845,9 @@ export default function Stundenplaene() {
                                       >
                                         <SelectTrigger className="w-full h-7 text-xs">
                                           <SelectValue>
-                                            <Badge variant="light" className="text-xs">
+                                            <span className="text-xs">
                                               {group.subject?.shortName || group.subject?.name || 'Unbekannt'}
-                                            </Badge>
+                                            </span>
                                           </SelectValue>
                                         </SelectTrigger>
                                         <SelectContent>
@@ -1859,9 +1859,9 @@ export default function Stundenplaene() {
                                         </SelectContent>
                                       </Select>
                                     ) : (
-                                      <Badge variant="light" className="text-xs">
+                                      <span className="text-xs">
                                         {group.subject?.shortName || group.subject?.name || 'Unbekannt'}
-                                      </Badge>
+                                      </span>
                                     )}
                                   </TableCell>
                                   {isTeacherEditMode && (
