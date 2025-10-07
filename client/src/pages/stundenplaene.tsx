@@ -850,8 +850,8 @@ export default function Stundenplaene() {
 
   const workloadPercentage = useMemo(() => {
     if (availableHours === 0) return 0;
-    const maxSemesterHours = Math.max(teacherSummary.s1Hours, teacherSummary.s2Hours);
-    return Math.round((maxSemesterHours / availableHours) * 100);
+    const avgSemesterHours = (teacherSummary.s1Hours + teacherSummary.s2Hours) / 2;
+    return Math.round((avgSemesterHours / availableHours) * 100);
   }, [availableHours, teacherSummary.s1Hours, teacherSummary.s2Hours]);
 
   // Calculate subject hour requirements vs. assignments
@@ -1520,7 +1520,7 @@ export default function Stundenplaene() {
                               {workloadPercentage}%
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {Math.max(teacherSummary.s1Hours, teacherSummary.s2Hours).toFixed(1)} / {availableHours.toFixed(1)}h
+                              {((teacherSummary.s1Hours + teacherSummary.s2Hours) / 2).toFixed(1)} / {availableHours.toFixed(1)}h
                             </p>
                           </div>
                         </div>

@@ -199,8 +199,8 @@ export default function Lehrerverwaltung() {
         .filter(a => a.semester === "2")
         .reduce((sum, a) => sum + a.hours, 0);
       
-      // Store the maximum of the two semesters (teacher's weekly workload)
-      hoursMap.set(teacherId, Math.max(s1Hours, s2Hours));
+      // Store the average of the two semesters (teacher's weekly workload)
+      hoursMap.set(teacherId, (s1Hours + s2Hours) / 2);
     });
     
     return hoursMap;
