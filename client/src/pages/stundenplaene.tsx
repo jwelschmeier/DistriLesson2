@@ -1884,7 +1884,45 @@ export default function Stundenplaene() {
                                   {isTeacherEditMode && (
                                     <TableCell className="px-2">
                                       <div className="flex space-x-1">
-                                        {group.semester1 && (
+                                        {/* Delete both semesters button - shown when both exist */}
+                                        {group.semester1 && group.semester2 && (
+                                          <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                              <Button
+                                                variant="destructive"
+                                                size="sm"
+                                                className="h-7 px-2"
+                                                data-testid={`button-delete-both-${group.key}`}
+                                              >
+                                                <Trash2 className="h-3 w-3 mr-1" />
+                                                Beide
+                                              </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                              <AlertDialogHeader>
+                                                <AlertDialogTitle>Beide Halbjahre löschen?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                  Möchten Sie die Zuweisung <strong>{group.subject?.shortName}</strong> 
+                                                  in Klasse <strong>{group.class?.name}</strong> für beide Halbjahre wirklich löschen?
+                                                  <br /><br />
+                                                  • 1. HJ: {group.semester1.hoursPerWeek}h<br />
+                                                  • 2. HJ: {group.semester2.hoursPerWeek}h
+                                                </AlertDialogDescription>
+                                              </AlertDialogHeader>
+                                              <AlertDialogFooter>
+                                                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                                                <AlertDialogAction
+                                                  onClick={() => bulkDeleteAssignmentsMutation.mutate([group.semester1!.id, group.semester2!.id])}
+                                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                >
+                                                  Beide löschen
+                                                </AlertDialogAction>
+                                              </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                          </AlertDialog>
+                                        )}
+                                        {/* Individual delete buttons - shown when only one semester exists */}
+                                        {group.semester1 && !group.semester2 && (
                                           <AlertDialog>
                                             <AlertDialogTrigger asChild>
                                               <Button
@@ -1918,7 +1956,7 @@ export default function Stundenplaene() {
                                             </AlertDialogContent>
                                           </AlertDialog>
                                         )}
-                                        {group.semester2 && (
+                                        {group.semester2 && !group.semester1 && (
                                           <AlertDialog>
                                             <AlertDialogTrigger asChild>
                                               <Button
@@ -2969,18 +3007,71 @@ export default function Stundenplaene() {
                                         <AlertDialogHeader>
                                           <AlertDialogTitle>Zuweisung löschen</AlertDialogTitle>
                                           <AlertDialogDescription>
-                                            Sind Sie sicher, dass Sie diese Zuweisung löschen möchten? 
-                                            Diese Aktion kann nicht rückgängig gemacht werden.
+                                            {(() => {
+                                              const otherSemester = assignment.semester === '1' ? '2' : '1';
+                                              const siblingAssignment = classAssignments.find(a => 
+                                                a.teacherId === assignment.teacherId && 
+                                                a.subjectId === assignment.subjectId && 
+                                                a.semester === otherSemester &&
+                                                a.id !== assignment.id
+                                              );
+                                              
+                                              if (siblingAssignment) {
+                                                return (
+                                                  <>
+                                                    Möchten Sie nur das {assignment.semester}. Halbjahr oder beide Halbjahre löschen?
+                                                    <br /><br />
+                                                    <strong>{assignment.subject?.shortName}</strong> bei <strong>{assignment.teacher?.lastName}</strong>:<br />
+                                                    • {assignment.semester}. HJ: {assignment.hoursPerWeek}h<br />
+                                                    • {otherSemester}. HJ: {siblingAssignment.hoursPerWeek}h
+                                                  </>
+                                                );
+                                              }
+                                              return 'Sind Sie sicher, dass Sie diese Zuweisung löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.';
+                                            })()}
                                           </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
                                           <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                                          <AlertDialogAction
-                                            onClick={() => deleteAssignment(assignment.id)}
-                                            data-testid={`confirm-delete-${assignment.id}`}
-                                          >
-                                            Löschen
-                                          </AlertDialogAction>
+                                          {(() => {
+                                            const otherSemester = assignment.semester === '1' ? '2' : '1';
+                                            const siblingAssignment = classAssignments.find(a => 
+                                              a.teacherId === assignment.teacherId && 
+                                              a.subjectId === assignment.subjectId && 
+                                              a.semester === otherSemester &&
+                                              a.id !== assignment.id
+                                            );
+                                            
+                                            if (siblingAssignment) {
+                                              return (
+                                                <>
+                                                  <AlertDialogAction
+                                                    onClick={() => deleteAssignment(assignment.id)}
+                                                    className="bg-orange-600 hover:bg-orange-700"
+                                                    data-testid={`confirm-delete-single-${assignment.id}`}
+                                                  >
+                                                    Nur {assignment.semester}. HJ löschen
+                                                  </AlertDialogAction>
+                                                  <AlertDialogAction
+                                                    onClick={() => bulkDeleteAssignmentsMutation.mutate([assignment.id, siblingAssignment.id])}
+                                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                    data-testid={`confirm-delete-both-${assignment.id}`}
+                                                  >
+                                                    Beide Halbjahre löschen
+                                                  </AlertDialogAction>
+                                                </>
+                                              );
+                                            }
+                                            return (
+                                              <AlertDialogAction
+                                                onClick={() => deleteAssignment(assignment.id)}
+                                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                data-testid={`confirm-delete-${assignment.id}`}
+                                              >
+                                                Löschen
+                                              </AlertDialogAction>
+                                            );
+                                          })()}
                                         </AlertDialogFooter>
                                       </AlertDialogContent>
                                     </AlertDialog>
