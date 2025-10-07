@@ -1902,28 +1902,30 @@ export default function Stundenplaene() {
                                           className="w-16 h-7 text-xs text-center"
                                         />
                                       ) : (
-                                        <Button
-                                          onClick={async () => {
-                                            if (!selectedTeacherId || !group.class || !group.subject) return;
-                                            try {
-                                              await createAssignmentMutation.mutateAsync({
-                                                teacherId: selectedTeacherId,
-                                                classId: group.class.id,
-                                                subjectId: group.subject.id,
-                                                hoursPerWeek: 1,
-                                                semester: "1",
-                                              });
-                                            } catch (error) {
-                                              // Error handled by mutation
+                                        <Input
+                                          type="number"
+                                          min="0"
+                                          max="40"
+                                          value={0}
+                                          onChange={async (e) => {
+                                            const hours = parseInt(e.target.value) || 0;
+                                            if (hours > 0 && selectedTeacherId && group.class && group.subject) {
+                                              try {
+                                                await createAssignmentMutation.mutateAsync({
+                                                  teacherId: selectedTeacherId,
+                                                  classId: group.class.id,
+                                                  subjectId: group.subject.id,
+                                                  hoursPerWeek: hours,
+                                                  semester: "1",
+                                                });
+                                              } catch (error) {
+                                                // Error handled by mutation
+                                              }
                                             }
                                           }}
-                                          size="sm"
-                                          variant="outline"
-                                          className="h-7 w-16 text-xs"
-                                          data-testid={`button-add-sem1-${group.key}`}
-                                        >
-                                          + 1. HJ
-                                        </Button>
+                                          data-testid={`input-hours-sem1-${group.key}`}
+                                          className="w-16 h-7 text-xs text-center bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400"
+                                        />
                                       )
                                     ) : (
                                       group.semester1 ? (
@@ -1958,28 +1960,30 @@ export default function Stundenplaene() {
                                           className="w-16 h-7 text-xs text-center"
                                         />
                                       ) : (
-                                        <Button
-                                          onClick={async () => {
-                                            if (!selectedTeacherId || !group.class || !group.subject) return;
-                                            try {
-                                              await createAssignmentMutation.mutateAsync({
-                                                teacherId: selectedTeacherId,
-                                                classId: group.class.id,
-                                                subjectId: group.subject.id,
-                                                hoursPerWeek: 1,
-                                                semester: "2",
-                                              });
-                                            } catch (error) {
-                                              // Error handled by mutation
+                                        <Input
+                                          type="number"
+                                          min="0"
+                                          max="40"
+                                          value={0}
+                                          onChange={async (e) => {
+                                            const hours = parseInt(e.target.value) || 0;
+                                            if (hours > 0 && selectedTeacherId && group.class && group.subject) {
+                                              try {
+                                                await createAssignmentMutation.mutateAsync({
+                                                  teacherId: selectedTeacherId,
+                                                  classId: group.class.id,
+                                                  subjectId: group.subject.id,
+                                                  hoursPerWeek: hours,
+                                                  semester: "2",
+                                                });
+                                              } catch (error) {
+                                                // Error handled by mutation
+                                              }
                                             }
                                           }}
-                                          size="sm"
-                                          variant="outline"
-                                          className="h-7 w-16 text-xs"
-                                          data-testid={`button-add-sem2-${group.key}`}
-                                        >
-                                          + 2. HJ
-                                        </Button>
+                                          data-testid={`input-hours-sem2-${group.key}`}
+                                          className="w-16 h-7 text-xs text-center bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400"
+                                        />
                                       )
                                     ) : (
                                       group.semester2 ? (
