@@ -1926,31 +1926,31 @@ export default function Stundenplaene() {
                                                   )}
                                                 </AlertDialogDescription>
                                               </AlertDialogHeader>
-                                              <AlertDialogFooter className={group.semester1 && group.semester2 ? "flex-col sm:flex-col gap-2" : ""}>
+                                              <AlertDialogFooter className={group.semester1 && group.semester2 ? "flex-col sm:flex-col gap-2 items-stretch" : ""}>
                                                 {group.semester1 && group.semester2 ? (
                                                   <>
                                                     <AlertDialogAction
                                                       onClick={() => deleteAssignment(group.semester1!.id)}
-                                                      className="bg-orange-600 hover:bg-orange-700 w-full"
+                                                      className="bg-orange-600 hover:bg-orange-700 w-full m-0"
                                                       data-testid={`button-delete-sem1-${group.key}`}
                                                     >
                                                       Nur 1. HJ löschen
                                                     </AlertDialogAction>
                                                     <AlertDialogAction
                                                       onClick={() => deleteAssignment(group.semester2!.id)}
-                                                      className="bg-orange-600 hover:bg-orange-700 w-full"
+                                                      className="bg-orange-600 hover:bg-orange-700 w-full m-0"
                                                       data-testid={`button-delete-sem2-${group.key}`}
                                                     >
                                                       Nur 2. HJ löschen
                                                     </AlertDialogAction>
                                                     <AlertDialogAction
                                                       onClick={() => bulkDeleteAssignmentsMutation.mutate([group.semester1!.id, group.semester2!.id])}
-                                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full"
+                                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full m-0"
                                                       data-testid={`button-delete-both-${group.key}`}
                                                     >
                                                       Beide löschen
                                                     </AlertDialogAction>
-                                                    <AlertDialogCancel className="w-full mt-2">Abbrechen</AlertDialogCancel>
+                                                    <AlertDialogCancel className="w-full m-0 mt-2">Abbrechen</AlertDialogCancel>
                                                   </>
                                                 ) : (
                                                   <>
@@ -3017,7 +3017,7 @@ export default function Stundenplaene() {
                                             a.semester === otherSemester &&
                                             a.id !== assignment.id
                                           );
-                                          return siblingAssignment ? "flex-col sm:flex-col gap-2" : "";
+                                          return siblingAssignment ? "flex-col sm:flex-col gap-2 items-stretch" : "";
                                         })()}>
                                           {(() => {
                                             const otherSemester = assignment.semester === '1' ? '2' : '1';
@@ -3033,19 +3033,19 @@ export default function Stundenplaene() {
                                                 <>
                                                   <AlertDialogAction
                                                     onClick={() => deleteAssignment(assignment.id)}
-                                                    className="bg-orange-600 hover:bg-orange-700 w-full"
+                                                    className="bg-orange-600 hover:bg-orange-700 w-full m-0"
                                                     data-testid={`confirm-delete-single-${assignment.id}`}
                                                   >
                                                     Nur {assignment.semester}. HJ löschen
                                                   </AlertDialogAction>
                                                   <AlertDialogAction
                                                     onClick={() => bulkDeleteAssignmentsMutation.mutate([assignment.id, siblingAssignment.id])}
-                                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full"
+                                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full m-0"
                                                     data-testid={`confirm-delete-both-${assignment.id}`}
                                                   >
                                                     Beide Halbjahre löschen
                                                   </AlertDialogAction>
-                                                  <AlertDialogCancel className="w-full mt-2">Abbrechen</AlertDialogCancel>
+                                                  <AlertDialogCancel className="w-full m-0 mt-2">Abbrechen</AlertDialogCancel>
                                                 </>
                                               );
                                             }
