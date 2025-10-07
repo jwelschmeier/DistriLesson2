@@ -1890,8 +1890,8 @@ export default function Stundenplaene() {
                                     </TableCell>
                                   )}
                                   <TableCell className="px-2 text-center">
-                                    {group.semester1 ? (
-                                      isTeacherEditMode ? (
+                                    {isTeacherEditMode ? (
+                                      group.semester1 ? (
                                         <Input
                                           type="number"
                                           min="1"
@@ -1902,6 +1902,31 @@ export default function Stundenplaene() {
                                           className="w-16 h-7 text-xs text-center"
                                         />
                                       ) : (
+                                        <Button
+                                          onClick={async () => {
+                                            if (!selectedTeacherId || !group.class || !group.subject) return;
+                                            try {
+                                              await createAssignmentMutation.mutateAsync({
+                                                teacherId: selectedTeacherId,
+                                                classId: group.class.id,
+                                                subjectId: group.subject.id,
+                                                hoursPerWeek: 1,
+                                                semester: "1",
+                                              });
+                                            } catch (error) {
+                                              // Error handled by mutation
+                                            }
+                                          }}
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-7 w-16 text-xs"
+                                          data-testid={`button-add-sem1-${group.key}`}
+                                        >
+                                          + 1. HJ
+                                        </Button>
+                                      )
+                                    ) : (
+                                      group.semester1 ? (
                                         <Badge 
                                           className={
                                             Math.round(parseFloat(group.semester1.hoursPerWeek)) <= 2
@@ -1913,16 +1938,16 @@ export default function Stundenplaene() {
                                         >
                                           {Math.round(parseFloat(group.semester1.hoursPerWeek))}h
                                         </Badge>
+                                      ) : (
+                                        <Badge className="bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-xs">
+                                          0h
+                                        </Badge>
                                       )
-                                    ) : (
-                                      <Badge className="bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-xs">
-                                        0h
-                                      </Badge>
                                     )}
                                   </TableCell>
                                   <TableCell className="px-2 text-center">
-                                    {group.semester2 ? (
-                                      isTeacherEditMode ? (
+                                    {isTeacherEditMode ? (
+                                      group.semester2 ? (
                                         <Input
                                           type="number"
                                           min="1"
@@ -1933,6 +1958,31 @@ export default function Stundenplaene() {
                                           className="w-16 h-7 text-xs text-center"
                                         />
                                       ) : (
+                                        <Button
+                                          onClick={async () => {
+                                            if (!selectedTeacherId || !group.class || !group.subject) return;
+                                            try {
+                                              await createAssignmentMutation.mutateAsync({
+                                                teacherId: selectedTeacherId,
+                                                classId: group.class.id,
+                                                subjectId: group.subject.id,
+                                                hoursPerWeek: 1,
+                                                semester: "2",
+                                              });
+                                            } catch (error) {
+                                              // Error handled by mutation
+                                            }
+                                          }}
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-7 w-16 text-xs"
+                                          data-testid={`button-add-sem2-${group.key}`}
+                                        >
+                                          + 2. HJ
+                                        </Button>
+                                      )
+                                    ) : (
+                                      group.semester2 ? (
                                         <Badge 
                                           className={
                                             Math.round(parseFloat(group.semester2.hoursPerWeek)) <= 2
@@ -1944,11 +1994,11 @@ export default function Stundenplaene() {
                                         >
                                           {Math.round(parseFloat(group.semester2.hoursPerWeek))}h
                                         </Badge>
+                                      ) : (
+                                        <Badge className="bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-xs">
+                                          0h
+                                        </Badge>
                                       )
-                                    ) : (
-                                      <Badge className="bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-xs">
-                                        0h
-                                      </Badge>
                                     )}
                                   </TableCell>
                                   {isTeacherEditMode && (
