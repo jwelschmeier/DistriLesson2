@@ -1595,11 +1595,29 @@ export default function Stundenplaene() {
                       <div className="space-y-3">
                         {/* Add New Assignment Button */}
                         <div className="flex justify-between items-center gap-4">
-                          <p className="text-sm text-muted-foreground">
-                            {teacherAssignments.length} Zuweisung{teacherAssignments.length !== 1 ? 'en' : ''}
-                            {!isTeacherEditMode && <span className="ml-2 text-blue-600 dark:text-blue-400">• Ansichtsmodus</span>}
-                            {isTeacherEditMode && <span className="ml-2 text-orange-600 dark:text-orange-400">• Bearbeitungsmodus</span>}
-                          </p>
+                          <div className="flex items-center gap-3">
+                            <p className="text-sm text-muted-foreground">
+                              {teacherAssignments.length} Zuweisung{teacherAssignments.length !== 1 ? 'en' : ''}
+                              {!isTeacherEditMode && <span className="ml-2 text-blue-600 dark:text-blue-400">• Ansichtsmodus</span>}
+                              {isTeacherEditMode && <span className="ml-2 text-orange-600 dark:text-orange-400">• Bearbeitungsmodus</span>}
+                            </p>
+                            {isTeacherEditMode && (
+                              <Button
+                                onClick={() => setNewTeacherAssignment({
+                                  classId: '',
+                                  subjectId: '',
+                                  hoursPerWeek: 1,
+                                  semester: '1',
+                                })}
+                                disabled={!!newTeacherAssignment}
+                                size="sm"
+                                data-testid="button-add-teacher-assignment"
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Neue Zuweisung
+                              </Button>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2">
                             <Select value={teacherClassFilter} onValueChange={setTeacherClassFilter}>
                               <SelectTrigger className="w-40" data-testid="select-teacher-class-filter">
@@ -1689,6 +1707,118 @@ export default function Stundenplaene() {
                               </TableRow>
                             </TableHeader>
                           <TableBody>
+                            {/* New Assignment Row */}
+                            {newTeacherAssignment && (
+                              <TableRow className="bg-blue-50 dark:bg-blue-950 border-l-4 border-l-blue-500" data-testid="row-new-teacher-assignment">
+                                <TableCell className="px-2">
+                                  <div className="flex space-x-1">
+                                    <Button
+                                      onClick={saveNewTeacherAssignment}
+                                      disabled={createAssignmentMutation.isPending || !newTeacherAssignment.classId || !newTeacherAssignment.subjectId}
+                                      size="sm"
+                                      className="h-6 w-6 p-0"
+                                      data-testid="button-save-new-assignment"
+                                    >
+                                      <Save className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      onClick={() => setNewTeacherAssignment(null)}
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-6 w-6 p-0"
+                                      data-testid="button-cancel-new-assignment"
+                                    >
+                                      ✕
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="px-2">
+                                  <Select
+                                    value={newTeacherAssignment.classId}
+                                    onValueChange={(value) => setNewTeacherAssignment({...newTeacherAssignment, classId: value})}
+                                    data-testid="select-new-class"
+                                  >
+                                    <SelectTrigger className="w-full h-7 text-xs">
+                                      <SelectValue placeholder="Klasse wählen..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {classes?.map((cls) => (
+                                        <SelectItem key={cls.id} value={cls.id}>
+                                          {cls.name} {cls.type !== 'klasse' && `(${cls.type === 'kurs' ? 'Kurs' : 'AG'})`}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </TableCell>
+                                <TableCell className="px-2">
+                                  <Select
+                                    value={newTeacherAssignment.subjectId}
+                                    onValueChange={(value) => setNewTeacherAssignment({...newTeacherAssignment, subjectId: value})}
+                                    data-testid="select-new-subject"
+                                  >
+                                    <SelectTrigger className="w-full h-7 text-xs">
+                                      <SelectValue placeholder="Fach wählen..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {subjects?.map((subject) => (
+                                        <SelectItem key={subject.id} value={subject.id}>
+                                          {subject.shortName} - {subject.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </TableCell>
+                                <TableCell className="px-2">
+                                  <span className="text-xs text-muted-foreground">{selectedTeacher?.shortName}</span>
+                                </TableCell>
+                                <TableCell className="px-2 text-center">
+                                  {newTeacherAssignment.semester === "1" ? (
+                                    <Input
+                                      type="number"
+                                      min="1"
+                                      max="40"
+                                      value={newTeacherAssignment.hoursPerWeek}
+                                      onChange={(e) => setNewTeacherAssignment({...newTeacherAssignment, hoursPerWeek: parseInt(e.target.value) || 1})}
+                                      data-testid="input-new-hours-sem1"
+                                      className="w-16 h-7 text-xs text-center"
+                                    />
+                                  ) : (
+                                    <span className="text-muted-foreground text-xs">—</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="px-2 text-center">
+                                  {newTeacherAssignment.semester === "2" ? (
+                                    <Input
+                                      type="number"
+                                      min="1"
+                                      max="40"
+                                      value={newTeacherAssignment.hoursPerWeek}
+                                      onChange={(e) => setNewTeacherAssignment({...newTeacherAssignment, hoursPerWeek: parseInt(e.target.value) || 1})}
+                                      data-testid="input-new-hours-sem2"
+                                      className="w-16 h-7 text-xs text-center"
+                                    />
+                                  ) : (
+                                    <span className="text-muted-foreground text-xs">—</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="px-2">
+                                  <Select
+                                    value={newTeacherAssignment.semester}
+                                    onValueChange={(value: "1" | "2") => setNewTeacherAssignment({...newTeacherAssignment, semester: value})}
+                                    data-testid="select-new-semester"
+                                  >
+                                    <SelectTrigger className="w-20 h-7 text-xs">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="1">1. HJ</SelectItem>
+                                      <SelectItem value="2">2. HJ</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </TableCell>
+                              </TableRow>
+                            )}
+                            
                             {/* Grouped Assignment Rows (Both Semesters in One Row) */}
                             {groupedTeacherAssignments.map((group) => {
                               const hasEditsSem1 = group.semester1 && editedAssignments[group.semester1.id];
