@@ -12,7 +12,7 @@ import { Grid3X3, RefreshCw, AlertTriangle, CheckCircle, Users, BookOpen, Search
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import type { Teacher, Class, Subject, Assignment } from '@shared/schema';
-import { calculateCorrectHours } from '@shared/parallel-subjects';
+import { calculateCorrectHours, PARALLEL_GROUPS } from '@shared/parallel-subjects';
 
 type DataComparison = {
   differences: {
@@ -369,13 +369,78 @@ export default function LehrerFaecherZuordnung() {
     });
 
     const hoursByTeacherAndSemester = new Map<string, number>();
+    
+    // Group assignments by class and semester to calculate correct hours
+    const assignmentsByClassAndSemester = new Map<string, AssignmentData[]>();
     assignments.forEach(assignment => {
-      if (!assignment.teacherId) return;
+      const key = `${assignment.classId}-${assignment.semester}`;
+      const existing = assignmentsByClassAndSemester.get(key) || [];
+      existing.push(assignment);
+      assignmentsByClassAndSemester.set(key, existing);
+    });
+    
+    // Calculate teacher hours using calculateCorrectHours to avoid double-counting parallel subjects
+    assignmentsByClassAndSemester.forEach((classAssignments, key) => {
+      const [classId, semester] = key.split('-');
+      const classData = classes.find(c => c.id === classId);
+      if (!classData) return;
       
-      const key = `${assignment.teacherId}-${assignment.semester}`;
-      const currentHours = hoursByTeacherAndSemester.get(key) || 0;
-      const additionalHours = parseFloat(assignment.hoursPerWeek) || 0;
-      hoursByTeacherAndSemester.set(key, currentHours + additionalHours);
+      // Build subject hours map for this class and semester
+      const subjectHours: Record<string, number> = {};
+      const teacherAssignments = new Map<string, { subjectName: string; hours: number }[]>();
+      
+      classAssignments.forEach(assignment => {
+        if (!assignment.teacherId) return;
+        
+        const subject = subjects.find(s => s.id === assignment.subjectId);
+        if (!subject) return;
+        
+        const hours = parseFloat(assignment.hoursPerWeek) || 0;
+        subjectHours[subject.shortName] = hours;
+        
+        // Track which teacher teaches which subject
+        const teacherKey = assignment.teacherId;
+        const existing = teacherAssignments.get(teacherKey) || [];
+        existing.push({ subjectName: subject.shortName, hours });
+        teacherAssignments.set(teacherKey, existing);
+      });
+      
+      // Calculate correct hours for this class (handles parallel subjects)
+      const { totalHours, parallelGroupHours, regularHours } = calculateCorrectHours(
+        subjectHours,
+        classData.grade
+      );
+      
+      // Distribute correct hours to teachers
+      teacherAssignments.forEach((subjectList, teacherId) => {
+        const teacherKey = `${teacherId}-${semester}`;
+        const currentHours = hoursByTeacherAndSemester.get(teacherKey) || 0;
+        
+        let teacherHoursForClass = 0;
+        const countedParallelGroups = new Set<string>();
+        
+        subjectList.forEach(({ subjectName, hours }) => {
+          // Check if subject is in a parallel group
+          const parallelGroupEntry = Object.entries(parallelGroupHours).find(([groupId]) => {
+            const group = Object.values(PARALLEL_GROUPS).find(g => g.id === groupId);
+            return group?.subjects.includes(subjectName);
+          });
+          
+          if (parallelGroupEntry) {
+            // For parallel subjects, count the group hours only once per teacher per class
+            const [groupId, groupHours] = parallelGroupEntry;
+            if (!countedParallelGroups.has(groupId)) {
+              teacherHoursForClass += groupHours;
+              countedParallelGroups.add(groupId);
+            }
+          } else if (regularHours[subjectName]) {
+            // For regular subjects, use the subject hours
+            teacherHoursForClass += regularHours[subjectName];
+          }
+        });
+        
+        hoursByTeacherAndSemester.set(teacherKey, currentHours + teacherHoursForClass);
+      });
     });
 
     // Create separate maps for remaining hours by teacher for each semester
