@@ -150,6 +150,11 @@ export default function Lehrerverwaltung() {
   const teacherHoursMap = useMemo(() => {
     const hoursMap = new Map<string, number>();
     
+    // Wait for subjects to be loaded
+    if (subjects.length === 0) {
+      return hoursMap;
+    }
+    
     teacherAssignmentsMap.forEach((teacherAssignments, teacherId) => {
       // Group assignments to prevent double-counting of team teaching and parallel subjects
       const processedAssignments = new Map<string, { hours: number; semester: string }>();
@@ -174,8 +179,6 @@ export default function Lehrerverwaltung() {
           groupKey = `team-${assignment.teamTeachingId}-${assignment.classId}-${assignment.subjectId}-${assignment.semester}-${assignment.teacherId}`;
         } else if (parallelGroup) {
           // Parallel subjects (Religion, Differenzierung): group by parallel group + class + semester
-          const classData = classes.find(c => c.id === assignment.classId);
-          const grade = classData?.grade ?? 'na';
           groupKey = `parallel-${parallelGroup.id}-${assignment.classId}-${assignment.semester}-${assignment.teacherId}`;
         } else {
           // Regular assignment
