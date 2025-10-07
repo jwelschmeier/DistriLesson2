@@ -1884,108 +1884,83 @@ export default function Stundenplaene() {
                                   {isTeacherEditMode && (
                                     <TableCell className="px-2">
                                       <div className="flex space-x-1">
-                                        {/* Delete both semesters button - shown when both exist */}
-                                        {group.semester1 && group.semester2 && (
-                                          <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                              <Button
-                                                variant="destructive"
-                                                size="sm"
-                                                className="h-7 px-2"
-                                                data-testid={`button-delete-both-${group.key}`}
-                                              >
-                                                <Trash2 className="h-3 w-3 mr-1" />
-                                                Beide
-                                              </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                              <AlertDialogHeader>
-                                                <AlertDialogTitle>Beide Halbjahre löschen?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                  Möchten Sie die Zuweisung <strong>{group.subject?.shortName}</strong> 
-                                                  in Klasse <strong>{group.class?.name}</strong> für beide Halbjahre wirklich löschen?
-                                                  <br /><br />
-                                                  • 1. HJ: {group.semester1.hoursPerWeek}h<br />
-                                                  • 2. HJ: {group.semester2.hoursPerWeek}h
-                                                </AlertDialogDescription>
-                                              </AlertDialogHeader>
-                                              <AlertDialogFooter>
-                                                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                                                <AlertDialogAction
-                                                  onClick={() => bulkDeleteAssignmentsMutation.mutate([group.semester1!.id, group.semester2!.id])}
-                                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                                >
-                                                  Beide löschen
-                                                </AlertDialogAction>
-                                              </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                          </AlertDialog>
-                                        )}
-                                        {/* Individual delete buttons - shown when only one semester exists */}
-                                        {group.semester1 && !group.semester2 && (
+                                        {/* Delete button - works for both cases: only one or both semesters */}
+                                        {(group.semester1 || group.semester2) && (
                                           <AlertDialog>
                                             <AlertDialogTrigger asChild>
                                               <Button
                                                 variant="destructive"
                                                 size="sm"
                                                 className="h-7 w-7 p-0"
-                                                data-testid={`button-delete-assignment-${group.semester1.id}`}
+                                                data-testid={`button-delete-${group.key}`}
                                               >
                                                 <Trash2 className="h-3 w-3" />
                                               </Button>
                                             </AlertDialogTrigger>
                                             <AlertDialogContent>
                                               <AlertDialogHeader>
-                                                <AlertDialogTitle>Zuweisung löschen?</AlertDialogTitle>
+                                                <AlertDialogTitle>Zuweisung löschen</AlertDialogTitle>
                                                 <AlertDialogDescription>
-                                                  Möchten Sie die Zuweisung <strong>{group.subject?.shortName}</strong> 
-                                                  in Klasse <strong>{group.class?.name}</strong> 
-                                                  ({group.semester1.hoursPerWeek}h, 1. HJ) 
-                                                  wirklich löschen?
+                                                  {group.semester1 && group.semester2 ? (
+                                                    <>
+                                                      Möchten Sie nur ein Halbjahr oder beide Halbjahre löschen?
+                                                      <br /><br />
+                                                      <strong>{group.subject?.shortName}</strong> in Klasse <strong>{group.class?.name}</strong>:<br />
+                                                      • 1. HJ: {group.semester1.hoursPerWeek}h<br />
+                                                      • 2. HJ: {group.semester2.hoursPerWeek}h
+                                                    </>
+                                                  ) : group.semester1 ? (
+                                                    <>
+                                                      Möchten Sie die Zuweisung <strong>{group.subject?.shortName}</strong> 
+                                                      in Klasse <strong>{group.class?.name}</strong> 
+                                                      ({group.semester1.hoursPerWeek}h, 1. HJ) 
+                                                      wirklich löschen?
+                                                    </>
+                                                  ) : (
+                                                    <>
+                                                      Möchten Sie die Zuweisung <strong>{group.subject?.shortName}</strong> 
+                                                      in Klasse <strong>{group.class?.name}</strong> 
+                                                      ({group.semester2?.hoursPerWeek}h, 2. HJ) 
+                                                      wirklich löschen?
+                                                    </>
+                                                  )}
                                                 </AlertDialogDescription>
                                               </AlertDialogHeader>
                                               <AlertDialogFooter>
                                                 <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                                                <AlertDialogAction
-                                                  onClick={() => deleteAssignment(group.semester1!.id)}
-                                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                                >
-                                                  Löschen
-                                                </AlertDialogAction>
-                                              </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                          </AlertDialog>
-                                        )}
-                                        {group.semester2 && !group.semester1 && (
-                                          <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                              <Button
-                                                variant="destructive"
-                                                size="sm"
-                                                className="h-7 w-7 p-0"
-                                                data-testid={`button-delete-assignment-${group.semester2.id}`}
-                                              >
-                                                <Trash2 className="h-3 w-3" />
-                                              </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                              <AlertDialogHeader>
-                                                <AlertDialogTitle>Zuweisung löschen?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                  Möchten Sie die Zuweisung <strong>{group.subject?.shortName}</strong> 
-                                                  in Klasse <strong>{group.class?.name}</strong> 
-                                                  ({group.semester2.hoursPerWeek}h, 2. HJ) 
-                                                  wirklich löschen?
-                                                </AlertDialogDescription>
-                                              </AlertDialogHeader>
-                                              <AlertDialogFooter>
-                                                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                                                <AlertDialogAction
-                                                  onClick={() => deleteAssignment(group.semester2!.id)}
-                                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                                >
-                                                  Löschen
-                                                </AlertDialogAction>
+                                                {group.semester1 && group.semester2 ? (
+                                                  <>
+                                                    <AlertDialogAction
+                                                      onClick={() => deleteAssignment(group.semester1!.id)}
+                                                      className="bg-orange-600 hover:bg-orange-700"
+                                                      data-testid={`button-delete-sem1-${group.key}`}
+                                                    >
+                                                      Nur 1. HJ löschen
+                                                    </AlertDialogAction>
+                                                    <AlertDialogAction
+                                                      onClick={() => deleteAssignment(group.semester2!.id)}
+                                                      className="bg-orange-600 hover:bg-orange-700"
+                                                      data-testid={`button-delete-sem2-${group.key}`}
+                                                    >
+                                                      Nur 2. HJ löschen
+                                                    </AlertDialogAction>
+                                                    <AlertDialogAction
+                                                      onClick={() => bulkDeleteAssignmentsMutation.mutate([group.semester1!.id, group.semester2!.id])}
+                                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                      data-testid={`button-delete-both-${group.key}`}
+                                                    >
+                                                      Beide löschen
+                                                    </AlertDialogAction>
+                                                  </>
+                                                ) : (
+                                                  <AlertDialogAction
+                                                    onClick={() => deleteAssignment(group.semester1?.id || group.semester2!.id)}
+                                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                    data-testid={`button-delete-single-${group.key}`}
+                                                  >
+                                                    Löschen
+                                                  </AlertDialogAction>
+                                                )}
                                               </AlertDialogFooter>
                                             </AlertDialogContent>
                                           </AlertDialog>
