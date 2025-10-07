@@ -1282,30 +1282,36 @@ export default function Stundenplaene() {
 
     try {
       if (newAssignmentForm.bothSemesters) {
-        // Create assignments for both semesters
-        await createAssignmentMutation.mutateAsync({
-          teacherId: selectedTeacherId,
-          classId: newAssignmentForm.classId,
-          subjectId: newAssignmentForm.subjectId,
-          hoursPerWeek: newAssignmentForm.hoursPerWeekSem1,
-          semester: "1",
-        });
-        await createAssignmentMutation.mutateAsync({
-          teacherId: selectedTeacherId,
-          classId: newAssignmentForm.classId,
-          subjectId: newAssignmentForm.subjectId,
-          hoursPerWeek: newAssignmentForm.hoursPerWeekSem2,
-          semester: "2",
-        });
+        // Create assignments for both semesters (only if hours > 0)
+        if (newAssignmentForm.hoursPerWeekSem1 > 0) {
+          await createAssignmentMutation.mutateAsync({
+            teacherId: selectedTeacherId,
+            classId: newAssignmentForm.classId,
+            subjectId: newAssignmentForm.subjectId,
+            hoursPerWeek: newAssignmentForm.hoursPerWeekSem1,
+            semester: "1",
+          });
+        }
+        if (newAssignmentForm.hoursPerWeekSem2 > 0) {
+          await createAssignmentMutation.mutateAsync({
+            teacherId: selectedTeacherId,
+            classId: newAssignmentForm.classId,
+            subjectId: newAssignmentForm.subjectId,
+            hoursPerWeek: newAssignmentForm.hoursPerWeekSem2,
+            semester: "2",
+          });
+        }
       } else {
-        // Create assignment for one semester only
-        await createAssignmentMutation.mutateAsync({
-          teacherId: selectedTeacherId,
-          classId: newAssignmentForm.classId,
-          subjectId: newAssignmentForm.subjectId,
-          hoursPerWeek: newAssignmentForm.hoursPerWeekSem1,
-          semester: "1",
-        });
+        // Create assignment for one semester only (if hours > 0)
+        if (newAssignmentForm.hoursPerWeekSem1 > 0) {
+          await createAssignmentMutation.mutateAsync({
+            teacherId: selectedTeacherId,
+            classId: newAssignmentForm.classId,
+            subjectId: newAssignmentForm.subjectId,
+            hoursPerWeek: newAssignmentForm.hoursPerWeekSem1,
+            semester: "1",
+          });
+        }
       }
       
       // Reset form and close dialog
@@ -2177,27 +2183,47 @@ export default function Stundenplaene() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-sm font-semibold">Stunden 1. HJ</label>
-                        <Input
-                          type="number"
-                          min="1"
-                          max="40"
-                          value={newAssignmentForm.hoursPerWeekSem1}
-                          onChange={(e) => setNewAssignmentForm({...newAssignmentForm, hoursPerWeekSem1: parseInt(e.target.value) || 1})}
-                          data-testid="input-dialog-hours-sem1"
-                        />
+                        <Select
+                          value={newAssignmentForm.hoursPerWeekSem1.toString()}
+                          onValueChange={(value) => setNewAssignmentForm({...newAssignmentForm, hoursPerWeekSem1: parseInt(value)})}
+                          data-testid="select-dialog-hours-sem1"
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">0 (kein Unterricht)</SelectItem>
+                            <SelectItem value="1">1</SelectItem>
+                            <SelectItem value="2">2</SelectItem>
+                            <SelectItem value="3">3</SelectItem>
+                            <SelectItem value="4">4</SelectItem>
+                            <SelectItem value="5">5</SelectItem>
+                            <SelectItem value="6">6</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       
                       {newAssignmentForm.bothSemesters && (
                         <div className="space-y-2">
                           <label className="text-sm font-semibold">Stunden 2. HJ</label>
-                          <Input
-                            type="number"
-                            min="1"
-                            max="40"
-                            value={newAssignmentForm.hoursPerWeekSem2}
-                            onChange={(e) => setNewAssignmentForm({...newAssignmentForm, hoursPerWeekSem2: parseInt(e.target.value) || 1})}
-                            data-testid="input-dialog-hours-sem2"
-                          />
+                          <Select
+                            value={newAssignmentForm.hoursPerWeekSem2.toString()}
+                            onValueChange={(value) => setNewAssignmentForm({...newAssignmentForm, hoursPerWeekSem2: parseInt(value)})}
+                            data-testid="select-dialog-hours-sem2"
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="0">0 (kein Unterricht)</SelectItem>
+                              <SelectItem value="1">1</SelectItem>
+                              <SelectItem value="2">2</SelectItem>
+                              <SelectItem value="3">3</SelectItem>
+                              <SelectItem value="4">4</SelectItem>
+                              <SelectItem value="5">5</SelectItem>
+                              <SelectItem value="6">6</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                       )}
                     </div>
@@ -2208,7 +2234,13 @@ export default function Stundenplaene() {
                     </Button>
                     <Button
                       onClick={saveNewAssignmentFromDialog}
-                      disabled={!newAssignmentForm.classId || !newAssignmentForm.subjectId || createAssignmentMutation.isPending}
+                      disabled={
+                        !newAssignmentForm.classId || 
+                        !newAssignmentForm.subjectId || 
+                        (newAssignmentForm.bothSemesters && newAssignmentForm.hoursPerWeekSem1 === 0 && newAssignmentForm.hoursPerWeekSem2 === 0) ||
+                        (!newAssignmentForm.bothSemesters && newAssignmentForm.hoursPerWeekSem1 === 0) ||
+                        createAssignmentMutation.isPending
+                      }
                       data-testid="button-dialog-save"
                     >
                       {createAssignmentMutation.isPending ? 'Wird gespeichert...' : 'Speichern'}
