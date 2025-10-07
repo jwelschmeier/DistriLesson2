@@ -1915,7 +1915,9 @@ export default function Stundenplaene() {
                                         </Badge>
                                       )
                                     ) : (
-                                      <span className="text-muted-foreground text-xs">—</span>
+                                      <Badge className="bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-xs">
+                                        0h
+                                      </Badge>
                                     )}
                                   </TableCell>
                                   <TableCell className="px-2 text-center">
@@ -1944,7 +1946,9 @@ export default function Stundenplaene() {
                                         </Badge>
                                       )
                                     ) : (
-                                      <span className="text-muted-foreground text-xs">—</span>
+                                      <Badge className="bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-xs">
+                                        0h
+                                      </Badge>
                                     )}
                                   </TableCell>
                                   {isTeacherEditMode && (
