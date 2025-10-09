@@ -700,11 +700,10 @@ export default function Stundenplaene() {
     return filtered;
   }, [extendedAssignments, selectedClassId, selectedSemester, classSort]);
 
-  // Calculate teacher summary statistics with team teaching support
-  const teacherSummary = useMemo(() => {
+  // Deduplicate teacher assignments (same logic for both summary and detail display)
+  const deduplicatedTeacherAssignments = useMemo(() => {
     // Group by class+subject+teacher+semester to avoid counting duplicates
-    // This handles cases where both team-teaching and individual assignments exist for the same combination
-    const processedAssignments = new Map<string, { hours: number; semester: string }>();
+    const processedAssignments = new Map<string, ExtendedAssignment>();
     
     teacherAssignments.forEach(assignment => {
       const hours = parseFloat(assignment.hoursPerWeek);
@@ -717,41 +716,38 @@ export default function Stundenplaene() {
       const grade = assignment.class?.grade ?? 'na';
       
       // Always use class+subject+teacher+semester as base grouping key to prevent duplicates
-      // This ensures that if there's both a team teaching assignment and a regular assignment
-      // for the same combination, only the one with more hours is counted
       let groupKey: string;
       if (parallelGroup === 'Differenzierung') {
-        // For Differenzierung, group by subject+teacher+semester+grade to handle kurs/klasse duplicates
         groupKey = `diff-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}-${grade}`;
       } else {
-        // For all other cases, group by class+subject+teacher+semester
         groupKey = `${assignment.classId}-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
       }
       
       const existing = processedAssignments.get(groupKey);
       
       // Keep the assignment with maximum hours (handles duplicates)
-      if (!existing || hours > existing.hours) {
-        processedAssignments.set(groupKey, {
-          hours: hours,
-          semester: assignment.semester
-        });
+      if (!existing || hours > parseFloat(existing.hoursPerWeek)) {
+        processedAssignments.set(groupKey, assignment);
       }
     });
     
-    // Calculate semester hours from processed assignments
-    const s1Hours = Array.from(processedAssignments.values())
+    return Array.from(processedAssignments.values());
+  }, [teacherAssignments]);
+
+  // Calculate teacher summary statistics from deduplicated assignments
+  const teacherSummary = useMemo(() => {
+    const s1Hours = deduplicatedTeacherAssignments
       .filter(a => a.semester === "1")
-      .reduce((sum, a) => sum + a.hours, 0);
+      .reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
       
-    const s2Hours = Array.from(processedAssignments.values())
+    const s2Hours = deduplicatedTeacherAssignments
       .filter(a => a.semester === "2")
-      .reduce((sum, a) => sum + a.hours, 0);
+      .reduce((sum, a) => sum + parseFloat(a.hoursPerWeek), 0);
     
     const totalHours = s1Hours + s2Hours;
     
     return { totalHours, s1Hours, s2Hours };
-  }, [teacherAssignments]);
+  }, [deduplicatedTeacherAssignments]);
 
   // Calculate class summary statistics with team teaching support
   const classSummary = useMemo(() => {
@@ -1655,8 +1651,8 @@ export default function Stundenplaene() {
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {teacherAssignments
-                                        .filter(a => a.semester === "1" && parseFloat(a.hoursPerWeek) > 0)
+                                      {deduplicatedTeacherAssignments
+                                        .filter(a => a.semester === "1")
                                         .map(assignment => {
                                           const cls = classes?.find(c => c.id === assignment.classId);
                                           const subject = subjects?.find(s => s.id === assignment.subjectId);
@@ -1737,8 +1733,8 @@ export default function Stundenplaene() {
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {teacherAssignments
-                                        .filter(a => a.semester === "2" && parseFloat(a.hoursPerWeek) > 0)
+                                      {deduplicatedTeacherAssignments
+                                        .filter(a => a.semester === "2")
                                         .map(assignment => {
                                           const cls = classes?.find(c => c.id === assignment.classId);
                                           const subject = subjects?.find(s => s.id === assignment.subjectId);
