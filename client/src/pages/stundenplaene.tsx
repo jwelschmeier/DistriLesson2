@@ -1651,6 +1651,7 @@ export default function Stundenplaene() {
                                         <TableHead>Fach</TableHead>
                                         <TableHead>Stunden</TableHead>
                                         <TableHead>Typ</TableHead>
+                                        <TableHead>Gruppe</TableHead>
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -1659,6 +1660,18 @@ export default function Stundenplaene() {
                                         .map(assignment => {
                                           const cls = classes?.find(c => c.id === assignment.classId);
                                           const subject = subjects?.find(s => s.id === assignment.subjectId);
+                                          const parallelGroup = subject?.parallelGroup;
+                                          const grade = cls?.grade ?? 'na';
+                                          
+                                          let groupKey: string;
+                                          if (assignment.teamTeachingId) {
+                                            groupKey = `team-${assignment.teamTeachingId}`;
+                                          } else if (parallelGroup === 'Differenzierung') {
+                                            groupKey = `diff-${grade}`;
+                                          } else {
+                                            groupKey = `${cls?.name}-${subject?.shortName}`;
+                                          }
+                                          
                                           return (
                                             <TableRow key={assignment.id}>
                                               <TableCell>{cls?.name || 'Unbekannt'}</TableCell>
@@ -1668,6 +1681,9 @@ export default function Stundenplaene() {
                                                 <Badge variant="outline">
                                                   {cls?.type || 'klasse'}
                                                 </Badge>
+                                              </TableCell>
+                                              <TableCell className="text-xs text-muted-foreground">
+                                                {groupKey}
                                               </TableCell>
                                             </TableRow>
                                           );
@@ -1718,6 +1734,7 @@ export default function Stundenplaene() {
                                         <TableHead>Fach</TableHead>
                                         <TableHead>Stunden</TableHead>
                                         <TableHead>Typ</TableHead>
+                                        <TableHead>Gruppe</TableHead>
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -1726,6 +1743,18 @@ export default function Stundenplaene() {
                                         .map(assignment => {
                                           const cls = classes?.find(c => c.id === assignment.classId);
                                           const subject = subjects?.find(s => s.id === assignment.subjectId);
+                                          const parallelGroup = subject?.parallelGroup;
+                                          const grade = cls?.grade ?? 'na';
+                                          
+                                          let groupKey: string;
+                                          if (assignment.teamTeachingId) {
+                                            groupKey = `team-${assignment.teamTeachingId}`;
+                                          } else if (parallelGroup === 'Differenzierung') {
+                                            groupKey = `diff-${grade}`;
+                                          } else {
+                                            groupKey = `${cls?.name}-${subject?.shortName}`;
+                                          }
+                                          
                                           return (
                                             <TableRow key={assignment.id}>
                                               <TableCell>{cls?.name || 'Unbekannt'}</TableCell>
@@ -1735,6 +1764,9 @@ export default function Stundenplaene() {
                                                 <Badge variant="outline">
                                                   {cls?.type || 'klasse'}
                                                 </Badge>
+                                              </TableCell>
+                                              <TableCell className="text-xs text-muted-foreground">
+                                                {groupKey}
                                               </TableCell>
                                             </TableRow>
                                           );
