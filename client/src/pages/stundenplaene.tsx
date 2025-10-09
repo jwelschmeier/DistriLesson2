@@ -1624,9 +1624,59 @@ export default function Stundenplaene() {
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground font-medium">1. Halbjahr</p>
-                            <p className="text-2xl font-bold" data-testid="text-teacher-s1-hours">
-                              {teacherSummary.s1Hours}
-                            </p>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  className="h-auto p-0 hover:bg-transparent"
+                                  title="Details anzeigen"
+                                >
+                                  <p className="text-2xl font-bold hover:underline" data-testid="text-teacher-s1-hours">
+                                    {teacherSummary.s1Hours}
+                                  </p>
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-3xl">
+                                <DialogHeader>
+                                  <DialogTitle>Stundendetails 1. Halbjahr</DialogTitle>
+                                  <DialogDescription>
+                                    Alle Zuweisungen, die zur Stundensumme beitragen
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="max-h-96 overflow-y-auto">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Klasse</TableHead>
+                                        <TableHead>Fach</TableHead>
+                                        <TableHead>Stunden</TableHead>
+                                        <TableHead>Typ</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {teacherAssignments
+                                        .filter(a => a.semester === "1" && parseFloat(a.hoursPerWeek) > 0)
+                                        .map(assignment => {
+                                          const cls = classes?.find(c => c.id === assignment.classId);
+                                          const subject = subjects?.find(s => s.id === assignment.subjectId);
+                                          return (
+                                            <TableRow key={assignment.id}>
+                                              <TableCell>{cls?.name || 'Unbekannt'}</TableCell>
+                                              <TableCell>{subject?.shortName || 'Unbekannt'}</TableCell>
+                                              <TableCell>{assignment.hoursPerWeek}h</TableCell>
+                                              <TableCell>
+                                                <Badge variant="outline">
+                                                  {cls?.type || 'klasse'}
+                                                </Badge>
+                                              </TableCell>
+                                            </TableRow>
+                                          );
+                                        })}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
                             {selectedTeacher && (
                               <p className="text-xs text-muted-foreground">
                                 {Math.max(0, availableHours - teacherSummary.s1Hours).toFixed(1)} verfügbar
@@ -1641,9 +1691,59 @@ export default function Stundenplaene() {
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground font-medium">2. Halbjahr</p>
-                            <p className="text-2xl font-bold" data-testid="text-teacher-s2-hours">
-                              {teacherSummary.s2Hours}
-                            </p>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  className="h-auto p-0 hover:bg-transparent"
+                                  title="Details anzeigen"
+                                >
+                                  <p className="text-2xl font-bold hover:underline" data-testid="text-teacher-s2-hours">
+                                    {teacherSummary.s2Hours}
+                                  </p>
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-3xl">
+                                <DialogHeader>
+                                  <DialogTitle>Stundendetails 2. Halbjahr</DialogTitle>
+                                  <DialogDescription>
+                                    Alle Zuweisungen, die zur Stundensumme beitragen
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="max-h-96 overflow-y-auto">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Klasse</TableHead>
+                                        <TableHead>Fach</TableHead>
+                                        <TableHead>Stunden</TableHead>
+                                        <TableHead>Typ</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {teacherAssignments
+                                        .filter(a => a.semester === "2" && parseFloat(a.hoursPerWeek) > 0)
+                                        .map(assignment => {
+                                          const cls = classes?.find(c => c.id === assignment.classId);
+                                          const subject = subjects?.find(s => s.id === assignment.subjectId);
+                                          return (
+                                            <TableRow key={assignment.id}>
+                                              <TableCell>{cls?.name || 'Unbekannt'}</TableCell>
+                                              <TableCell>{subject?.shortName || 'Unbekannt'}</TableCell>
+                                              <TableCell>{assignment.hoursPerWeek}h</TableCell>
+                                              <TableCell>
+                                                <Badge variant="outline">
+                                                  {cls?.type || 'klasse'}
+                                                </Badge>
+                                              </TableCell>
+                                            </TableRow>
+                                          );
+                                        })}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
                             {selectedTeacher && (
                               <p className="text-xs text-muted-foreground">
                                 {Math.max(0, availableHours - teacherSummary.s2Hours).toFixed(1)} verfügbar
