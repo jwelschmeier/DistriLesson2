@@ -702,7 +702,8 @@ export default function Stundenplaene() {
 
   // Calculate teacher summary statistics with team teaching support
   const teacherSummary = useMemo(() => {
-    // Use the same grouping logic as teacherWorkloadBySemester for consistency
+    // Group by class+subject+teacher+semester to avoid counting duplicates
+    // This handles cases where both team-teaching and individual assignments exist for the same combination
     const processedAssignments = new Map<string, { hours: number; semester: string }>();
     
     teacherAssignments.forEach(assignment => {
@@ -715,17 +716,16 @@ export default function Stundenplaene() {
       const parallelGroup = assignment.subject?.parallelGroup;
       const grade = assignment.class?.grade ?? 'na';
       
-      // For team teaching, we need to count the hours for each teacher individually
-      // but avoid double-counting within the same teacher's workload
-      // For Differenzierung subjects (regardless of class type), group by subject+teacher+semester+grade
-      // This prevents counting both the kurs assignment and the individual klasse assignments
+      // Always use class+subject+teacher+semester as base grouping key to prevent duplicates
+      // This ensures that if there's both a team teaching assignment and a regular assignment
+      // for the same combination, only the one with more hours is counted
       let groupKey: string;
-      if (assignment.teamTeachingId) {
-        groupKey = `team-${assignment.teamTeachingId}-${assignment.classId}-${assignment.subjectId}-${assignment.semester}-${assignment.teacherId}`;
-      } else if (parallelGroup === 'Differenzierung') {
+      if (parallelGroup === 'Differenzierung') {
+        // For Differenzierung, group by subject+teacher+semester+grade to handle kurs/klasse duplicates
         groupKey = `diff-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}-${grade}`;
       } else {
-        groupKey = `individual-${assignment.classId}-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
+        // For all other cases, group by class+subject+teacher+semester
+        groupKey = `${assignment.classId}-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
       }
       
       const existing = processedAssignments.get(groupKey);
@@ -1664,9 +1664,7 @@ export default function Stundenplaene() {
                                           const grade = cls?.grade ?? 'na';
                                           
                                           let groupKey: string;
-                                          if (assignment.teamTeachingId) {
-                                            groupKey = `team-${assignment.teamTeachingId}`;
-                                          } else if (parallelGroup === 'Differenzierung') {
+                                          if (parallelGroup === 'Differenzierung') {
                                             groupKey = `diff-${grade}`;
                                           } else {
                                             groupKey = `${cls?.name}-${subject?.shortName}`;
@@ -1680,6 +1678,7 @@ export default function Stundenplaene() {
                                               <TableCell>
                                                 <Badge variant="outline">
                                                   {cls?.type || 'klasse'}
+                                                  {assignment.teamTeachingId && ' (Team)'}
                                                 </Badge>
                                               </TableCell>
                                               <TableCell className="text-xs text-muted-foreground">
@@ -1747,9 +1746,7 @@ export default function Stundenplaene() {
                                           const grade = cls?.grade ?? 'na';
                                           
                                           let groupKey: string;
-                                          if (assignment.teamTeachingId) {
-                                            groupKey = `team-${assignment.teamTeachingId}`;
-                                          } else if (parallelGroup === 'Differenzierung') {
+                                          if (parallelGroup === 'Differenzierung') {
                                             groupKey = `diff-${grade}`;
                                           } else {
                                             groupKey = `${cls?.name}-${subject?.shortName}`;
@@ -1763,6 +1760,7 @@ export default function Stundenplaene() {
                                               <TableCell>
                                                 <Badge variant="outline">
                                                   {cls?.type || 'klasse'}
+                                                  {assignment.teamTeachingId && ' (Team)'}
                                                 </Badge>
                                               </TableCell>
                                               <TableCell className="text-xs text-muted-foreground">

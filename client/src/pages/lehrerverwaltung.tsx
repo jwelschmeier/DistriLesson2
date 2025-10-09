@@ -168,15 +168,16 @@ export default function Lehrerverwaltung() {
         const grade = classData?.grade ?? 'na';
         
         // Create grouping key using SAME logic as stundenplaene.tsx
+        // Always use class+subject+teacher+semester as base grouping key to prevent duplicates
+        // This ensures that if there's both a team teaching assignment and a regular assignment
+        // for the same combination, only the one with more hours is counted
         let groupKey: string;
-        if (assignment.teamTeachingId) {
-          groupKey = `team-${assignment.teamTeachingId}-${assignment.classId}-${assignment.subjectId}-${assignment.semester}-${assignment.teacherId}`;
-        } else if (parallelGroup === 'Differenzierung') {
+        if (parallelGroup === 'Differenzierung') {
+          // For Differenzierung, group by subject+teacher+semester+grade to handle kurs/klasse duplicates
           groupKey = `diff-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}-${grade}`;
-        } else if (parallelGroup === 'Religion') {
-          groupKey = `religion-${assignment.teacherId}-${assignment.semester}-${assignment.classId}`;
         } else {
-          groupKey = `individual-${assignment.classId}-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
+          // For all other cases, group by class+subject+teacher+semester
+          groupKey = `${assignment.classId}-${assignment.subjectId}-${assignment.teacherId}-${assignment.semester}`;
         }
         
         const existing = processedAssignments.get(groupKey);
